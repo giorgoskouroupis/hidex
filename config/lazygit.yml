@@ -1,0 +1,12 @@
+# hIDEx's own lazygit config (LG_CONFIG_FILE), the same on every machine
+gui:
+  theme:
+    authorColors:
+      "*": blue
+git:
+  # | switches between the two diff views
+  pagers:
+    - colorArg: always
+      pager: delta --paging=never
+    - colorArg: always
+      pager: delta --paging=never --side-by-side

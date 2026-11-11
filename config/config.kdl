@@ -1,0 +1,91 @@
+// hIDEx's zellij config. Locked by default, so every key reaches Helix, lazygit and Claude
+// (Ctrl+g unlocks zellij's own modes); the Alt keys below work while locked.
+default_mode "locked"
+theme "hidex"
+pane_frames true
+// a full rounded frame around every pane (the default only draws a title line above each)
+pane_frame_style "full"
+show_startup_tips false
+show_release_notes false
+// plain segments in zellij's own UI (pop-up titles, prompts) instead of arrow-shaped ones
+simplified_ui true
+// panes stack as one title line each when a split has no room
+stacked_pane_list false
+// no browser access to sessions
+web_server false
+// no frame highlight on mouse hover, so a coloured frame always means focus
+mouse_hover_effects false
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name true
+    }
+}
+
+// the hIDEx plugin (plugin/): jumps to a pane by role, opens terminals and Claudes in their area
+load_plugins {
+    "file:@plugin@"
+}
+
+keybinds {
+    locked {
+        bind "Alt Left" { MoveFocusOrTab "Left"; }
+        bind "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt Down" { MoveFocus "Down"; }
+        bind "Alt Up" { MoveFocus "Up"; }
+        // jump straight to a pane: the explorer, Helix, the terminals, Claude
+        bind "Alt e" { MessagePlugin "file:@plugin@" { name "focus"; payload "tree"; }; }
+        bind "Alt h" { MessagePlugin "file:@plugin@" { name "focus"; payload "helix"; }; }
+        bind "Alt t" { MessagePlugin "file:@plugin@" { name "focus"; payload "terminals"; }; }
+        bind "Alt c" { MessagePlugin "file:@plugin@" { name "focus"; payload "claude"; }; }
+        // Alt+n, then t or c: a new terminal or Claude, stacked in its area wherever the focus is
+        bind "Alt n" { SwitchToMode "tmux"; }
+        bind "Alt f" "Shift Esc" { ToggleFocusFullscreen; }
+        bind "Alt =" "Alt +" { Resize "Increase"; }
+        bind "Alt -" { Resize "Decrease"; }
+        // move one border: Alt+Shift+arrow grows the pane on that side, Alt+Ctrl+arrow shrinks it from that side
+        bind "Alt Shift Left" { Resize "Increase Left"; }
+        bind "Alt Shift Right" { Resize "Increase Right"; }
+        bind "Alt Shift Up" { Resize "Increase Up"; }
+        bind "Alt Shift Down" { Resize "Increase Down"; }
+        bind "Alt Ctrl Left" { Resize "Decrease Left"; }
+        bind "Alt Ctrl Right" { Resize "Decrease Right"; }
+        bind "Alt Ctrl Up" { Resize "Decrease Up"; }
+        bind "Alt Ctrl Down" { Resize "Decrease Down"; }
+        // a new terminal split beside the focused pane
+        bind "Alt Shift n" { NewPane; }
+        bind "Alt w" { ToggleFloatingPanes; }
+        // quit hIDEx: Helix quits first, and refuses (showing which) while files are unsaved
+        bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "all"; }; }
+        bind "Alt g" { Run "lazygit" { floating true; close_on_exit true; }; }
+        bind "Alt y" { Run "env" "EDITOR=hidex-open --popup" "yazi" { floating true; close_on_exit true; }; }
+    }
+    // the second key after Alt+n (zellij's tmux mode, repurposed); anything else cancels
+    tmux clear-defaults=true {
+        bind "t" { MessagePlugin "file:@plugin@" { name "new"; payload "terminal"; }; SwitchToMode "locked"; }
+        bind "c" { MessagePlugin "file:@plugin@" { name "new"; payload "claude"; }; SwitchToMode "locked"; }
+        bind "Esc" "Enter" "Ctrl c" "Alt n" { SwitchToMode "locked"; }
+    }
+}
+
+// Terminal colours by ANSI index (0 black .. 8 grey), so hIDEx follows the terminal's palette and its
+// dark/light switch: frames in its white, the focused one in its blue.
+themes {
+    hidex {
+        text_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        text_selected { base 7; background 8; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        ribbon_selected { base 0; background 5; emphasis_0 1; emphasis_1 3; emphasis_2 6; emphasis_3 4; }
+        ribbon_unselected { base 7; background 8; emphasis_0 1; emphasis_1 3; emphasis_2 6; emphasis_3 5; }
+        table_title { base 5; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 4; }
+        table_cell_selected { base 7; background 8; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        table_cell_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        list_selected { base 7; background 8; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        list_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        frame_selected { base 4; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        frame_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        frame_highlight { base 3; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        exit_code_success { base 2; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        exit_code_error { base 1; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        multiplayer_user_colors { player_1 5; player_2 4; player_3 6; player_4 2; player_5 3; player_6 1; player_7 5; player_8 4; player_9 6; player_10 2; }
+    }
+}

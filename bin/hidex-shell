@@ -1,0 +1,7 @@
+#!/bin/sh
+# A shell pane: a login shell, a new one when it exits if this is the only shell pane left, else the pane closes.
+while :; do
+  "${SHELL:-sh}" -l
+  [ "$(zellij action list-panes | grep -cE '[[:space:]]shell$')" -gt 1 ] &&
+    exec zellij action close-pane -p "terminal_$ZELLIJ_PANE_ID"
+done

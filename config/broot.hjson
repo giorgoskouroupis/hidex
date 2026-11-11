@@ -1,0 +1,88 @@
+// broot as hIDEx's tree: Enter on a file opens it through hidex-open (Helix, or lnav for logs and big files);
+// directories still expand. File-changing commands are switched off for now: each prints a note instead.
+{
+    verbs: [
+        { invocation: "open", key: "enter", apply_to: "file", external: "hidex-open {file}", leave_broot: false }
+        // Enter on a folder goes into it; on the top line it goes up, but not above the tree's own folder
+        // (hidex-tree-enter); broot's parent commands do nothing
+        { key: "enter", apply_to: "directory", external: "hidex-tree-enter {directory}", leave_broot: false }
+        { invocation: "parent", internal: ":refresh" }
+        { invocation: "up_tree", internal: ":refresh" }
+        { invocation: "root_up", internal: ":refresh" }
+        { invocation: "rm", external: "echo rm is off in hIDEx", leave_broot: false }
+        { invocation: "mv", external: "echo mv is off in hIDEx", leave_broot: false }
+        { invocation: "cp", external: "echo cp is off in hIDEx", leave_broot: false }
+        { invocation: "mvp", external: "echo mvp is off in hIDEx", leave_broot: false }
+        { invocation: "cpp", external: "echo cpp is off in hIDEx", leave_broot: false }
+        { invocation: "mkdir", external: "echo mkdir is off in hIDEx", leave_broot: false }
+    ]
+    // terminal colours (ansi indexes) on the terminal's own background: follows the theme like the other panes
+    skin: {
+        default: "none none / none none"
+        tree: "ansi(8) none"
+        parent: "ansi(8) none"
+        file: "none none"
+        directory: "ansi(4) none bold"
+        exe: "ansi(2) none"
+        link: "ansi(6) none"
+        pruning: "ansi(8) none italic"
+        perm__: "ansi(8) none"
+        dates: "ansi(8) none"
+        sparse: "ansi(8) none"
+        git_branch: "ansi(5) none"
+        git_insertions: "ansi(2) none"
+        git_deletions: "ansi(1) none"
+        git_status_current: "none none"
+        git_status_modified: "ansi(3) none"
+        git_status_new: "ansi(2) none bold"
+        git_status_ignored: "ansi(8) none"
+        git_status_conflicted: "ansi(1) none"
+        git_status_other: "ansi(1) none"
+        selected_line: "none ansi(0)"
+        char_match: "ansi(3) none underlined"
+        file_error: "ansi(1) none"
+        flag_label: "ansi(8) none"
+        flag_value: "ansi(3) none bold"
+        input: "none none"
+        status_error: "ansi(1) none"
+        status_job: "ansi(5) none"
+        status_normal: "ansi(8) none"
+        status_italic: "ansi(3) none italic"
+        status_bold: "ansi(3) none bold"
+        status_code: "ansi(5) none"
+        status_ellipsis: "ansi(8) none"
+        purpose_normal: "none none"
+        purpose_italic: "ansi(3) none italic"
+        purpose_bold: "ansi(3) none bold"
+        purpose_ellipsis: "none none"
+        scrollbar_track: "ansi(0) none"
+        scrollbar_thumb: "ansi(8) none"
+        help_paragraph: "none none"
+        help_bold: "ansi(3) none bold"
+        help_italic: "ansi(5) none italic"
+        help_code: "ansi(2) none"
+        help_headers: "ansi(5) none bold"
+        help_table_border: "ansi(8) none"
+        preview_title: "none none"
+        preview: "none none"
+        preview_line_number: "ansi(8) none"
+        preview_match: "none ansi(0)"
+        hex_null: "ansi(8) none"
+        hex_ascii_graphic: "none none"
+        hex_ascii_whitespace: "ansi(3) none"
+        hex_ascii_other: "ansi(1) none"
+        hex_non_ascii: "ansi(5) none"
+        staging_area_title: "ansi(3) none"
+        mode_command_mark: "ansi(0) ansi(5) bold"
+        good_to_bad_0: ansi(2)
+        good_to_bad_1: ansi(2)
+        good_to_bad_2: ansi(2)
+        good_to_bad_3: ansi(2)
+        good_to_bad_4: ansi(3)
+        good_to_bad_5: ansi(3)
+        good_to_bad_6: ansi(3)
+        good_to_bad_7: ansi(1)
+        good_to_bad_8: ansi(1)
+        good_to_bad_9: ansi(1)
+    }
+}

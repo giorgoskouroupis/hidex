@@ -1,0 +1,22 @@
+// broot tree | Helix on top, a shell across both below, Claude right, starting with claude --resume (pick a
+// past conversation). The last Claude and the last shell come back when exited (bin/hidex-claude, hidex-shell).
+// Keys and pop-ups: ../config.kdl.
+layout {
+    // no status bar: zellij stays locked, so its mode indicator has little to say (restore: a borderless
+    // `pane size=1 { plugin location="compact-bar"; }` after `children` in a default_tab_template)
+    tab name="hIDEx" focus=true {
+        pane split_direction="vertical" {
+            pane size="60%" split_direction="horizontal" {
+                pane size="72%" split_direction="vertical" {
+                    // @TREES@: one locked tree per folder passed to hidex, stacked (bin/hidex fills it in)
+                    pane stacked=true size="28%" {
+                        @TREES@
+                    }
+                    pane name="Helix" command="hx" focus=true
+                }
+                pane name="shell" command="hidex-shell"
+            }
+            pane name="Claude" command="hidex-claude" size="40%" { args "--resume"; }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+# basedpyright and ruff come with hIDEx (package.nix)
+[[language]]
+name = "python"
+language-servers = ["basedpyright", "ruff"]
+
+# "standard", not basedpyright's default "recommended", which flags every unknown or partial type
+[language-server.basedpyright]
+command = "basedpyright-langserver"
+args = ["--stdio"]
+config.basedpyright.analysis.typeCheckingMode = "standard"
+
+[language-server.ruff]
+command = "ruff"
+args = ["server"]

@@ -1,0 +1,15 @@
+[package]
+name = "hidex-panes"
+version = "0.1.0"
+edition = "2021"
+description = "hIDEx's zellij plugin: jump to a pane by role, open a new terminal or Claude in its area"
+license = "MIT"
+
+[dependencies]
+# must match the zellij that hIDEx pins (nixpkgs in flake.lock)
+zellij-tile = "=0.45.1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

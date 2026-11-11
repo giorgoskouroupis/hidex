@@ -1,0 +1,36 @@
+#!/bin/sh
+# hidex [host:]path [more paths]: hIDEx in path, as a zellij session named after it. Every path gets
+# its own tree (stacked), locked to it; Helix, the shell and Claude work in the first one.
+# A live session (window closed, ssh dropped) is reattached; a dead one is replaced, not revived.
+# host:path runs it on that server, through nix run (the other paths are then on the server too).
+case ${1:-.} in
+  *:*) h=${1%%:*} d=${1#*:}; shift
+       exec ssh -t "$h" "cd $d && exec nix run ${HIDEX_FLAKE:-github:giorgoskouroupis/hidex} -- . $*" ;;
+esac
+cd "${1:-.}" || exit 1
+[ $# -gt 0 ] && shift
+# the plugin runs in the background, where zellij cannot ask for its permissions: approve them, replacing
+# the entries of earlier hIDEx builds
+p=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
+mkdir -p "${p%/*}"; touch "$p"
+if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
+  awk '/^"[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next } skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
+  printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
+  mv "$p.new" "$p"
+fi
+# named after the folder and its parent (e.g. insar-trace): two folders with the same name do not collide
+n=$(basename "$(dirname "$PWD")")-$(basename "$PWD")
+case $(zellij ls -n 2>/dev/null | grep "^$n ") in
+  *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
+  ?*) exec zellij attach "$n" ;;
+esac
+# the layout with one tree per folder, written per session
+# the layout with one tree per folder, stacked; the first (code) tree is the open one
+trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
+  printf 'pane name="tree: %s" command="hidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1
+layout=${XDG_RUNTIME_DIR:-/tmp}/hidex-$n.kdl
+# no claude on this machine: no Claude pane, and the rest takes the whole width
+claude=1; command -v claude >/dev/null || claude=0
+awk -v t="$trees" -v claude="$claude" '/@TREES@/ && !/\/\// { print t; next } 
+  !claude && /name="Claude"/ { next } !claude { sub(/ size="60%"/, "") } { print }' "$ZELLIJ_CONFIG_DIR/layouts/hidex.kdl" > "$layout"
+exec zellij -s "$n" -n "$layout"

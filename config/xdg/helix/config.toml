@@ -1,0 +1,30 @@
+# hIDEx's own Helix config (its hx runs with XDG_CONFIG_HOME pointing here; the machine's is not read).
+# A copy of the usual settings, without Helix's own file explorer: the tree pane is the explorer.
+theme = "hidex"
+
+[editor]
+bufferline = "multiple"
+color-modes = true
+cursorline = true
+# diagnostics stay squiggles; their text shows only on the cursor line (all of them: space d)
+end-of-line-diagnostics = "disable"
+
+[editor.auto-save]
+focus-lost = true
+
+[editor.cursor-shape]
+insert = "bar"
+
+[editor.indent-guides]
+render = true
+
+[editor.inline-diagnostics]
+cursor-line = "warning"
+
+[keys.normal]
+# Helix never reloads files changed on disk (e.g. by Claude): Ctrl+r does it
+C-r = ":reload-all"
+
+[keys.normal.space]
+e = "no_op"
+E = "no_op"

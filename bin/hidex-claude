@@ -1,0 +1,9 @@
+#!/bin/sh
+# A Claude pane: claude (with the arguments given, e.g. --resume for the IDE's first one), a shell when it
+# exits, then Claude again if this is the only Claude pane left, else the pane closes.
+while :; do
+  claude "$@"; set --
+  "${SHELL:-sh}" -l
+  [ "$(zellij action list-panes | grep -cE '[[:space:]]Claude$')" -gt 1 ] &&
+    exec zellij action close-pane -p "terminal_$ZELLIJ_PANE_ID"
+done

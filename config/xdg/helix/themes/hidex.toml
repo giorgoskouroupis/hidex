@@ -1,0 +1,3 @@
+# the terminal's own colours (follows its palette and dark/light switch), with readable line numbers
+inherits = "base16_transparent"
+"ui.linenr" = "gray"
