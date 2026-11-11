@@ -81,7 +81,7 @@ themes {
         table_cell_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         list_selected { base 7; background 8; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         list_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
-        frame_selected { base 4; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        frame_selected { base 3; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         frame_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         frame_highlight { base 3; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         exit_code_success { base 2; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
