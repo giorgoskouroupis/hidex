@@ -43,7 +43,11 @@ machine's `~/.config/helix`), broot, yazi, lazygit, delta, lnav, pudb.
 Debugging: `python -m pudb script.py` works in any hIDEx terminal, in whichever env is active, without
 installing pudb there: hIDEx puts its own pudb for that Python version (3.12, 3.13, 3.14) at the end of the
 import path, so the env's packages come first. With no env, hIDEx's own `python3` is used. (An env with its
-own `sitecustomize.py`, which is rare, would lose it in hIDEx terminals.)
+own `sitecustomize.py`, which is rare, would lose it in hIDEx terminals.) `breakpoint()` in the code opens
+pudb too. In pudb: `b` breakpoint, `n` next, `s` step in, `c` continue, `!` a prompt in the current frame
+(IPython when the env has it). Its look and settings come from `config/xdg/pudb`; what pudb saves
+(breakpoints) goes to `~/.local/state/hidex/pudb`. On a Python version hIDEx has no pudb for,
+`breakpoint()` only prints a warning and the program goes on.
 
 The first Claude starts with `claude --resume` (pick a past conversation). Exiting a Claude or a shell
 leaves a shell or a new shell when it is the last of its kind; extra ones just close.

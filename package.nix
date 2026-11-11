@@ -16,14 +16,34 @@ runCommand "hidex" { nativeBuildInputs = [ makeWrapper ]; } ''
   cp -r ${./config} $out/share/hidex
   chmod -R u+w $out/share/hidex
   substituteInPlace $out/share/hidex/config.kdl --replace-fail @plugin@ ${plugin}/hidex-panes.wasm
+  substituteInPlace $out/share/hidex/xdg/pudb/pudb.cfg --replace-fail @theme@ $out/share/hidex/xdg/pudb/theme.py
   mkdir -p $out/share/hidex/python
   cat > $out/share/hidex/python/sitecustomize.py <<EOF
   # hIDEx: 'python -m pudb' in any env, without installing it there. pudb for this Python's version goes at the
   # end of the import path, so the env's own packages always come first.
-  import sys
+  import os, sys
   _pudb = {${lib.concatStringsSep ", " (lib.mapAttrsToList (v: p: "\"${v}\": \"${p}\"") pudbs)}}.get("%d.%d" % sys.version_info[:2])
   if _pudb and _pudb not in sys.path:
       sys.path.append(_pudb)
+
+  # pudb's settings module is given its folders as it is imported (the program's environment is untouched):
+  # its state goes to ~/.local/state/hidex/pudb, never ~/.config, and hIDEx's settings, read last, win.
+  class _HidexPudbSettings:
+      def find_spec(self, name, path=None, target=None):
+          if name != "pudb.settings":
+              return None
+          sys.meta_path.remove(self)
+          import importlib.util
+          spec = importlib.util.find_spec(name)
+          run = spec.loader.exec_module
+          def exec_module(module):
+              run(module)
+              state = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "hidex")
+              module.XDG_CONFIG_HOME = state
+              module.XDG_CONFIG_DIRS = [state, "$out/share/hidex/xdg"]
+          spec.loader.exec_module = exec_module
+          return spec
+  sys.meta_path.insert(0, _HidexPudbSettings())
   EOF
   for s in hidex hidex-open hidex-tree hidex-tree-enter hidex-claude hidex-shell; do
     install -m755 ${./bin}/$s $out/bin/$s
@@ -40,5 +60,6 @@ runCommand "hidex" { nativeBuildInputs = [ makeWrapper ]; } ''
     --set HIDEX_SHARE $out/share/hidex \
     --set HIDEX_PLUGIN ${plugin}/hidex-panes.wasm \
     --prefix PYTHONPATH : $out/share/hidex/python \
+    --set PYTHONBREAKPOINT pudb.set_trace \
     --suffix PATH : ${python3}/bin
 ''
