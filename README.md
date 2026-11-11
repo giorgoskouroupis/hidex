@@ -1,18 +1,20 @@
 # hIDEx
 
-A terminal IDE around Helix, in zellij: a file tree and Helix on top, a shell below, Claude on the right,
-lazygit and yazi as pop-ups, lnav for big logs. Every tool is pinned by the flake; nothing is installed.
+A terminal IDE around [Helix], in [zellij]: a file tree ([broot]) and Helix on top, a shell below, [Claude Code]
+on the right, [lazygit] and [yazi] as pop-ups, [lnav] for big logs. Every tool is pinned by the [Nix] flake;
+nothing is installed.
 
 ```sh
 nix run github:giorgoskouroupis/hidex -- ~/some/project     # or: hidex ~/some/project
 hidex ~/some/project ~/results/run-42                       # more folders: one tree each
-hidex enova_horus:~/some/project                            # the same on a server, over ssh
+hidex myserver:~/some/project                               # the same on a server, over ssh
 ```
 
-Every folder gets its own tree, stacked, locked to it: a sandbox that sees only that folder, read-only.
+Every folder gets its own tree, stacked, locked to it: a sandbox ([bubblewrap]) that sees only that folder,
+read-only.
 Logs and files over 10 MB open in lnav, the rest in Helix.
 
-Each project is a zellij session named after its (first) folder and that folder's parent, e.g. `insar-trace`.
+Each project is a zellij session named after its (first) folder and that folder's parent, e.g. `code-myproject`.
 Running `hidex` there again reattaches to it, also after the window was closed or the ssh connection
 dropped. `Alt+q` ends it: Helix quits first, and refuses (showing which) while files are unsaved.
 
@@ -38,7 +40,8 @@ zellij stays locked, so every other key reaches the program in the pane; `Ctrl+g
 Only its terminal colours (every hIDEx colour is a terminal colour, so it follows the theme), its default
 shell, and Claude if `claude` is on the PATH; without it there is no Claude pane. Everything else is pinned
 by the flake and configured from `config/`: zellij, Helix (its own config and language servers, not the
-machine's `~/.config/helix`), broot, yazi, lazygit, delta, lnav, pudb.
+machine's `~/.config/helix`; Python through [basedpyright] and [ruff]), broot, yazi, lazygit with [delta],
+lnav, [pudb].
 
 Debugging: `python -m pudb script.py` works in any hIDEx terminal, in whichever env is active, without
 installing pudb there: hIDEx puts its own pudb for that Python version (3.12, 3.13, 3.14) at the end of the
@@ -64,3 +67,17 @@ leaves a shell or a new shell when it is the last of its kind; extra ones just c
 - `bin/hidex-claude`, `bin/hidex-shell`: what runs in a Claude or a shell pane
 - `config/`: zellij config and theme, the layout, broot's, lazygit's and lnav's config; `config/xdg/`:
   Helix's and yazi's
+
+[Helix]: https://helix-editor.com
+[zellij]: https://zellij.dev
+[broot]: https://dystroy.org/broot
+[Claude Code]: https://github.com/anthropics/claude-code
+[lazygit]: https://github.com/jesseduffield/lazygit
+[yazi]: https://yazi-rs.github.io
+[lnav]: https://lnav.org
+[Nix]: https://nixos.org
+[bubblewrap]: https://github.com/containers/bubblewrap
+[basedpyright]: https://docs.basedpyright.com
+[ruff]: https://docs.astral.sh/ruff
+[delta]: https://github.com/dandavison/delta
+[pudb]: https://github.com/inducer/pudb

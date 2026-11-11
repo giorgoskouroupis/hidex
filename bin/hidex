@@ -18,7 +18,7 @@ if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
   printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
   mv "$p.new" "$p"
 fi
-# named after the folder and its parent (e.g. insar-trace): two folders with the same name do not collide
+# named after the folder and its parent (e.g. code-myproject): two folders with the same name do not collide
 n=$(basename "$(dirname "$PWD")")-$(basename "$PWD")
 case $(zellij ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
