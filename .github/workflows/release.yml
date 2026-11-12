@@ -1,5 +1,5 @@
 # a version tag (v0.1.0…) builds hIDEx's archive (scripts/release) and publishes it as that tag's release, with
-# its checksum, for install.sh
+# its checksum (for install.sh) and its section of CHANGELOG.md as the text
 name: release
 on:
   push:
@@ -11,6 +11,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # kept between releases: the tools' downloads, the npm packages, the plugin's Rust build
+      - uses: actions/cache@v4
+        with:
+          path: |
+            dist/cache
+            ~/.npm
+            ~/.cargo/registry
+            plugin/target
+          key: release-${{ hashFiles('tools.lock', 'release/lsp/package-lock.json', 'plugin/Cargo.lock') }}
+          restore-keys: release-
       - name: Rust with the wasm32-wasip1 target (the zellij plugin)
         run: rustup target add wasm32-wasip1
       - name: Plugin tests
@@ -22,7 +32,12 @@ jobs:
           echo "ARCHIVE=$archive" >> "$GITHUB_ENV"
       - name: Unit tests, on the installed archive
         run: tests/unit "$(tests/installed "$ARCHIVE")"
+      - name: Release notes, from CHANGELOG.md
+        run: |
+          awk -v v="[$GITHUB_REF_NAME]" '$1 == "##" && $2 == v { on = 1; next } on && $1 == "##" { exit } on' \
+            CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "CHANGELOG.md has no section for $GITHUB_REF_NAME"; exit 1; }
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" --title "hIDEx $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" --title "hIDEx $GITHUB_REF_NAME" --notes-file notes.md

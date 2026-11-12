@@ -152,7 +152,8 @@ concern lives in one place (named below).
 - **Build:** `scripts/release` (the archive: scripts, config, plugin, and the tools of `tools.lock`, the Node
   language servers of `release/lsp`, pudb of `release/pudb.txt`), `install.sh` (one folder per version, reached
   through each session's `current` link), `.github/workflows/release.yml` (a `v*` tag publishes the archive),
-  `flake.nix` (only the shell to build it here: `nix develop`).
+  `flake.nix` (optional, only to build hIDEx on a machine with Nix: `nix develop` gives Rust and the tools
+  `scripts/release` needs; installing and running hIDEx never use Nix), `CHANGELOG.md` (each release's text).
 - **Start and state:** `bin/hidex` starts or reattaches a session; `bin/hidex-state` (the session's state
   folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`).
 - **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks,
