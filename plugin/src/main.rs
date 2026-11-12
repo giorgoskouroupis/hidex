@@ -1,6 +1,7 @@
 //! hIDEx's zellij plugin. It lives in the bar at the bottom of the layout and does what keys (config.kdl),
 //! bar clicks and scripts (hidex-msg) ask, all as `Action`s. Each part is its own module:
 //!   panes     the panes and their roles (tree, Helix, terminals, side), jumping, new terminals
+//!   names     the terminals' names: what runs in each, with its number
 //!   popups    lazygit, yazi, the command palette: toggled per key, tiled side by side
 //!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
@@ -11,6 +12,7 @@ mod actions;
 mod bar;
 mod clients;
 mod collapse;
+mod names;
 mod panes;
 mod popups;
 mod scripts;
@@ -155,6 +157,7 @@ impl State {
             Tick::QuitWait => self.typist.on_quit_wait(),
             Tick::Refresh => {
                 self.status.refresh(&self.cwd);
+                names::refresh(&self.panes);
                 Tick::Refresh.start();
             }
         }

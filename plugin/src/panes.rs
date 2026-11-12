@@ -1,5 +1,7 @@
-//! The panes of the hIDEx tab and their roles, which come from the pane names in the layout: "tree: <folder>",
-//! "Helix", "side N"; any other tiled terminal ("term N") is part of the terminals area.
+//! The panes of the hIDEx tab and their roles, which come from the pane names: "tree: <folder>", "Helix", a side
+//! terminal's name (it ends with the side mark, names::SIDE; "side N" in the layout); any other tiled terminal is
+//! part of the terminals area. Terminals and side terminals are named "<program> <n>" (names).
+use crate::names::{self, SIDE};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use zellij_tile::prelude::*;
@@ -24,11 +26,16 @@ pub fn role(p: &PaneInfo) -> Option<&'static str> {
         "tree"
     } else if p.title == "Helix" {
         "helix"
-    } else if p.title.starts_with("side") {
+    } else if p.title.ends_with(SIDE) || p.title.starts_with("side") {
         "side"
     } else {
         "terminals"
     })
+}
+
+/// a terminal or a side terminal
+fn is_terminal(p: &PaneInfo) -> bool {
+    matches!(role(p), Some("terminals" | "side"))
 }
 
 impl Panes {
@@ -105,18 +112,27 @@ impl Panes {
         }
     }
 
+    /// the terminals and side terminals
+    pub fn terminals(&self) -> impl Iterator<Item = &PaneInfo> {
+        self.all().into_iter().filter(|p| is_terminal(p))
+    }
+
     /// the terminal (or side terminal) last used: the one focused, else the terminals' last one
     pub fn last_terminal(&self) -> Option<u32> {
-        let focused = self.focused_tiled.filter(|id| self.get(*id).and_then(role).is_some_and(|r| r == "terminals" || r == "side"));
+        let focused = self.focused_tiled.filter(|id| self.get(*id).is_some_and(is_terminal));
         focused.or_else(|| self.for_role("terminals"))
     }
 
-    /// a terminal by its name, spaces optional ("term 2", "side1")
+    /// a terminal by its name, spaces optional ("zsh 2", "claude1")
     pub fn terminal(&self, name: &str) -> Option<u32> {
-        let squeeze = |s: &str| s.replace(' ', "");
+        let squeeze = |s: &str| names::plain(s).replace(' ', "");
         let wanted = squeeze(name);
-        let terminal = |p: &&PaneInfo| role(p).is_some_and(|r| r == "terminals" || r == "side");
-        self.all().into_iter().filter(terminal).find(|p| squeeze(&p.title) == wanted).map(|p| p.id)
+        self.terminals().find(|p| squeeze(&p.title) == wanted).map(|p| p.id)
+    }
+
+    /// the pane of that kind with number n
+    fn of_kind_numbered(&self, kind: &str, n: u32) -> Option<u32> {
+        self.all().into_iter().find(|p| role(p) == Some(kind) && number(&p.title) == n).map(|p| p.id)
     }
 }
 
@@ -125,16 +141,18 @@ pub fn focus(id: u32) {
 }
 
 /// a new terminal or side terminal, stacked onto its area; named, stacked and focused once it opens
-/// (`on_opened`). hidex-shell / hidex-side close when exited, unless they are the last of their kind.
+/// (`on_opened`), renamed after what runs in it on the next refresh (names). hidex-shell / hidex-side close when
+/// exited, unless they are the last of their kind.
 pub fn open_new(kind: &str, panes: &Panes, cwd: &PathBuf) {
     // "here" (Alt+n): the kind of the focused pane; a side terminal if on one, else a terminal
     let on_side = panes.tiled().and_then(|id| panes.get(id)).and_then(role) == Some("side");
     let kind = if kind == "here" && on_side { "side" } else { kind };
-    let (area, name, program) = match kind {
-        "side" | "claude" => ("side", "side", "hidex-side"),
-        _ => ("terminals", "term", "hidex-shell"),
+    let (area, program) = match kind {
+        "side" | "claude" => ("side", "hidex-side"),
+        _ => ("terminals", "hidex-shell"),
     };
-    let mut context = named(&next_name(name, panes));
+    let n = (1..).find(|n| panes.of_kind_numbered(area, *n).is_none()).unwrap_or(1);
+    let mut context = named(&names::name(if area == "side" { "side" } else { "shell" }, n, area == "side"));
     if let Some(target) = panes.for_role(area) {
         context.insert("stack_with".to_string(), target.to_string());
     }
@@ -142,16 +160,9 @@ pub fn open_new(kind: &str, panes: &Panes, cwd: &PathBuf) {
     open_command_pane(run, context);
 }
 
-/// the number in "term 3" or "side 2" (a pane named otherwise: after all of them)
-fn number(title: &str) -> u32 {
-    title.rsplit(' ').next().and_then(|n| n.parse().ok()).unwrap_or(u32::MAX / 2)
-}
-
-/// "term 3": the lowest number no open pane of that kind has (a closed one's number is used again)
-fn next_name(kind: &str, panes: &Panes) -> String {
-    let taken: Vec<&str> = panes.all().iter().map(|p| p.title.as_str()).collect();
-    let n = (1..).find(|n| !taken.contains(&format!("{kind} {n}").as_str())).unwrap_or(1);
-    format!("{kind} {n}")
+/// the number in "zsh 3" or a side terminal's "claude 2" (a pane named otherwise: after all of them)
+pub fn number(title: &str) -> u32 {
+    names::plain(title).rsplit(' ').next().and_then(|n| n.parse().ok()).unwrap_or(u32::MAX / 2)
 }
 
 /// what a pane about to be opened carries, so it is named once open (on_opened)
@@ -171,17 +182,16 @@ pub fn on_opened(id: u32, context: &BTreeMap<String, String>) {
 }
 
 impl Panes {
-    /// Alt+N: pane N of the focused pane's kind ("term N", "side N", the Nth tree); from Helix, "term N"
+    /// Alt+N: pane N of the focused pane's kind (terminal N, side terminal N, the Nth tree); from Helix, terminal N
     pub fn numbered(&self, n: usize) -> Option<u32> {
         let kind = self.focused_tiled.and_then(|id| self.get(id)).and_then(role).unwrap_or("terminals");
-        let mut members: Vec<&PaneInfo> = self.all().into_iter().filter(|p| role(p).is_some()).collect();
         if kind == "tree" {
-            members.retain(|p| role(p) == Some("tree"));
-            members.sort_by_key(|p| p.id);
-            return members.get(n.checked_sub(1)?).map(|p| p.id);
+            let mut trees: Vec<&PaneInfo> = self.all().into_iter().filter(|p| role(p) == Some("tree")).collect();
+            trees.sort_by_key(|p| p.id);
+            return trees.get(n.checked_sub(1)?).map(|p| p.id);
         }
-        let name = format!("{} {n}", if kind == "side" { "side" } else { "term" });
-        members.into_iter().find(|p| p.title == name).map(|p| p.id)
+        let kind = if kind == "side" { "side" } else { "terminals" };
+        self.of_kind_numbered(kind, u32::try_from(n).ok()?)
     }
 }
 
@@ -209,18 +219,22 @@ pub mod tests {
         assert_eq!(role(&pane(1, "tree: proj", false)), Some("tree"));
         assert_eq!(role(&pane(1, "Helix", false)), Some("helix"));
         assert_eq!(role(&pane(1, "side 2", false)), Some("side"));
-        assert_eq!(role(&pane(1, "term 4", false)), Some("terminals"));
+        // what runs in it names a pane; the side mark keeps a side terminal a side terminal
+        assert_eq!(role(&pane(1, &names::name("zsh", 2, true), false)), Some("side"));
+        assert_eq!(role(&pane(1, "zsh 4", false)), Some("terminals"));
         assert_eq!(role(&PaneInfo { is_floating: true, ..pane(1, "lazygit", false) }), None);
         assert_eq!(role(&PaneInfo { is_plugin: true, ..pane(1, "bar", false) }), None);
     }
 
     #[test]
-    fn numbers_and_new_names() {
-        assert_eq!(number("term 3"), 3);
+    fn numbers_whatever_runs() {
+        assert_eq!(number("zsh 3"), 3);
+        assert_eq!(number(&names::name("claude", 2, true)), 2);
         assert!(number("Helix") > 1000);
-        let p = panes(vec![pane(1, "term 1", false), pane(2, "term 3", false)]);
-        assert_eq!(next_name("term", &p), "term 2");
-        assert_eq!(next_name("side", &p), "side 1");
+        let p = panes(vec![pane(1, "zsh 1", false), pane(2, "bash 3", false), pane(3, &names::name("claude", 1, true), false)]);
+        assert_eq!(title(&p, p.of_kind_numbered("terminals", 3)), "bash 3");
+        assert_eq!(p.of_kind_numbered("terminals", 2), None);
+        assert_eq!(p.of_kind_numbered("side", 1), Some(3));
     }
 
     #[test]

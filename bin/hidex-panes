@@ -1,0 +1,14 @@
+#!/bin/sh
+# hidex-panes [term|side]: the session's terminals ("term"), side terminals ("side") or both, one "ID<TAB>NAME" line
+# each, the name as shown ("zsh 2"). From zellij's pane list: the bar names them after what runs, a side terminal's
+# name ending with an invisible mark (plugin/src/names.rs); "term N" / "side N" before it has named them.
+mark=$(printf '\342\200\213')
+zellij action list-panes -s 2>/dev/null | awk -F'  +' -v want="${1:-all}" -v mark="$mark" '
+  NR > 1 && $2 == "terminal" && $5 == "false" && $6 != "true" {
+    t = $3
+    side = substr(t, length(t) - length(mark) + 1) == mark
+    if (side) t = substr(t, 1, length(t) - length(mark))
+    if (t !~ /^[^ :]+ [0-9]+$/) next
+    if (t ~ /^side /) side = 1
+    if (want == "all" || want == (side ? "side" : "term")) print $1 "\t" t
+  }'
