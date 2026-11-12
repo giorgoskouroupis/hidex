@@ -99,12 +99,3 @@ impl Popups {
         change_floating_panes_coordinates(moves);
     }
 }
-
-/// a / command with its arguments in the commands pop-up (the bar's command line, for one that needs a screen);
-/// it is closed, tiled and coloured like the other pop-ups
-pub fn open_command(words: &[String], cwd: &PathBuf) {
-    let args = std::iter::once("--popup".to_string()).chain(words.iter().cloned()).collect();
-    let context = panes::named("commands");
-    let run = CommandToRun { path: COMMANDS.into(), args, cwd: Some(cwd.clone()) };
-    open_command_pane_floating(run, None, context);
-}

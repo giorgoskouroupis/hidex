@@ -5,14 +5,12 @@
 //!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
 //!   status    branch, Python and theme for the bar; bar  the bar itself
-//!   prompt    the bar as a command line (Alt+Shift+p), what fits shown in it as you type
 //!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
 mod actions;
 mod bar;
 mod collapse;
 mod panes;
 mod popups;
-mod prompt;
 mod scripts;
 mod status;
 mod timers;
@@ -39,8 +37,6 @@ struct State {
     ending: bool,
     /// the project's Helix theme has been asked for (once both the session and Helix are known)
     restored: bool,
-    /// the bar's command line (Alt+Shift+p)
-    prompt: prompt::Prompt,
 }
 
 register_plugin!(State);
@@ -80,17 +76,11 @@ impl State {
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
-            // the bar takes the keys until Enter or Esc (on_prompt_key)
-            Action::Prompt => {
-                self.prompt.open(self.panes.tiled());
-                set_selectable(true);
-                focus_plugin_pane(get_plugin_ids().plugin_id, false, false);
-            }
-            Action::Copy => {
-                if let Some(id) = self.panes.last_terminal() {
-                    let pane = format!("terminal_{id}");
-                    scripts::run(&["hidex-copy", &pane], None);
-                }
+            // no such terminal: hidex-copy empties the clipboard, so nothing stale gets pasted
+            Action::Copy(name) => {
+                let id = if name.is_empty() { self.panes.last_terminal() } else { self.panes.terminal(&name) };
+                let pane = id.map(|id| format!("terminal_{id}")).unwrap_or_default();
+                scripts::run(&["hidex-copy", &pane], None);
             }
         }
     }
@@ -100,27 +90,6 @@ impl State {
         if !self.restored && self.cwd_known {
             self.restored = true;
             scripts::run(&["hidex-helix-theme", "restore"], None);
-        }
-    }
-
-    /// a key typed in the bar's command line; when the line is done, the focus goes back and it runs
-    fn on_prompt_key(&mut self, key: &KeyWithModifier) {
-        let run = self.prompt.key(key);
-        if let Some(name) = self.prompt.args_wanted() {
-            scripts::run(&[popups::COMMANDS, "--complete", &name], Some(scripts::ARG_LIST));
-        }
-        let Some(run) = run else { return };
-        set_selectable(false);
-        if let Some(id) = self.prompt.back {
-            panes::focus(id);
-        }
-        match run {
-            prompt::Run::Popup(words) => popups::open_command(&words, &self.cwd),
-            prompt::Run::Background(words) => {
-                let command: Vec<&str> = [popups::COMMANDS].into_iter().chain(words.iter().map(String::as_str)).collect();
-                scripts::run(&command, None);
-            }
-            prompt::Run::Nothing => {}
         }
     }
 
@@ -205,10 +174,8 @@ impl ZellijPlugin for State {
             EventType::Timer,
             EventType::RunCommandResult,
             EventType::Mouse,
-            EventType::Key,
-            EventType::PermissionRequestResult,
         ]);
-        // the bar is not a pane to move to (but for its command line, Alt+Shift+p)
+        // the bar is not a pane to move to
         set_selectable(false);
         self.cwd = get_plugin_ids().initial_cwd;
         self.status.set_project(&self.cwd);
@@ -230,22 +197,8 @@ impl ZellijPlugin for State {
             Event::RunCommandResult(_, stdout, _, context) => match scripts::tag(&context) {
                 Some(scripts::STATUS_LINE) => return self.status.read(&stdout),
                 Some(scripts::STOPPED) => quit_zellij(),
-                Some(scripts::COMMAND_LIST) => self.prompt.read_commands(&stdout),
-                Some(scripts::ARG_LIST) => {
-                    self.prompt.read_args(&stdout);
-                    return true;
-                }
                 _ => {}
             },
-            // the / commands, for the command line: asked once the plugin may run commands (asked in load,
-            // they would be refused)
-            Event::PermissionRequestResult(PermissionStatus::Granted) => {
-                scripts::run(&[popups::COMMANDS, "--list"], Some(scripts::COMMAND_LIST));
-            }
-            Event::Key(key) if self.prompt.active => {
-                self.on_prompt_key(&key);
-                return true;
-            }
             Event::Mouse(Mouse::LeftClick(_, col)) => {
                 if let Some(action) = self.bar.click(col) {
                     self.run(action);
@@ -269,12 +222,10 @@ impl ZellijPlugin for State {
         if let Some(action) = Action::from_message(&message.name, payload) {
             self.run(action);
         }
-        // the command line has just opened: draw it
-        self.prompt.active
+        false
     }
 
     fn render(&mut self, _rows: usize, cols: usize) {
-        let prompt = self.prompt.active.then_some(&self.prompt);
-        self.bar.render(cols, &self.status, prompt);
+        self.bar.render(cols, &self.status);
     }
 }

@@ -37,7 +37,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+n` | a new pane of the kind you are on, stacked with it: `term N` or `side N` (from Helix or a tree: `term N`; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |
 | `Alt+1`…`Alt+9` | `term N` / `side N` / the Nth tree, of the kind of pane you are on (from Helix: `term N`) |
 | `Alt+x` | fold the focused pane to a strip (its neighbour covers it), or unfold it to its exact size |
-| `Alt+p` | the / commands: type `copy`, `theme dracula`… with what fits listed below as you type (`Tab` completes, `Enter` runs the chosen line or the typed one, `Esc` closes); `Alt+Shift+p`: the same as a line in the bar |
+| `Alt+p` | the / commands: type `copy`, `theme dracula`… with what fits listed below as you type (`Tab` completes, `Enter` runs the chosen line or the typed one, `Esc` closes) |
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
 | `Alt+Shift+g` | lazygit that can stage, commit, push: it replaces the read-only one |
 | `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred, 80% of the window; all share one solid colour set from the theme: lighter with white text on a dark one, darker on a light one) |
@@ -140,7 +140,7 @@ concern lives in one place (named below).
   folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`).
 - **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks,
   the command line and `hidex-msg` can ask), `panes` (roles, jumps, new panes), `popups`, `typist` (commands
-  typed into Helix), `collapse` (folding), `status` and `bar`, `prompt` (the bar's command line), `scripts` (the
+  typed into Helix), `collapse` (folding), `status` and `bar`, `scripts` (the
   scripts it runs, and how their answers are told apart), `timers`. Its
   `zellij-tile` version must match the zellij in `flake.lock`. Scripts reach it through `bin/hidex-msg`.
 - **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,

@@ -97,13 +97,6 @@ check "Alt+p, term, Enter: the suggested terminal opens" '[ "$(count "term ")" =
 key '\x1bp' 3; key '\x1b' 2
 check "Esc closes the palette" '! has commands && [ "$(count "term ")" = $((n + 1)) ]'
 
-echo "command line"
-n=$(count "term ")
-key '\x1bP'; key 'terminal\r' 3
-check "Alt+Shift+p, terminal, Enter: a new terminal" '[ "$(count "term ")" = $((n + 1)) ]'
-key '\x1bP'; key '\x1b' 2
-check "Esc cancels, and the keys go back to the panes" '[ "$(count "term ")" = $((n + 1)) ] && [ -n "$(focused)" ]'
-
 echo "copy"
 key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-copy-marker
 '; pause 1

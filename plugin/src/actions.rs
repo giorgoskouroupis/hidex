@@ -20,10 +20,9 @@ pub enum Action {
     Quit(String),
     /// read the branch, Python and theme again for the bar
     Status,
-    /// the last used terminal's last command and its output, to the clipboard (hidex-copy)
-    Copy,
-    /// the bar's command line (Alt+p)
-    Prompt,
+    /// a terminal's last command and its output, to the clipboard (hidex-copy): the one named ("term 2",
+    /// "side1"), or "" for the terminal last used
+    Copy(String),
 }
 
 impl Action {
@@ -39,8 +38,7 @@ impl Action {
             "helix" if !payload.is_empty() => Action::Helix(arg),
             "quit" => Action::Quit(arg),
             "status" => Action::Status,
-            "copy" => Action::Copy,
-            "prompt" => Action::Prompt,
+            "copy" => Action::Copy(if payload == "-" { String::new() } else { arg }),
             _ => return None,
         })
     }
@@ -58,7 +56,8 @@ mod tests {
         assert_eq!(Action::from_message("quit", "now"), Some(Quit("now".into())));
         assert_eq!(Action::from_message("helix", "reload-all"), Some(Helix("reload-all".into())));
         assert_eq!(Action::from_message("status", "-"), Some(Status));
-        assert_eq!(Action::from_message("copy", "-"), Some(Copy));
+        assert_eq!(Action::from_message("copy", "-"), Some(Copy(String::new())));
+        assert_eq!(Action::from_message("copy", "side 2"), Some(Copy("side 2".into())));
     }
 
     #[test]

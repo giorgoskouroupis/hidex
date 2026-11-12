@@ -91,6 +91,14 @@ impl Panes {
         let focused = self.focused_tiled.filter(|id| self.get(*id).and_then(role).is_some_and(|r| r == "terminals" || r == "side"));
         focused.or_else(|| self.for_role("terminals"))
     }
+
+    /// a terminal by its name, spaces optional ("term 2", "side1")
+    pub fn terminal(&self, name: &str) -> Option<u32> {
+        let squeeze = |s: &str| s.replace(' ', "");
+        let wanted = squeeze(name);
+        let terminal = |p: &&PaneInfo| role(p).is_some_and(|r| r == "terminals" || r == "side");
+        self.all().into_iter().filter(terminal).find(|p| squeeze(&p.title) == wanted).map(|p| p.id)
+    }
 }
 
 pub fn focus(id: u32) {
@@ -241,5 +249,8 @@ pub mod tests {
         assert_eq!(title(&p, p.last_terminal()), "side 1");
         let p = list("Helix");
         assert_eq!(title(&p, p.last_terminal()), "term 1");
+        assert_eq!(title(&p, p.terminal("term2")), "term 2");
+        assert_eq!(title(&p, p.terminal("side 1")), "side 1");
+        assert_eq!(p.terminal("Helix"), None);
     }
 }
