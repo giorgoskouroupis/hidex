@@ -132,10 +132,12 @@ key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 300
 key '\x1bQ' 10
 check "Alt+Shift+q ends the session" '! "$Z" ls -n 2>/dev/null | grep -q "^$S .*" || "$Z" ls -n 2>/dev/null | grep -q "^$S .*EXITED"'
 check "and stops what ran in it" '! pgrep -f "^sleep 300$" >/dev/null'
-stop
+# the ended session is left to hidex, as after a real quit
+exec 3>&-; pause 1
 
 echo "next session"
 start
+check "an ended session is replaced, not revived" 'has Helix && ! screen Helix | grep -q "Waiting to run"'
 check "the project's Python comes back" 'grep -qx "$T/venv" "$XDG_RUNTIME_DIR/hidex/$S/python"'
 check "the project's window theme comes back" 'grep -qx Dracula "$XDG_RUNTIME_DIR/hidex/$S/theme"'
 msg helix theme
