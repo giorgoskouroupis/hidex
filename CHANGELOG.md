@@ -21,6 +21,9 @@ pushing the version's tag (the release Action stops when the section is missing)
   from WezTerm's script (MIT), loaded after your own config without changing it. zellij then jumps between
   prompts (`[` and `]` in its scroll mode), selects a command's output with a triple click, and copies the last
   output (`c` in scroll mode).
+- `Alt+v`: an earlier command with its command line and output, copied from the keyboard (zellij's scroll mode: `[`
+  `]` step through commands, `m` copies the one at the top and returns to hIDEx's keys); a triple click on any
+  command's output selects it with its command line.
 
 ### Changed
 - Unfocused pane frames are fainter: a colour just off the window's background (darker on a light theme),

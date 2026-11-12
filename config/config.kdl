@@ -25,6 +25,12 @@ ui {
 }
 
 keybinds {
+    // scroll mode (Alt+v) ends back in hIDEx's keys (locked mode), at the bottom: m after copying the command at the
+    // top with its output (the shell marks them: OSC 133), Esc, Ctrl+c or q without
+    scroll {
+        bind "m" { SelectCommandAtScrollPosition; Copy; ScrollToBottom; SwitchToMode "Locked"; }
+        bind "Esc" "Ctrl c" "q" { ScrollToBottom; SwitchToMode "Locked"; }
+    }
     locked {
         bind "Alt Left" { MoveFocusOrTab "Left"; }
         bind "Alt Right" { MoveFocusOrTab "Right"; }
@@ -52,6 +58,9 @@ keybinds {
         bind "Alt f" "Shift Esc" { ToggleFocusFullscreen; }
         // zen: the focused pane covers the whole window, the bar too; the same key brings everything back
         bind "Alt z" { ToggleFocusNoUiFullscreen; }
+        // an earlier command with its output, from the keyboard: zellij's scroll mode at the last command whose
+        // prompt is off screen; [ and ] step through commands, m copies the one at the top with its command line
+        bind "Alt v" { SwitchToMode "Scroll"; ScrollToPreviousPrompt; }
         // back to the pane you were in before
         bind "Alt \\" { FocusLastPane; }
         bind "Alt =" "Alt +" { Resize "Increase"; }

@@ -134,6 +134,12 @@ key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-copy-marker
 '; pause 1
 msg copy; pause 2
 check "/copy: zellij copies the terminal's last output to the window's clipboard" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | grep -q hidex-copy-marker'
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do "$Z" -s "$S" action write-chars "seq $i 40
+"; pause 0.3; done
+key '\x1bv' 1; key 'm' 2
+check "Alt+v, m: an earlier command copied with its command line" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | head -1 | grep -q "^seq [0-9]* 40"'
+key '\x1bh'
+check "and hIDEx's keys work again right after" '[ "$(focused)" = Helix ]'
 
 echo "memory"
 in_session "$out/bin/hidex-theme" Dracula

@@ -52,6 +52,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+f`, `Shift+Esc` | max out the focused pane (the bar stays), and back |
 | `Alt+z` | zen: the focused pane covers the whole window, the bar too, and back |
 | `Alt+\` | back to the pane you were in before |
+| `Alt+v` | an earlier command with its output: zellij's scroll mode, `[` `]` step through commands, `m` copies the one at the top with its command line, `Esc` back (the newest ones, still on screen: triple-click their output) |
 | `Alt+=` / `Alt+-` | grow / shrink the focused pane |
 | `Alt+Shift+arrows` / `Alt+Ctrl+arrows` | grow the focused pane on that side / shrink it from that side |
 | `Alt+n` | a new pane of the kind you are on, stacked with it: a terminal or a side terminal (from Helix or a tree: a terminal; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |
