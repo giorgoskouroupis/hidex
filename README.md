@@ -22,6 +22,8 @@ shell's file (`~/.bashrc`, `~/.zshrc`, fish's, else `~/.profile`) when needed, u
 (as on NixOS) or `HIDEX_NO_MODIFY_PATH=1` is set.
 
 `hidex --uninstall` removes hIDEx and everything it brought (it says what, and asks first); `hidex --version`.
+At start, `hidex` says when a newer release is out, with its changes, and asks whether to install it (GitHub asked
+at most once a day, nothing said offline; `HIDEX_NO_UPDATE_CHECK=1` to turn it off).
 
 ```sh
 hidex ~/some/project
@@ -50,8 +52,8 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+f`, `Shift+Esc` | max out the focused pane, and back |
 | `Alt+=` / `Alt+-` | grow / shrink the focused pane |
 | `Alt+Shift+arrows` / `Alt+Ctrl+arrows` | grow the focused pane on that side / shrink it from that side |
-| `Alt+n` | a new pane of the kind you are on, stacked with it: `term N` or `side N` (from Helix or a tree: `term N`; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |
-| `Alt+1`…`Alt+9` | `term N` / `side N` / the Nth tree, of the kind of pane you are on (from Helix: `term N`) |
+| `Alt+n` | a new pane of the kind you are on, stacked with it: a terminal or a side terminal (from Helix or a tree: a terminal; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |
+| `Alt+1`…`Alt+9` | terminal N / side terminal N / the Nth tree, of the kind of pane you are on (from Helix: terminal N) |
 | `Alt+x` | fold the focused pane to a strip (its neighbour covers it), or unfold it to its exact size |
 | `Alt+p` | the / commands: type `copy`, `theme dracula`… with what fits listed below as you type (`Tab` completes, `Enter` runs the chosen line or the typed one, `Esc` closes) |
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
@@ -89,7 +91,7 @@ of `bin/hidex-cmd` and one small function; those that need a list or a result op
   new shells, side terminals and Claude start in it (`bin/hidex-env`). Helix's checker follows a switch at once,
   without a restart (`bin/hidex-pyright` hands basedpyright the env's interpreter).
 - `/reload` (files changed on disk), `/lsp` (restart the language servers), `/git`, `/git-write`, `/yazi`,
-  `/terminal`, `/side`, `/collapse`, `/keys`, `/quit`.
+  `/terminal`, `/side`, `/collapse`, `/keys`, `/about` (version, install folder, tools, the sandbox here), `/quit`.
 - `/copy`: the last command run in the terminal you were last in, with its output below it, to the clipboard
   (the window's, through the terminal, so over ssh too). Read from the screen: the bottom line is the prompt, and
   the last earlier line starting with it is the command, so unusual prompts can fool it.
@@ -119,7 +121,8 @@ pudb too. In pudb: `b` breakpoint, `n` next, `s` step in, `c` continue, `!` a pr
 
 The side terminal starts Claude with `--resume` (pick a past conversation); `Ctrl+c` twice leaves Claude for
 a shell in the same pane, where any other AI tool on the PATH can be started, each with its own login.
-Terminals are named `term 1`, `term 2`…, side terminals `side 1`…: a new one takes the lowest free number.
+Terminals and side terminals sit in stacks shown as tabs, each named after what runs in it with its number:
+`zsh 1 · bash 2 · htop 3` (Claude: `claude 1`); the number stays with the pane, a new one takes the lowest free one.
 Exiting the last shell of a side terminal or of the terminals starts a new one; extra ones just close.
 
 ## Sandboxing
@@ -162,13 +165,13 @@ concern lives in one place (named below).
   `flake.nix` (optional, only to build hIDEx on a machine with Nix: `nix develop` gives Rust and the tools
   `scripts/release` needs; installing and running hIDEx never use Nix), `CHANGELOG.md` (each release's text).
 - **Start and state:** `bin/hidex` starts or reattaches a session; `bin/hidex-state` (the session's state
-  folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`),
-  `bin/hidex-uninstall` (`hidex --uninstall`).
-- **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks,
-  the command line and `hidex-msg` can ask), `panes` (roles, jumps, new panes), `popups`, `typist` (commands
-  typed into Helix), `collapse` (folding), `status` and `bar`, `scripts` (the
-  scripts it runs, and how their answers are told apart), `timers`. Its
-  `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/hidex-msg`.
+  folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`), `bin/hidex-check-update` (a
+  newer release offered at start), `bin/hidex-uninstall` (`hidex --uninstall`).
+- **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks and
+  `hidex-msg` can ask), `panes` (roles, jumps, new panes), `names` (the terminals named after what runs),
+  `clients` (only the bar of a connected window acts), `popups`, `typist` (commands typed into Helix), `collapse`
+  (folding), `status` and `bar`, `scripts` (the scripts it runs, and how their answers are told apart), `timers`.
+  Its `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/hidex-msg`.
 - **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,
   `bin/hidex-helix-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-copy`, `bin/hidex-quit-ask`.
 - **Panes:** `bin/hidex-shell` (terminals, and side terminals after Claude: `bin/hidex-side`), `bin/hidex-tree`

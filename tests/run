@@ -24,13 +24,27 @@ ok() { printf '  ok    %s\n' "$1"; }
 fail() { printf '  FAIL  %s\n' "$1"; failed=$((failed + 1)); }
 check() { if eval "$2"; then ok "$1"; else fail "$1"; fi; }
 pause() { timeout "$1" tail -f /dev/null; }
+# zellij's pane list, the terminals' names as their roles: hIDEx names them after what runs ("bash 2"; a side
+# terminal's name ends with an invisible mark), the checks below speak of "term 2" and "side 2"
+MARK=$(printf '\342\200\213')
+list() { "$Z" -s "$S" action list-panes "$@" 2>/dev/null | awk -F'  +' -v OFS='  ' -v mark="$MARK" '
+  function role(t,  n) {
+    side = substr(t, length(t) - length(mark) + 1) == mark
+    if (side) t = substr(t, 1, length(t) - length(mark))
+    if (t !~ /^[^ :]+ [0-9]+$/) return t
+    n = t; sub(/.* /, "", n)
+    return (side || t ~ /^side /) ? "side " n : "term " n
+  }
+  NR > 1 { $3 = role($3) } { print }'; }
+# a pane of exactly that name (as zellij lists it, side mark included)
+named() { "$Z" -s "$S" action list-panes 2>/dev/null | awk -F'  +' -v t="$1" '$3 == t { f = 1 } END { exit !f }'; }
 # the panes as "title|focused|floating|rows" lines
-panes() { "$Z" -s "$S" action list-panes -s -g 2>/dev/null | awk -F'  +' 'NR > 1 && $2 == "terminal" { print $3 "|" $4 "|" $5 "|" $9 }'; }
+panes() { list -s -g | awk -F'  +' 'NR > 1 && $2 == "terminal" { print $3 "|" $4 "|" $5 "|" $9 }'; }
 titles() { panes | cut -d'|' -f1 | tr '\n' ';'; }
 # the focused pane's title: the test window's own (zellij's list of windows), not the panes' "focused" flags,
 # which also count windows that have gone
 focused() { local id; id=$("$Z" -s "$S" action list-clients 2>/dev/null | awk 'NR == 2 { print $2 }')
-  "$Z" -s "$S" action list-panes 2>/dev/null | awk -F'  +' -v id="$id" '$1 == id { print $3 }'; }
+  list | awk -F'  +' -v id="$id" '$1 == id { print $3 }'; }
 has() { titles | grep -q "$1;"; }
 count() { titles | tr ';' '\n' | grep -c "^$1"; }
 rows() { panes | awk -F'|' -v t="$1" '$1 == t { print $4 }'; }
@@ -40,7 +54,7 @@ msg() { timeout 10 "$Z" -s "$S" pipe --name "hidex:$1" -- "${2:--}"; pause 2; }
 in_session() { "$Z" -s "$S" run --close-on-exit --floating --name test -- "$@" >/dev/null; pause 2; }
 wait_for() { local i; for i in $(seq 40); do eval "$1" && return 0; pause 0.25; done; return 1; }
 # what a pane shows (its screen), by title
-screen() { local id; id=$("$Z" -s "$S" action list-panes | awk -F'  +' -v t="$1" '$3 == t { print $1 }' | head -1)
+screen() { local id; id=$(list | awk -F'  +' -v t="$1" '$3 == t { print $1 }' | head -1)
   [ -n "$id" ] && "$Z" -s "$S" action dump-screen --pane-id "$id"; }
 
 start() {
@@ -59,6 +73,8 @@ echo "hIDEx tests ($out)"
 echo "start"
 start
 check "layout: tree, Helix, term 1, side 1" 'has "tree: proj" && has Helix && has "term 1" && has "side 1"'
+check "the tree runs (broot listening on its socket)" 'wait_for "ls /tmp/broot-server-hidex-$S-* >/dev/null 2>&1"'
+check "terminals are named after what runs in them: bash 1, and the side one bash 1 too" 'wait_for "named \"bash 1\" && named \"bash 1$MARK\""'
 check "running hidex again attaches to the live session" '! (cd "$T/proj" && timeout 4 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null </dev/null 2>&1) | grep -q "panicked\|not supported" && has Helix'
 # (until that second window has gone, zellij may still count it: a focus change could land there)
 wait_for '[ "$("$Z" -s "$S" action list-clients 2>/dev/null | tail -n +2 | wc -l)" = 1 ]'; pause 1
@@ -94,6 +110,12 @@ key '\x1bg' 5
 check "Alt+g opens lazygit" 'has "lazygit (read-only)"'
 key 'q' 3
 check "q closes it" '! has "lazygit (read-only)"'
+key '\x1by' 5
+check "Alt+y opens yazi on the project" 'wait_for "screen yazi | grep -q a.py"'
+key 'h' 2
+check "h at the project folder stays there (nothing above is reachable)" 'screen yazi | grep -q a.py && ! screen yazi | grep -q "Permission denied"'
+key 'q' 3
+check "and yazi still answers: q closes it" '! has yazi'
 
 echo "command palette"
 n=$(count "term ")

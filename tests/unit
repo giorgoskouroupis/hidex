@@ -100,9 +100,33 @@ check "every command has its function" 'for c in $(hidex-cmd --list | cut -f1); 
 check "suggestions: commands starting with the line" '[ "$(hidex-cmd --suggest co | cut -f1 | tr "\n" " ")" = "collapse copy " ]'
 check "suggestions: a command's arguments after a space" '[ "$(hidex-cmd --suggest "langs p" | cut -f1)" = "langs python" ]'
 check "suggestions: nothing fits, nothing listed" '[ -z "$(hidex-cmd --suggest zzz)" ]'
-mkdir -p "$T/panes"; printf '#!/bin/sh\nprintf "1 terminal term 2\\n0 terminal Helix\\n3 terminal side 1\\n"\n' > "$T/panes/zellij"; chmod +x "$T/panes/zellij"
-check "copy: the open terminals suggested" '[ "$(PATH=$T/panes:$PATH hidex-cmd --suggest "copy " | cut -f1 | tr "\n" ,)" = "copy side 1,copy term 2," ]'
+mkdir -p "$T/panes"; printf '#!/bin/sh\nprintf "ID  TYPE  TITLE  FOCUSED  FLOATING\\nterminal_1  terminal  zsh 2  false  false\\nterminal_0  terminal  Helix  true  false\\nterminal_3  terminal  claude 1\\342\\200\\213  false  false\\nterminal_4  terminal  lazygit  false  true\\n"\n' > "$T/panes/zellij"; chmod +x "$T/panes/zellij"
+check "copy: the open terminals suggested" '[ "$(PATH=$T/panes:$PATH hidex-cmd --suggest "copy " | cut -f1 | tr "\n" ,)" = "copy claude 1,copy zsh 2," ]'
 
+
+echo "update check"
+# a fake GitHub: v0.2.1 is out, with its changes and a newer zellij; its install.sh only says it ran
+u=$T/upd; mkdir -p "$u/fake" "$u/home"; printf 'v0.2.0\n' > "$u/home/VERSION"; printf 'zellij\t0.46.0\n' > "$u/home/tools.lock"
+cat > "$u/fake/curl" <<'FAKE'
+#!/bin/sh
+for a; do url=$a; done
+case $url in
+  */releases/latest) echo '"tag_name": "v0.2.1",' ;;
+  */CHANGELOG.md) printf '## [Unreleased]\n\n## [v0.2.1] - 2026-11-13\n\n### Added\n- tabs\n\n## [v0.2.0] - 2026-11-12\n- old\n' ;;
+  */tools.lock) printf 'zellij\t0.47.0\n' ;;
+  */install.sh) echo 'echo INSTALLED' ;;
+esac
+FAKE
+chmod +x "$u/fake/curl"
+ask() { echo "$1" | env PATH="$u/fake:$PATH" HIDEX_HOME="$u/home" XDG_CACHE_HOME="$u/cache" script -qfec hidex-check-update /dev/null 2>&1; }
+said=$(ask n); status=$?
+check "a newer release is offered, with its changes" 'printf "%s" "$said" | grep -q "v0.2.1 is available (you have v0.2.0)" && printf "%s" "$said" | grep -q "tabs" && ! printf "%s" "$said" | grep -q old'
+check "a new zellij is announced (sessions need a restart)" 'printf "%s" "$said" | grep -q "zellij 0.47.0 (now 0.46.0)"'
+check "N: nothing installed" '[ "$status" = 0 ] && ! printf "%s" "$said" | grep -q INSTALLED'
+said=$(ask y); status=$?
+check "y: installed, and the launcher told to start the new one" '[ "$status" = 10 ] && printf "%s" "$said" | grep -q INSTALLED'
+printf 'test\n' > "$u/home/VERSION"
+check "a build from the repo is not offered anything" '! ask n | grep -q available'
 
 echo "uninstall"
 p=$T/pfx; mkdir -p "$p/share/hidex/versions/v9/bin" "$p/share/hidex/tools/zellij-1" "$p/bin" "$T/state/hidex"

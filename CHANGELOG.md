@@ -5,6 +5,24 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+### Added
+- Each terminal and side terminal is named after what runs in it, with its number: `zsh 1`, `bash 2` (after typing
+  `bash`), `htop 3` while htop runs, `claude 1`; the number stays with the pane (`Alt+N`, `/copy zsh 2`).
+- At start, `hidex` says when a newer release is out, with its changes (and when it brings a new zellij, that
+  sessions need a restart to use it), and asks whether to install it; asked again each start until updated.
+  GitHub is asked at most once a day, nothing is said offline; `HIDEX_NO_UPDATE_CHECK=1` turns it off.
+- `/about`: the version, the install folder, the tools and their versions, the sandbox this machine allows.
+
+### Changed
+- Unfocused pane frames are fainter: a colour just off the window's background (darker on a light theme),
+  following `/theme`.
+
+### Fixed
+- yazi: going up stops at the project folder (above it, the sandbox refused and yazi hung).
+- A terminal closes again on `exit` (it looked for its siblings under their old names).
+- The file tree starts again (its socket in `/tmp` was refused by the sandbox), each tree with a socket of its own.
+- The terminals and side terminals show as tabs: zellij's stack list mode is on.
+
 ## [v0.2.1] - 2026-11-12
 
 ### Added
