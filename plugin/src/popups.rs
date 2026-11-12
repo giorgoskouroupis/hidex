@@ -57,6 +57,7 @@ pub fn toggle(name: &str, panes: &Panes, floating_visible: bool, cwd: &PathBuf) 
                 path: (*program).into(),
                 args: args.iter().map(|a| a.to_string()).collect(),
                 cwd: Some(cwd.clone()),
+                ..Default::default()
             };
             open_command_pane_floating(run, None, context);
         }

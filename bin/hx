@@ -1,0 +1,7 @@
+#!/bin/sh
+# hx: hIDEx's Helix, with its runtime and hIDEx's settings (share/hidex/xdg/helix), never the machine's; through
+# HIDEX_SHARE when set, so :config-reload after /update reads the newer ones
+h=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+XDG_CONFIG_HOME=${HIDEX_SHARE:-$h/share/hidex}/xdg HELIX_RUNTIME=$h/tools/helix/runtime
+export XDG_CONFIG_HOME HELIX_RUNTIME
+exec "$h/tools/helix/hx" "$@"

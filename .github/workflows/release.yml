@@ -1,0 +1,28 @@
+# a version tag (v0.1.0…) builds hIDEx's archive (scripts/release) and publishes it as that tag's release, with
+# its checksum, for install.sh
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust with the wasm32-wasip1 target (the zellij plugin)
+        run: rustup target add wasm32-wasip1
+      - name: Plugin tests
+        run: cd plugin && cargo test --locked
+      - name: Build the archive
+        run: |
+          archive=$(scripts/release "$GITHUB_REF_NAME")
+          (cd "$(dirname "$archive")" && sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256")
+          echo "ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - name: Unit tests, on the installed archive
+        run: tests/unit "$(tests/installed "$ARCHIVE")"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" --title "hIDEx $GITHUB_REF_NAME" --generate-notes

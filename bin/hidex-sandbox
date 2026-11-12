@@ -1,34 +1,92 @@
 #!/usr/bin/env bash
-# hidex-sandbox MODE [DIR] -- COMMAND...: runs COMMAND under bubblewrap, hIDEx's one sandbox policy:
-#   read DIR   DIR read-only, the Nix store and /etc, an empty home, no network (the trees, the read-only lazygit)
+# hidex-sandbox MODE [DIR] -- COMMAND...: runs COMMAND in hIDEx's one sandbox policy:
+#   read DIR   DIR read-only, the system's programs and /etc, a private empty home, no network (the trees, the
+#              read-only lazygit)
 #   write DIR  the same, DIR writable (yazi, a file manager)
-#   machine    the whole machine as usual but the secrets folders and files, emptied (Helix)
-# read and write also see zellij's socket and the session's state (its "current" link to hIDEx), so files picked
-# there still open in Helix. Where the kernel allows no sandbox (some servers), machine runs COMMAND without one
-# (an editor matters more); read and write fail.
+#   machine    the whole machine as usual but the secrets folders and files (Helix)
+# read and write also reach zellij's socket and the session's state (its "current" link to hIDEx), so files
+# picked there still open in Helix. With Landlock (the kernel's, through landrun), else bubblewrap if the
+# machine has it; with neither, machine runs COMMAND as it is (an editor matters more), read and write fail.
 mode=$1; shift
 [ "$mode" != machine ] && { dir=$1; shift; }
 [ "$1" = -- ] && shift
 run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+secret_dirs=(.ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker)
+secret_files=(.netrc .git-credentials .pgpass)
 
-case $mode in
-  read|write)
-    project=--ro-bind; [ "$mode" = write ] && project=--bind
-    # inside DIR the program starts where it was asked to; else in DIR
-    case $PWD/ in "$dir"/*) start=$PWD ;; *) start=$dir ;; esac
-    exec bwrap --die-with-parent --unshare-all \
-      --ro-bind /nix /nix --ro-bind /etc /etc --proc /proc --dev /dev --tmpfs /tmp --tmpfs "$HOME" \
-      --bind "$run/zellij" "$run/zellij" --ro-bind "$run/hidex" "$run/hidex" \
-      "$project" "$dir" "$dir" --chdir "$start" -- "$@" ;;
-  machine)
-    hide=()
-    for d in .ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker; do
-      [ -d "$HOME/$d" ] && hide+=(--tmpfs "$HOME/$d")
+# every variable passes (landrun passes none by default), but those given anew (VAR=value): a variable passed
+# twice keeps its first value
+env_args() {
+  local v own=" ${*%%=*} "
+  for v in $(compgen -e); do case $own in *" $v "*) ;; *) printf -- '--env\n%s\n' "$v" ;; esac; done
+  for v; do printf -- '--env\n%s\n' "$v"; done
+}
+
+# the system's programs and settings, wherever the distribution keeps them
+system=(/usr /bin /sbin /lib /lib64 /etc /opt /nix /run/current-system ${HIDEX_HOME:+"$HIDEX_HOME"})
+
+# everything from DIR down but the secrets: Landlock only allows, so a folder holding a secret (/, /home, HOME,
+# .local/share…) is listed entry by entry instead. Entries made later in those folders stay out of reach.
+all_but_secrets() {
+  local d=${1:-} e s deeper
+  for e in "$d"/* "$d"/.[!.]* "$d"/..?*; do
+    [ -e "$e" ] || [ -L "$e" ] || continue
+    deeper=
+    for s in "${secret_dirs[@]}" "${secret_files[@]}"; do
+      [ "$e" = "$HOME/$s" ] && continue 2
+      case $HOME/$s in "$e"/*) deeper=1 ;; esac
     done
-    for f in .netrc .git-credentials .pgpass; do
-      [ -f "$HOME/$f" ] && hide+=(--ro-bind /dev/null "$HOME/$f")
-    done
-    bwrap --dev-bind / / true 2>/dev/null || exec "$@"
-    exec bwrap --dev-bind / / --die-with-parent "${hide[@]}" -- "$@" ;;
-  *) echo "hidex-sandbox: read DIR, write DIR or machine" >&2; exit 2 ;;
-esac
+    if [ -n "$deeper" ]; then all_but_secrets "$e"; else printf '%s\n' "$e"; fi
+  done
+}
+
+landlock() {
+  local args=() mode_args=() start
+  case $mode in
+    read|write)
+      # inside DIR the program starts where it was asked to; else in DIR
+      case $PWD/ in "$dir"/*) start=$PWD ;; *) start=$dir ;; esac
+      # a private home and temp folder (programs write their caches there)
+      local home=$run/hidex/sandbox-home tmp=$run/hidex/sandbox-tmp
+      mkdir -p "$home" "$tmp"
+      mode_args=(--rox "$(IFS=,; echo "${system[*]}")" --ro /proc --rw /dev,"$home","$tmp" --rwx "$run/zellij"
+        --ro "$run/hidex" --unix "$run/zellij")
+      [ "$mode" = write ] && mode_args+=(--rw "$dir") || mode_args+=(--ro "$dir")
+      cd "$start" || exit 1
+      # the XDG folders follow HOME (set ones would lead back to the real home)
+      mapfile -t args < <(env_args "HOME=$home" "TMPDIR=$tmp" "XDG_CONFIG_HOME=$home/.config" \
+        "XDG_CACHE_HOME=$home/.cache" "XDG_DATA_HOME=$home/.local/share" "XDG_STATE_HOME=$home/.local/state")
+      exec landrun --best-effort --ignore-missing "${args[@]}" "${mode_args[@]}" -- "$@" ;;
+    machine)
+      mapfile -t args < <(env_args)
+      mapfile -t mode_args < <(all_but_secrets | sed 's/^/--rwx\n/')
+      exec landrun --best-effort --ignore-missing --unrestricted-network --unrestricted-scoped "${args[@]}" \
+        "${mode_args[@]}" -- "$@" ;;
+  esac
+}
+
+bubblewrap() {
+  case $mode in
+    read|write)
+      local project=--ro-bind start
+      [ "$mode" = write ] && project=--bind
+      case $PWD/ in "$dir"/*) start=$PWD ;; *) start=$dir ;; esac
+      local binds=() p
+      for p in "${system[@]}"; do [ -e "$p" ] && binds+=(--ro-bind "$p" "$p"); done
+      exec bwrap --die-with-parent --unshare-all "${binds[@]}" --proc /proc --dev /dev --tmpfs /tmp \
+        --tmpfs "$HOME" --bind "$run/zellij" "$run/zellij" --ro-bind "$run/hidex" "$run/hidex" \
+        "$project" "$dir" "$dir" --chdir "$start" -- "$@" ;;
+    machine)
+      local hide=() d f
+      for d in "${secret_dirs[@]}"; do [ -d "$HOME/$d" ] && hide+=(--tmpfs "$HOME/$d"); done
+      for f in "${secret_files[@]}"; do [ -f "$HOME/$f" ] && hide+=(--ro-bind /dev/null "$HOME/$f"); done
+      exec bwrap --dev-bind / / --die-with-parent "${hide[@]}" -- "$@" ;;
+  esac
+}
+
+case $mode in read|write|machine) ;; *) echo "hidex-sandbox: read DIR, write DIR or machine" >&2; exit 2 ;; esac
+grep -qw landlock /sys/kernel/security/lsm 2>/dev/null && command -v landrun >/dev/null && landlock "$@"
+command -v bwrap >/dev/null && bwrap --dev-bind / / true 2>/dev/null && bubblewrap "$@"
+[ "$mode" = machine ] && exec "$@"
+echo "hIDEx: this machine allows no sandbox (no Landlock, no bubblewrap): not starting $1" >&2
+exit 1

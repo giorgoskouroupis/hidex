@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# tests/installed [ARCHIVE]: hIDEx as a user gets it, for the tests: the archive (default: scripts/release of this
+# checkout, as version "test") installed by install.sh into dist/test-install. Prints the installed folder.
+set -euo pipefail
+repo=$(cd "$(dirname "$0")/.." && pwd)
+archive=${1:-$("$repo/scripts/release" test)}
+prefix=$repo/dist/test-install
+HIDEX_ARCHIVE=$archive HIDEX_PREFIX=$prefix sh "$repo/install.sh" >&2
+readlink -f "$prefix/bin/hidex" | sed 's|/bin/hidex$||'

@@ -18,7 +18,7 @@ side	a new side terminal (Claude, or a shell for any AI tool)
 collapse	fold the last used pane to a strip, or unfold it
 copy	copy the last command of the terminal last used ("copy term 2", "copy side 1": of that one), with its output below it, to the clipboard
 keys	every hIDEx key
-update	move this session to the hIDEx installed in your profile (after nix profile upgrade), keeping terminals and buffers
+update	move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers
 quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
 cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; }

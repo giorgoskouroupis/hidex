@@ -1,14 +1,14 @@
 #!/bin/sh
-# hidex-update [HIDEX]: moves this session to a newer hIDEx (default: the one installed in your Nix profile)
+# hidex-update [HIDEX]: moves this session to a newer hIDEx (default: the one installed, ~/.local/bin/hidex)
 # without restarting it. Terminals, running commands and Helix with its unsaved buffers stay as they are; the
 # session's "current" link (bin/hidex) moves, then zellij's keys, the bar and Helix's settings are reloaded.
 # Scripts, pop-ups and language servers started from then on are the new ones. Not reloaded: the layout, and
 # zellij itself (when it changed, quit and start again).
 s=$(hidex-state) || exit 1
 [ -L "$s/current" ] || { echo "hIDEx: this session started before /update existed: quit and start it again"; exit 1; }
-new=${1:-$(readlink -f "$HOME/.nix-profile/bin/hidex" 2>/dev/null)}
+new=${1:-$(readlink -f "${HIDEX_PREFIX:-$HOME/.local}/bin/hidex" 2>/dev/null)}
 new=${new%/bin/hidex}
-[ -x "$new/bin/hidex" ] || { echo "hIDEx: no installed hIDEx found (nix profile add / upgrade first)"; exit 1; }
+[ -x "$new/bin/hidex" ] || { echo "hIDEx: no installed hIDEx found (install.sh first)"; exit 1; }
 old=$(readlink -f "$s/current")
 [ "$new" = "$old" ] && { echo "hIDEx: already the newest"; exit 0; }
 if [ "$("$old/tools/bin/zellij" --version)" != "$("$new/tools/bin/zellij" --version)" ]; then

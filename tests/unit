@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # tests/unit [HIDEX]: the scripts' rules, each checked on its own in a second or two, with fake fzf, zellij and
-# delta standing in where a script would need a person or a session. Run by nix flake check (with the plugin's
-# cargo tests); tests/run is the end-to-end one. HIDEX: a built hIDEx (default: nix build of this repo).
+# delta standing in where a script would need a person or a session (the plugin has its own: cargo test in
+# plugin/); tests/run is the end-to-end one. HIDEX: an installed hIDEx (default: tests/installed).
 set -u
 repo=$(cd "$(dirname "$0")/.." && pwd)
-out=${1:-$(nix build "$repo" --no-link --print-out-paths)} || exit 1
+out=${1:-$("$repo/tests/installed")} || exit 1
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/fake" "$T/run" "$T/home"

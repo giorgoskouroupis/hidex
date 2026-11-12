@@ -119,7 +119,7 @@ pub fn open_new(kind: &str, panes: &Panes, cwd: &PathBuf) {
     if let Some(target) = panes.for_role(area) {
         context.insert("stack_with".to_string(), target.to_string());
     }
-    let run = CommandToRun { path: program.into(), args: vec![], cwd: Some(cwd.clone()) };
+    let run = CommandToRun { path: program.into(), args: vec![], cwd: Some(cwd.clone()), ..Default::default() };
     open_command_pane(run, context);
 }
 

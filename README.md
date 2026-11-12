@@ -2,19 +2,28 @@
 
 A terminal IDE around [Helix], in [zellij]: a file tree ([broot]) and Helix on top, a shell below, a side
 terminal on the right ([Claude Code] first, then any AI tool), a bar at the bottom, [lazygit] and [yazi] as
-pop-ups, [lnav] for big logs, `/` commands for themes and the project's languages. Every tool is pinned by the
-[Nix] flake; nothing is installed.
+pop-ups, [lnav] for big logs, `/` commands for themes and the project's languages. Every tool comes with it, at a
+pinned version (`tools.lock`), in its own folder: nothing else on the machine is touched.
 
 A fun personal project, vibe coded with Claude: shaped around one person's daily work, shared as is.
 
+Install (Linux x86_64, any distribution, no root), and the same again to update:
+
 ```sh
-nix run github:giorgoskouroupis/hidex -- ~/some/project     # or: hidex ~/some/project
+curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/hidex/main/install.sh | sh
+```
+
+It goes to `~/.local/share/hidex/VERSION`, with `~/.local/bin/hidex` pointing at the newest; older versions are
+removed once no session uses them. Node and Python come with it, for the language servers and the debugger.
+
+```sh
+hidex ~/some/project
 hidex ~/some/project ~/results/run-42                       # more folders: one tree each
-hidex myserver:~/some/project                               # the same on a server, over ssh
+hidex myserver:~/some/project                               # the server's hIDEx, over ssh (installed there too)
 hidex --side shell ~/some/project                           # side terminal without Claude (none: no side pane)
 ```
 
-Every folder gets its own tree, stacked, locked to it: a sandbox ([bubblewrap]) that sees only that folder,
+Every folder gets its own tree, stacked, locked to it: a sandbox ([Landlock]) that sees only that folder,
 read-only.
 Logs and files over 10 MB open in lnav, the rest in Helix.
 
@@ -64,7 +73,7 @@ of `bin/hidex-cmd` and one small function; those that need a list or a result op
 - `/helix-theme`: one of Helix's own themes, for Helix only, previewed in Helix as you move, kept for the
   project; `/helix-theme terminal` (or `hidex`) follows `/theme` again.
 - `/langs`: the project's languages, most files first, with their language servers (found or missing). hIDEx
-  brings servers for Python and the files most projects have (shell, Markdown, TOML, Nix, YAML, JSON, HTML,
+  brings servers for Python and the files most projects have (shell, Markdown, TOML, YAML, JSON, HTML,
   CSS, JavaScript/TypeScript, Dockerfile); others (rust-analyzer, gopls, …) are used when on the PATH, e.g.
   from the project's dev shell. Enter on a language shows Helix's health report for it.
 - `/langs python` (or Enter on Python): the project's Python env, the one Helix checks the code against: at
@@ -77,7 +86,7 @@ of `bin/hidex-cmd` and one small function; those that need a list or a result op
 - `/copy`: the last command run in the terminal you were last in, with its output below it, to the clipboard
   (the window's, through the terminal, so over ssh too). Read from the screen: the bottom line is the prompt, and
   the last earlier line starting with it is the command, so unusual prompts can fool it.
-- `/update`: after `nix profile upgrade hidex`, moves the running session to the new hIDEx without a restart:
+- `/update`: after installing a newer hIDEx, moves the running session to it without a restart:
   terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
   everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
 
@@ -111,11 +120,13 @@ Exiting the last shell of a side terminal or of the terminals starts a new one; 
 hIDEx refuses to start in, or open anything from, system folders (`/`, `/etc`, `/nix`, `/usr`, `/var`…),
 the home folder itself and its hidden folders (`~/.ssh`, `~/.gnupg`, `~/.config`…): `bin/hidex-guard`.
 
-The trees, yazi and the read-only lazygit run under [bubblewrap]: the kernel, not the program's settings,
-keeps them in their place, so no key pressed there can reach further.
+The trees, yazi and the read-only lazygit run under [Landlock] (the kernel's own sandbox, through [landrun]; on a
+kernel without it, [bubblewrap] if the machine has it): the kernel, not the program's settings, keeps them in
+their place, so no key pressed there can reach further.
 
-- They see the Nix store, `/etc`, and the project: read-only for the trees and lazygit, writable for yazi
-  (a file manager). An empty home folder: not your `~/.ssh`, `~/.gitconfig` or anything else in it. No network.
+- They see the system's programs, `/etc`, and the project: read-only for the trees and lazygit, writable for yazi
+  (a file manager). A private empty home and temp folder: not your `~/.ssh`, `~/.gitconfig` or anything else in
+  it. No network.
 - They still open files: `Enter` reaches Helix and lnav through zellij's socket, the one way out.
 - Helix runs in a lighter sandbox (`bin/hidex-helix`): it sees the machine as usual (it saves files, runs the
   language servers, uses your envs and the clipboard), except the secrets: `~/.ssh`, `~/.gnupg`, password
@@ -124,9 +135,12 @@ keeps them in their place, so no key pressed there can reach further.
 - In the read-only lazygit any change (stage, commit, checkout, fetch, push) fails with "read-only file
   system"; `Alt+Shift+g` swaps it for the plain lazygit.
 - It guards against accidents, not against hostile code.
-- Limits: it needs unprivileged user namespaces, which some servers turn off (then the trees and the
-  read-only lazygit do not start, and Helix runs without its sandbox); in a git worktree the repo's data lives outside the folder, so the
-  read-only lazygit cannot see it; the trees and yazi refuse, as above, off-limits folders.
+- Limits: it needs Landlock (Linux 5.13 and later, when the distribution turns it on) or bubblewrap; with
+  neither, the trees and the read-only lazygit do not start, and Helix runs without its sandbox. Landlock only
+  allows, so Helix gets everything but the secrets as it was at its start: a file or folder created afterwards
+  right in your home folder (or in `/`) stays out of its reach until Helix restarts. In a git worktree the repo's
+  data lives outside the folder, so the read-only lazygit cannot see it; the trees and yazi refuse, as above,
+  off-limits folders.
 
 ## Layout
 
@@ -134,15 +148,17 @@ One job per file; each script says at its top what it does and who calls it. Two
 session is found in `ZELLIJ_SESSION_NAME` (set once by `bin/hidex`), never passed around, and each shared
 concern lives in one place (named below).
 
-- **Build:** `flake.nix`, `package.nix` (the `hidex` package: its tools, config and plugin, reached through each
-  session's `current` link), `plugin.nix`.
+- **Build:** `scripts/release` (the archive: scripts, config, plugin, and the tools of `tools.lock`, the Node
+  language servers of `release/lsp`, pudb of `release/pudb.txt`), `install.sh` (one folder per version, reached
+  through each session's `current` link), `.github/workflows/release.yml` (a `v*` tag publishes the archive),
+  `flake.nix` (only the shell to build it here: `nix develop`).
 - **Start and state:** `bin/hidex` starts or reattaches a session; `bin/hidex-state` (the session's state
   folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`).
 - **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks,
   the command line and `hidex-msg` can ask), `panes` (roles, jumps, new panes), `popups`, `typist` (commands
   typed into Helix), `collapse` (folding), `status` and `bar`, `scripts` (the
   scripts it runs, and how their answers are told apart), `timers`. Its
-  `zellij-tile` version must match the zellij in `flake.lock`. Scripts reach it through `bin/hidex-msg`.
+  `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/hidex-msg`.
 - **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,
   `bin/hidex-helix-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-copy`, `bin/hidex-quit-ask`.
 - **Panes:** `bin/hidex-shell` (terminals, and side terminals after Claude: `bin/hidex-side`), `bin/hidex-tree`
@@ -155,12 +171,14 @@ concern lives in one place (named below).
   it), `bin/hidex-status` (the bar's line), `bin/hidex-pyright` (basedpyright on the project Python, live),
   `bin/hidex-delta` (light diffs).
 - **Config:** `config/` (zellij's keys and layout, broot, lazygit, lnav), `config/xdg/` (Helix, yazi, pudb).
-- **Tests:** `tests/unit` and the plugin's `cargo test` (`nix flake check`), `tests/run` (end to end).
+- **Tests:** `tests/unit`, the plugin's `cargo test`, `tests/run` (end to end), all on hIDEx as installed
+  (`tests/installed`).
 
 ## Tests
 
-`nix flake check` runs the unit tests in under a minute: the plugin's logic (`cargo test`: pane names and jumps,
-focus after a close, the bar's buttons, messages, folding) and the scripts' rules (`tests/unit`: the folder guard,
+In `nix develop` (or with Rust and its wasm32-wasip1 target): `tests/installed` builds the archive and installs
+it into `dist/test-install`; `cargo test` in `plugin/` checks the plugin's logic (pane names and jumps,
+focus after a close, the bar's buttons, messages, folding); `tests/unit HIDEX` the scripts' rules (the folder guard,
 pop-up colours, themes, the Python picked and kept, languages), with fake fzf, zellij and delta.
 
 `tests/run`, the end-to-end test, starts hIDEx in hidden sessions (no window), drives it with keys and messages, and checks the panes:
@@ -174,7 +192,8 @@ its own temporary folders, never in your sessions or settings, in a few minutes;
 [lazygit]: https://github.com/jesseduffield/lazygit
 [yazi]: https://yazi-rs.github.io
 [lnav]: https://lnav.org
-[Nix]: https://nixos.org
+[Landlock]: https://landlock.io
+[landrun]: https://github.com/Zouuup/landrun
 [bubblewrap]: https://github.com/containers/bubblewrap
 [basedpyright]: https://docs.basedpyright.com
 [ruff]: https://docs.astral.sh/ruff

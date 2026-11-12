@@ -3,13 +3,24 @@
 # it. Every path gets its own tree (stacked), locked to it; Helix, the shell and the side terminal work in
 # the first one. --side: what the side terminal starts with (default: Claude if installed), or no side pane.
 # A live session (window closed, ssh dropped) is reattached; a dead one is replaced, not revived.
-# host:path runs it on that server, through nix run (the other paths are then on the server too).
+# host:path runs the server's hIDEx there (the other paths are then on the server too).
 side=claude
 [ "$1" = --side ] && { side=$2; shift 2; }
 case ${1:-.} in
   *:*) h=${1%%:*} d=${1#*:}; shift
-       exec ssh -t "$h" "cd $d && exec nix run ${HIDEX_FLAKE:-github:giorgoskouroupis/hidex} -- --side $side . $*" ;;
+       exec ssh -t "$h" "cd $d && if [ -x ~/.local/bin/hidex ]; then exec ~/.local/bin/hidex --side $side . $*;
+         else echo 'hIDEx is not installed here: curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/hidex/main/install.sh | sh'; fi" ;;
 esac
+
+# hIDEx's own folder (this script's, links followed): its scripts and tools come first, its settings are used
+HIDEX_HOME=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+h=$HIDEX_HOME
+PATH=$h/bin:$h/tools/bin:$PATH HIDEX_SHARE=$h/share/hidex HIDEX_PLUGIN=$h/share/hidex/hidex-panes.wasm
+LG_CONFIG_FILE=$h/share/hidex/lazygit.yml YAZI_CONFIG_HOME=$h/share/hidex/xdg/yazi ZELLIJ_CONFIG_DIR=$h/share/hidex
+# pudb for breakpoint() and python -m pudb in any env (share/hidex/python/sitecustomize.py)
+PYTHONPATH=$h/share/hidex/python${PYTHONPATH:+:$PYTHONPATH} PYTHONBREAKPOINT=pudb.set_trace
+export HIDEX_HOME PATH HIDEX_SHARE HIDEX_PLUGIN LG_CONFIG_FILE YAZI_CONFIG_HOME ZELLIJ_CONFIG_DIR
+export PYTHONPATH PYTHONBREAKPOINT
 hidex-guard "${1:-.}" "$@" || exit 1
 cd "${1:-.}" || exit 1
 [ $# -gt 0 ] && shift
@@ -61,6 +72,7 @@ YAZI_CONFIG_HOME=$(swap "$YAZI_CONFIG_HOME") HIDEX_SHARE=$c/share/hidex HIDEX_PL
 ZELLIJ_CONFIG_DIR=$s/config
 export PATH PYTHONPATH LG_CONFIG_FILE YAZI_CONFIG_HOME HIDEX_SHARE HIDEX_PLUGIN ZELLIJ_CONFIG_DIR
 hidex-config "$s"
+hidex-zellij-setup
 
 # the plugin runs in the bar, where zellij cannot ask for its permissions: approve them for this session's
 # path (the same across /update), the same list as the plugin asks for (plugin/src/main.rs). The entry is

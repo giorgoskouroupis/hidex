@@ -1,0 +1,14 @@
+{
+  "name": "hidex-language-servers",
+  "private": true,
+  "description": "hIDEx's bundled language servers that run on Node (scripts/release installs them with npm ci)",
+  "dependencies": {
+    "basedpyright": "1.40.2",
+    "bash-language-server": "5.8.1",
+    "yaml-language-server": "2.0.0",
+    "vscode-langservers-extracted": "4.10.0",
+    "dockerfile-language-server-nodejs": "0.15.0",
+    "typescript-language-server": "6.0.3",
+    "typescript": "5.9.3"
+  }
+}

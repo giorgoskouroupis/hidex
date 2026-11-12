@@ -6,8 +6,8 @@ description = "hIDEx's zellij plugin: jump to a pane by role, open a new termina
 license = "MIT"
 
 [dependencies]
-# must match the zellij that hIDEx pins (nixpkgs in flake.lock)
-zellij-tile = "=0.45.1"
+# must match the zellij that hIDEx bundles (tools.lock)
+zellij-tile = "=0.46.0"
 
 [profile.release]
 opt-level = "s"
