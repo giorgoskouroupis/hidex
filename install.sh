@@ -55,7 +55,19 @@ for d in "$versions"/*/; do
 done
 
 echo "hIDEx $v installed: $prefix/bin/hidex"
-case :$PATH: in *":$prefix/bin:"*) ;; *) echo "  add $prefix/bin to your PATH" ;; esac
+
+# PATH: the shell's own rc file gets the line, when it is a plain file of the user's (not one a system manages,
+# e.g. NixOS/home-manager's read-only links); else the hint
+on_path() { case :$PATH: in *":$prefix/bin:"*) return 0 ;; esac; return 1; }
+rc=$HOME/.${SHELL##*/}rc
+line="export PATH=\"$prefix/bin:\$PATH\"  # hIDEx"
+if on_path || grep -qF "$line" "$rc" 2>/dev/null; then :
+elif [ -f "$rc" ] && [ ! -L "$rc" ] && [ -w "$rc" ]; then
+  printf '\n%s\n' "$line" >> "$rc"
+  echo "  $prefix/bin added to your PATH in $rc: open a new terminal"
+else
+  echo "  add $prefix/bin to your PATH (until then: $prefix/bin/hidex)"
+fi
 grep -qw landlock /sys/kernel/security/lsm 2>/dev/null ||
   echo "  this kernel has no Landlock: the file tree, yazi and lazygit will not start, Helix runs without its sandbox"
 echo "  running sessions: /update moves them to this version"

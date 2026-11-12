@@ -13,7 +13,8 @@ Install (Linux x86_64, any distribution, no root), and the same again to update:
 curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/hidex/main/install.sh | sh
 ```
 
-It goes to `~/.local/share/hidex/VERSION`, with `~/.local/bin/hidex` pointing at the newest; older versions are
+It goes to `~/.local/share/hidex/VERSION`, with `~/.local/bin/hidex` pointing at the newest (`~/.local/bin` is added to
+PATH in your `~/.bashrc` or `~/.zshrc` when needed and that file is yours to change); older versions are
 removed once no session uses them. Node and Python come with it, for the language servers and the debugger.
 
 ```sh
