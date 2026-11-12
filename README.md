@@ -49,9 +49,11 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 |---|---|
 | `Alt+←/→/↑/↓` | move between panes, and through a stack |
 | `Alt+e` / `Alt+h` / `Alt+t` / `Alt+c` | jump to the explorer / Helix / the terminals / the side terminal (unfolds it) |
-| `Alt+f`, `Shift+Esc` | max out the focused pane (the bar stays), and back |
+| `Alt+f`, `Shift+Esc` | max: the focused pane fills the panes' area (the bar stays), and back |
 | `Alt+z` | zen: the focused pane covers the whole window, the bar too, and back |
 | `Alt+\` | back to the pane you were in before |
+| `Alt+j` | to the next pane that needs you: Claude waiting for an answer, a command that failed or a long one finished (zellij's attention) |
+| `Alt+Space` | everything that needs you, across panes and sessions, with previews (zellij's inbox) |
 | `Alt+v` | an earlier command with its output: zellij's scroll mode, `[` `]` step through commands, `m` copies the one at the top with its command line, `Esc` back (the newest ones, still on screen: triple-click their output) |
 | `Alt+=` / `Alt+-` | grow / shrink the focused pane |
 | `Alt+Shift+arrows` / `Alt+Ctrl+arrows` | grow the focused pane on that side / shrink it from that side |
@@ -151,7 +153,8 @@ their place, so no key pressed there can reach further.
 - Limits: it needs Landlock (Linux 5.13 and later, when the distribution turns it on) or bubblewrap; with
   neither, the trees and the read-only lazygit do not start, and Helix runs without its sandbox. Landlock only
   allows, so Helix gets everything but the secrets as it was at its start: a file or folder created afterwards
-  right in your home folder (or in `/`) stays out of its reach until Helix restarts. In a git worktree the repo's
+  right in your home folder (or in `/`) stays out of its reach until Helix restarts, and the home folder itself
+  cannot be listed from Helix (what is in it opens as usual). In a git worktree the repo's
   data lives outside the folder, so the read-only lazygit cannot see it; the trees and yazi refuse, as above,
   off-limits folders.
 

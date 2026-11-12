@@ -5,6 +5,8 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.2.2] - 2026-11-13
+
 ### Added
 - Each terminal and side terminal is named after what runs in it, with its number: `zsh 1`, `bash 2` (after typing
   `bash`), `htop 3` while htop runs, `claude 1`, renamed as soon as zellij says the command changed; the number
@@ -13,7 +15,9 @@ pushing the version's tag (the release Action stops when the section is missing)
   sessions need a restart to use it), and asks whether to install it; asked again each start until updated.
   GitHub is asked at most once a day, nothing is said offline; `HIDEX_NO_UPDATE_CHECK=1` turns it off.
 - `/about`: the version, the install folder, the tools and their versions, the sandbox this machine allows.
-- `Alt+z`: zen, the focused pane covers the whole window, the bar too (zellij's own); `Alt+\`: back to the pane
+- `Alt+z`: zen, the focused pane covers the whole window, the bar too (zellij's own);
+  `Alt+j`: to the next pane that needs you (Claude waiting, a command failed or finished: zellij's attention, which
+  Claude Code reports by itself); `Alt+Space`: all of them, zellij's inbox; `Alt+\`: back to the pane
   you were in before.
 - `/copy` is zellij's own copy of the last command's output (exact, from the shell's marks), no longer read off the
   screen; the command line itself is not part of it.
@@ -26,6 +30,11 @@ pushing the version's tag (the release Action stops when the section is missing)
   command's output selects it with its command line.
 
 ### Changed
+- A first install downloads about 60 MB less: broot comes as a small bundle of its Linux program (its official
+  download holds builds for every system).
+- The bar warns ("sandbox: partial" or "no sandbox", in red) when this machine's kernel cannot give the full
+  sandbox; `/about` and the installer say what is not protected. The Rust compiler for the bar is pinned
+  (`plugin/rust-toolchain.toml`), the same for the release build and `nix develop`.
 - Unfocused pane frames are fainter: a colour just off the window's background (darker on a light theme),
   following `/theme` and the terminal's own dark/light switch.
 
@@ -50,6 +59,11 @@ pushing the version's tag (the release Action stops when the section is missing)
   bar at the wrong address); a message to the bar never waits more than 5 s.
 
 ### Changed
+- A first install downloads about 60 MB less: broot comes as a small bundle of its Linux program (its official
+  download holds builds for every system).
+- The bar warns ("sandbox: partial" or "no sandbox", in red) when this machine's kernel cannot give the full
+  sandbox; `/about` and the installer say what is not protected. The Rust compiler for the bar is pinned
+  (`plugin/rust-toolchain.toml`), the same for the release build and `nix develop`.
 - Unfocused pane frames are faint (the terminal's grey): only the focused one, in the accent colour, stands out.
 - Downloads show a progress line: spinner, bar, percent, size, speed, a check mark when done (in a terminal).
 - PATH as other installers do it: the line goes in your shell's file (`~/.bashrc`, `~/.zshrc` also under
@@ -60,6 +74,11 @@ pushing the version's tag (the release Action stops when the section is missing)
 ## [v0.2.0] - 2026-11-12
 
 ### Changed
+- A first install downloads about 60 MB less: broot comes as a small bundle of its Linux program (its official
+  download holds builds for every system).
+- The bar warns ("sandbox: partial" or "no sandbox", in red) when this machine's kernel cannot give the full
+  sandbox; `/about` and the installer say what is not protected. The Rust compiler for the bar is pinned
+  (`plugin/rust-toolchain.toml`), the same for the release build and `nix develop`.
 - Updates download only what changed: hIDEx's own files (a few MB), and a tool only when its version in
   `tools.lock` changed. Each tool is kept once in `~/.local/share/hidex/tools/`, shared by the installed
   versions, and comes from its official download; the language servers and pudb are bundles of their own.
@@ -73,6 +92,11 @@ pushing the version's tag (the release Action stops when the section is missing)
 ## [v0.1.1] - 2026-11-12
 
 ### Changed
+- A first install downloads about 60 MB less: broot comes as a small bundle of its Linux program (its official
+  download holds builds for every system).
+- The bar warns ("sandbox: partial" or "no sandbox", in red) when this machine's kernel cannot give the full
+  sandbox; `/about` and the installer say what is not protected. The Rust compiler for the bar is pinned
+  (`plugin/rust-toolchain.toml`), the same for the release build and `nix develop`.
 - lazygit back to 0.65.1: 0.66 takes about 700 ms instead of 100 ms to start inside zellij.
 - `install.sh` adds `~/.local/bin` to PATH in your `~/.bashrc` or `~/.zshrc` when it is missing and that file is
   yours to change (not one a system manages, as on NixOS).
@@ -91,6 +115,11 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `/copy term 2`, `/copy side1`: the last command and its output of that terminal.
 
 ### Changed
+- A first install downloads about 60 MB less: broot comes as a small bundle of its Linux program (its official
+  download holds builds for every system).
+- The bar warns ("sandbox: partial" or "no sandbox", in red) when this machine's kernel cannot give the full
+  sandbox; `/about` and the installer say what is not protected. The Rust compiler for the bar is pinned
+  (`plugin/rust-toolchain.toml`), the same for the release build and `nix develop`.
 - zellij 0.46 (its setup wizard, which would open over every new session, is turned off).
 - The sandbox of the trees, yazi, the read-only lazygit and Helix is now Landlock, the kernel's own (through
   landrun); bubblewrap only where the kernel has no Landlock.
