@@ -1,22 +1,26 @@
 #!/bin/sh
-# hidex-cmd [NAME [ARG]]: hIDEx's / commands. With no name, a list to pick from (Alt+p, or "cmds" on the
-# bar): type to filter, Enter runs. Each command is one function below and one line in the table.
+# hidex-cmd [--session NAME] [--popup] [NAME [ARG]]: hIDEx's / commands, the one table of them: each command
+# is one line below (name, whether it needs a screen, description) and one function. The bar's command line
+# (Alt+p) reads the table (--list) and runs the commands; with no name, a list to pick from ("cmds" on the
+# bar). --popup: started as a pop-up, so it takes the pop-ups' colours.
+# Screen: "screen", always (a list or a result to read); "pick", when given no argument (a list to pick from);
+# "-", never: run in the background.
 
-COMMANDS='theme	colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
-helix-theme	a theme of Helix'"'"'s own, for Helix only, previewed as you move, kept for the project; "terminal" to follow /theme again
-langs	the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
-reload	reload every file open in Helix from disk
-lsp	restart Helix'"'"'s language servers
-git	lazygit, read-only
-git-write	lazygit that can stage, commit, push
-yazi	yazi, the file manager
-terminal	a new terminal, stacked with the others
-side	a new side terminal (Claude, or a shell for any AI tool)
-collapse	fold the last used pane to a strip, or unfold it
-copy	copy the last command of the terminal last used, with its output below it, to the clipboard
-keys	every hIDEx key
-update	move this session to the hIDEx installed in your profile (after nix profile upgrade), keeping terminals and buffers
-quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
+COMMANDS='theme	pick	colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
+helix-theme	pick	a theme of Helix'"'"'s own, for Helix only, previewed as you move, kept for the project; "terminal" to follow /theme again
+langs	screen	the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
+reload	-	reload every file open in Helix from disk
+lsp	-	restart Helix'"'"'s language servers
+git	-	lazygit, read-only
+git-write	-	lazygit that can stage, commit, push
+yazi	-	yazi, the file manager
+terminal	-	a new terminal, stacked with the others
+side	-	a new side terminal (Claude, or a shell for any AI tool)
+collapse	-	fold the last used pane to a strip, or unfold it
+copy	-	copy the last command of the terminal last used, with its output below it, to the clipboard
+keys	screen	every hIDEx key
+update	screen	move this session to the hIDEx installed in your profile (after nix profile upgrade), keeping terminals and buffers
+quit	-	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
 cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; }
 cmd_helix_theme() { hidex-helix-theme "${1:-pick}"; }
@@ -39,12 +43,14 @@ cmd_keys() {
 cmd_update() { hidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
 cmd_quit() { hidex-msg quit ask; }
 
+# --session NAME: run for that session (the bar runs commands in the background, outside any pane)
+[ "$1" = --session ] && { export ZELLIJ_SESSION_NAME=$2; shift 2; }
+[ "$1" = --popup ] && { shift; hidex-popup-colors; }
 case $1 in
   --list) printf '%s\n' "$COMMANDS" ;;
   '')
-    hidex-popup-colors
-    pick=$(printf '%s\n' "$COMMANDS" | fzf --prompt '/' --delimiter '\t' --tabstop 12 --height 100% --reverse \
-           --no-info) || exit 0
+    pick=$(printf '%s\n' "$COMMANDS" | fzf --prompt '/' --delimiter '\t' --with-nth 1,3 --tabstop 12 \
+           --height 100% --reverse --no-info) || exit 0
     exec "$0" "$(printf '%s' "$pick" | cut -f1)" ;;
   *)
     f=cmd_$(printf '%s' "$1" | tr - _)

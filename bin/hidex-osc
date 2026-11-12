@@ -1,0 +1,8 @@
+#!/bin/sh
+# hidex-osc [--session NAME] CODE...: sends terminal codes (OSC, without the ESC ] … ESC \ around them) straight
+# to the window hIDEx runs in (its tty, noted by hidex), past zellij: colours (hidex-theme), the clipboard
+# (hidex-copy). Fails when the window is not known.
+[ "$1" = --session ] && { session=$2; shift 2; }
+s=$(hidex-state $session) || exit 1
+tty=$(cat "$s/tty" 2>/dev/null) && [ -w "$tty" ] || { echo "hIDEx: the window's terminal is not known" >&2; exit 1; }
+for code; do printf '\033]%s\033\\' "$code"; done >> "$tty"

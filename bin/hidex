@@ -23,7 +23,7 @@ mkdir -p "$HIDEX_PROJECT"
 s=$(hidex-state "$n")
 # the window's terminal, for live colour themes (hidex-theme); reset to its own colours when hIDEx ends
 tty > "$s/tty" 2>/dev/null || rm -f "$s/tty"
-end() { [ -f "$s/theme" ] && printf '\033]104\033\\\033]110\033\\\033]111\033\\\033]112\033\\'; }
+end() { hidex-theme off "$n"; }
 case $(zellij ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
   ?*) hidex-theme apply "$n"; zellij attach "$n"; end; exit ;;

@@ -22,6 +22,8 @@ pub enum Action {
     Status,
     /// the last used terminal's last command and its output, to the clipboard (hidex-copy)
     Copy,
+    /// the bar's command line (Alt+p)
+    Prompt,
 }
 
 impl Action {
@@ -38,6 +40,7 @@ impl Action {
             "quit" => Action::Quit(arg),
             "status" => Action::Status,
             "copy" => Action::Copy,
+            "prompt" => Action::Prompt,
             _ => return None,
         })
     }

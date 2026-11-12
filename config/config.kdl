@@ -61,8 +61,8 @@ keybinds {
         bind "Alt w" { ToggleFloatingPanes; }
         // fold the focused pane to a strip (its neighbours cover it), or unfold it; jumping to it unfolds it too
         bind "Alt x" { MessagePlugin "file:@plugin@" { name "collapse"; }; }
-        // the / commands: theme, python, reload…
-        bind "Alt p" { MessagePlugin "file:@plugin@" { name "popup"; payload "commands"; }; }
+        // the bar as a command line, like Helix's ":": /copy, /theme dracula… (the full list: cmds on the bar)
+        bind "Alt p" { MessagePlugin "file:@plugin@" { name "prompt"; }; }
         // quit hIDEx, asking first (hidex-quit-ask): Helix quits first, and refuses while files are unsaved
         bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "ask"; }; }
         // quit on the spot: unsaved changes dropped, running commands stopped

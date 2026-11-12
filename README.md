@@ -37,7 +37,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+n` | a new pane of the kind you are on, stacked with it: `term N` or `side N` (from Helix or a tree: `term N`; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |
 | `Alt+1`…`Alt+9` | `term N` / `side N` / the Nth tree, of the kind of pane you are on (from Helix: `term N`) |
 | `Alt+x` | fold the focused pane to a strip (its neighbour covers it), or unfold it to its exact size |
-| `Alt+p` | the `/` commands: theme, langs, reload, lsp, keys… (type to filter, `Enter` runs, `Esc` closes) |
+| `Alt+p` | the bar becomes a command line, like Helix's `:`: type `/copy`, `/theme dracula`… (matches shown as you type, `Tab` completes, `Enter` runs, `Esc` cancels); `cmds` on the bar lists them all |
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
 | `Alt+Shift+g` | lazygit that can stage, commit, push: it replaces the read-only one |
 | `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred, 80% of the window; all share one solid colour set from the theme: lighter with white text on a dark one, darker on a light one) |
@@ -53,7 +53,8 @@ the colour theme, and
 has buttons for the same actions as the keys (git, yazi, +term, +side, fold, cmds, quit): click them. Plain
 text: no icon font needed.
 
-**`/` commands** (`Alt+p`, or `cmds` on the bar), one small function each in `bin/hidex-cmd`:
+**`/` commands**, typed in the bar (`Alt+p`) or picked from the list (`cmds` on the bar), one line each in the table
+of `bin/hidex-cmd` and one small function; those that need a list or a result open in a pop-up:
 
 - `/theme`: recolours the whole window live, with any of the ~900 [iTerm2-Color-Schemes] (favourites first,
   then dark and light ones; each is previewed as you move, `Esc` goes back), kept for the project's next sessions;

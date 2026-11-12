@@ -1,6 +1,7 @@
 //! The bar at the bottom: on the left what you work on (project, branch, Python, theme), on the right buttons
 //! for the usual actions. Plain text (no icon font needed), drawn in the terminal's own colours, so it follows the theme.
 use crate::actions::Action;
+use crate::prompt::Prompt;
 use crate::status::Status;
 
 const RESET: &str = "\u{1b}[0m";
@@ -74,6 +75,22 @@ impl Bar {
             }
         }
         print!("{line}");
+    }
+
+    /// the bar as a command line: "/" and what is typed, then the matching commands, the first one's
+    /// description after it; cut to the bar's width
+    pub fn render_prompt(&mut self, cols: usize, prompt: &Prompt) {
+        self.hits.clear();
+        let matches = prompt.matches();
+        let names: Vec<&str> = matches.iter().map(|c| c.name.as_str()).collect();
+        let mut plain = format!(" /{}█   {}", prompt.text, names.join("  "));
+        let described = matches.first().map(|c| format!("   {}", c.description)).unwrap_or_default();
+        plain.push_str(&described);
+        let shown: String = plain.chars().take(cols).collect();
+        // the typed part bold in the accent colour, the rest dim
+        let typed = 3 + prompt.text.chars().count();
+        let (head, tail): (String, String) = (shown.chars().take(typed).collect(), shown.chars().skip(typed).collect());
+        print!("\u{1b}[1;38;5;{ACCENT}m{head}{RESET}{DIM}{tail}{RESET}");
     }
 
     /// the action of the button at that column, if any

@@ -19,5 +19,5 @@ if [ -z "$bg" ] && [ -r /dev/tty ]; then
   fi
 fi
 [ -z "$bg" ] && exit 0
-r=$((16#${bg:1:2})) g=$((16#${bg:3:2})) b=$((16#${bg:5:2}))
-if (( r * 299 + g * 587 + b * 114 < 128000 )); then echo "$bg dark"; else echo "$bg light"; fi
+
+echo "$bg $(awk -f "$HIDEX_SHARE/brightness.awk" -e "BEGIN { print mode(\"$bg\") }")"

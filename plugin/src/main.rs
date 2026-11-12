@@ -11,6 +11,7 @@ mod bar;
 mod collapse;
 mod panes;
 mod popups;
+mod prompt;
 mod status;
 mod timers;
 mod typist;
@@ -36,6 +37,8 @@ struct State {
     ending: bool,
     /// the project's Helix theme has been asked for (once both the session and Helix are known)
     restored: bool,
+    /// the bar's command line (Alt+p)
+    prompt: prompt::Prompt,
 }
 
 register_plugin!(State);
@@ -75,6 +78,12 @@ impl State {
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
+            // the bar takes the keys until Enter or Esc (on_prompt_key)
+            Action::Prompt => {
+                self.prompt.open(self.panes.tiled());
+                set_selectable(true);
+                focus_plugin_pane(get_plugin_ids().plugin_id, false, false);
+            }
             Action::Copy => {
                 if let Some(id) = self.panes.last_terminal() {
                     let pane = format!("terminal_{id}");
@@ -89,6 +98,26 @@ impl State {
         if !self.restored && self.cwd_known && !self.status.session.is_empty() {
             self.restored = true;
             run_command(&["hidex-helix-theme", "restore", &self.status.session], BTreeMap::new());
+        }
+    }
+
+    /// a key typed in the bar's command line; when the line is done, the focus goes back and it runs
+    fn on_prompt_key(&mut self, key: &KeyWithModifier) {
+        let Some(run) = self.prompt.key(key) else { return };
+        set_selectable(false);
+        if let Some(id) = self.prompt.back {
+            panes::focus(id);
+        }
+        match run {
+            prompt::Run::Popup(words) => popups::open_command(&words, &self.cwd),
+            // zellij's own environment (PATH…), the session named as an argument: given variables would replace it
+            prompt::Run::Background(words) => {
+                let session = ["--session", self.status.session.as_str()];
+                let command: Vec<&str> =
+                    [popups::COMMANDS].into_iter().chain(session).chain(words.iter().map(String::as_str)).collect();
+                run_command(&command, BTreeMap::new());
+            }
+            prompt::Run::Nothing => {}
         }
     }
 
@@ -177,8 +206,10 @@ impl ZellijPlugin for State {
             EventType::Timer,
             EventType::RunCommandResult,
             EventType::Mouse,
+            EventType::Key,
+            EventType::PermissionRequestResult,
         ]);
-        // the bar is not a pane to move to
+        // the bar is not a pane to move to (but for its command line, Alt+p)
         set_selectable(false);
         self.cwd = get_plugin_ids().initial_cwd;
         self.status.set_project(&self.cwd);
@@ -209,6 +240,19 @@ impl ZellijPlugin for State {
                 return self.status.read(&stdout);
             }
             Event::RunCommandResult(_, _, _, context) if context.contains_key("stopped") => quit_zellij(),
+            // the / commands, for the command line: asked once the plugin may run commands (asked in load,
+            // they would be refused)
+            Event::PermissionRequestResult(PermissionStatus::Granted) => {
+                let context = BTreeMap::from([("commands".to_string(), String::new())]);
+                run_command(&[popups::COMMANDS, "--list"], context);
+            }
+            Event::RunCommandResult(_, stdout, _, context) if context.contains_key("commands") => {
+                self.prompt.read_commands(&stdout);
+            }
+            Event::Key(key) if self.prompt.active => {
+                self.on_prompt_key(&key);
+                return true;
+            }
             Event::Mouse(Mouse::LeftClick(_, col)) => {
                 if let Some(action) = self.bar.click(col) {
                     self.run(action);
@@ -232,10 +276,15 @@ impl ZellijPlugin for State {
         if let Some(action) = Action::from_message(&message.name, payload) {
             self.run(action);
         }
-        false
+        // the command line has just opened: draw it
+        self.prompt.active
     }
 
     fn render(&mut self, _rows: usize, cols: usize) {
-        self.bar.render(cols, &self.status);
+        if self.prompt.active {
+            self.bar.render_prompt(cols, &self.prompt);
+        } else {
+            self.bar.render(cols, &self.status);
+        }
     }
 }

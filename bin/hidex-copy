@@ -28,5 +28,5 @@ dump=$s/copy.txt
 zellij action dump-screen --pane-id "$2" --full --path "$dump" || exit 1
 text=$(last "$dump")
 [ -n "$text" ] || exit 0
-tty=$(cat "$s/tty" 2>/dev/null) && [ -w "$tty" ] || exit 0
-printf '\033]52;c;%s\a' "$(printf '%s\n' "$text" | base64 | tr -d '\n')" >> "$tty"
+
+hidex-osc "52;c;$(printf '%s\n' "$text" | base64 | tr -d '\n')"

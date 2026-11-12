@@ -8,13 +8,15 @@ use zellij_tile::prelude::*;
 pub const LAZYGIT_RO: &str = "lazygit (read-only)";
 pub const LAZYGIT: &str = "lazygit";
 pub const QUIT_ASK: &str = "quit?";
+/// the / commands' program (hidex-cmd), its one table of them
+pub const COMMANDS: &str = "hidex-cmd";
 
 /// name (the pop-up's title) and what runs in it
 pub const POPUPS: [(&str, &str, &[&str]); 5] = [
     (LAZYGIT_RO, "hidex-lazygit", &[]),
     (LAZYGIT, "hidex-lazygit", &["--write"]),
     ("yazi", "hidex-yazi", &[]),
-    ("commands", "hidex-cmd", &[]),
+    ("commands", COMMANDS, &["--popup"]),
     // Alt+q while commands still run in the shells
     (QUIT_ASK, "hidex-quit-ask", &[]),
 ];
@@ -98,4 +100,14 @@ impl Popups {
             .collect();
         change_floating_panes_coordinates(moves);
     }
+}
+
+/// a / command with its arguments in the commands pop-up (the bar's command line, for one that needs a screen);
+/// it is closed, tiled and coloured like the other pop-ups
+pub fn open_command(words: &[String], cwd: &PathBuf) {
+    let args = std::iter::once("--popup".to_string()).chain(words.iter().cloned()).collect();
+    let mut context = BTreeMap::new();
+    context.insert("name".to_string(), "commands".to_string());
+    let run = CommandToRun { path: COMMANDS.into(), args, cwd: Some(cwd.clone()) };
+    open_command_pane_floating(run, None, context);
 }
