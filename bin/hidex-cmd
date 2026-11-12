@@ -47,7 +47,9 @@ cmd_about() {
     printf '  https://github.com/giorgoskouroupis/hidex\n'
     printf '  changes: https://github.com/giorgoskouroupis/hidex/blob/main/CHANGELOG.md\n\n'
     printf 'installed in  %s\n' "$(readlink -f "$h")"
-    printf 'sandbox here  %s\n\n' "$(hidex-sandbox --which)"
+    printf 'sandbox here  %s\n' "$(hidex-sandbox --which)"
+    hidex-sandbox --gaps | sed 's/^/  not protected: /'
+    echo
     echo 'tools'
     grep -v '^#' "$h/tools.lock" 2>/dev/null | awk -F'\t' 'NF { printf "  %-16s %s\n", $1, $2 }'
   } | less

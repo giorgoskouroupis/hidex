@@ -102,6 +102,8 @@ mv "$p.new" "$p"
 # the project's window theme, else the terminal's own; the Python (hidex-python detect)
 if [ -f "$HIDEX_PROJECT/theme" ]; then cp "$HIDEX_PROJECT/theme" "$s/theme"; hidex-theme apply; else rm -f "$s/theme"; fi
 hidex-python detect
+# what this machine's sandbox leaves unprotected, once: the bar warns of it (hidex-status), /about says what
+hidex-sandbox --gaps > "$s/sandbox-gaps"
 # the layout with one tree per folder, stacked; the first (code) tree is the open one
 trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
   printf 'pane name="tree: %s" command="hidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1

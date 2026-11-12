@@ -118,6 +118,20 @@ check "y: installed, and the launcher told to start the new one" '[ "$status" = 
 printf 'test\n' > "$u/home/VERSION"
 check "a build from the repo is not offered anything" '! ask n | grep -q available'
 
+echo "sandbox, for real on this machine ($(hidex-sandbox --which))"
+if [ "$(hidex-sandbox --which)" = none ]; then echo "  (no sandbox here: skipped)"; else
+  p=$T/sbproj; mkdir -p "$p" "$T/home/.ssh"; echo hi > "$p/a"; touch "$T/home/.ssh/id_test" "$T/home/notes"
+  check "read: the project is readable" '[ "$(hidex-sandbox read "$p" -- cat "$p/a")" = hi ]'
+  check "read: nothing can be written in it" '! hidex-sandbox read "$p" -- sh -c "echo x > $p/b" 2>/dev/null; [ ! -e "$p/b" ]'
+  check "read: the home folder is out of reach" '! hidex-sandbox read "$p" -- ls "$T/home" >/dev/null 2>&1'
+  check "write: the project is writable" 'hidex-sandbox write "$p" -- sh -c "echo x > $p/c" && [ -f "$p/c" ]'
+  if ! hidex-sandbox --gaps | grep -q network; then
+    check "read: no network (refused by the sandbox, not just unanswered)" 'hidex-sandbox read "$p" -- bash -c "exec 3<>/dev/tcp/127.0.0.1/9" 2>&1 | grep -q -E "Permission denied|unreachable"'
+  fi
+  check "machine (Helix): ~/.ssh hidden" '[ -z "$(hidex-sandbox machine -- ls -A "$T/home/.ssh" 2>/dev/null)" ]'
+  check "machine (Helix): the rest of home as usual" 'echo note > "$T/home/notes"; [ "$(hidex-sandbox machine -- cat "$T/home/notes")" = note ]'
+fi
+
 echo "uninstall"
 p=$T/pfx; mkdir -p "$p/share/hidex/versions/v9/bin" "$p/share/hidex/tools/zellij-1" "$p/bin" "$T/state/hidex"
 ln -s "$p/share/hidex/versions/v9/bin/hidex" "$p/bin/hidex"

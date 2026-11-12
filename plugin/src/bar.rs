@@ -39,7 +39,9 @@ fn left(status: &Status) -> Vec<Piece> {
         (format!("\u{1b}[1;30;48;5;{ACCENT}m hIDEx {RESET}"), 7),
         (format!(" \u{1b}[1m{}{RESET}", status.project), 1 + status.project.chars().count()),
     ];
-    for (color, label, value) in [(5, "on ", &status.branch), (2, "py ", &status.python), (6, "theme ", &status.theme)] {
+    let fields =
+        [(5, "on ", &status.branch), (2, "py ", &status.python), (6, "theme ", &status.theme), (1, "", &status.sandbox)];
+    for (color, label, value) in fields {
         if !value.is_empty() {
             let text = format!("{label}{value}");
             out.push((format!("{DIM}  ·  {RESET}{}", fg(color, &text)), 5 + text.chars().count()));

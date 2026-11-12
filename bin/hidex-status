@@ -1,6 +1,7 @@
 #!/bin/sh
 # hidex-status DIR: one line for the bar, tab-separated: git branch, project Python (only in a Python
-# project: an env chosen, or Python files), colour theme.
+# project: an env chosen, or Python files), colour theme, and the sandbox when it is incomplete ("sandbox:
+# partial", "no sandbox"; hidex-sandbox --gaps, noted at start).
 cd "$1" 2>/dev/null || exit 0
 s=$(hidex-state)
 b=$(git branch --show-current 2>/dev/null) || b=
@@ -11,4 +12,6 @@ python_project() {
 }
 p=; python_project && p=$(hidex-python label)
 t=$(cat "$s/theme" 2>/dev/null)
-printf '%s\t%s\t%s\n' "$b" "$p" "$t"
+sb=
+case $(cat "$s/sandbox-gaps" 2>/dev/null) in "") ;; "no sandbox"*) sb="no sandbox" ;; *) sb="sandbox: partial" ;; esac
+printf '%s\t%s\t%s\t%s\n' "$b" "$p" "$t" "$sb"

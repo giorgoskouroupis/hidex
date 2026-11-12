@@ -7,9 +7,10 @@
 # read and write also reach zellij's socket and the session's state (its "current" link to hIDEx), so files
 # picked there still open in Helix. With Landlock (the kernel's, through landrun), else bubblewrap if the
 # machine has it; with neither, machine runs COMMAND as it is (an editor matters more), read and write fail.
-# hidex-sandbox --which: the sandbox this machine allows: landlock, bubblewrap or none (/about).
+# hidex-sandbox --which: the sandbox this machine allows: landlock, bubblewrap or none; --gaps: what it leaves
+# unprotected, one line each (older kernels), nothing when all is (/about, the bar).
 mode=$1; shift
-case $mode in machine|--which) ;; *) dir=$1; shift ;; esac
+case $mode in machine|--which|--gaps) ;; *) dir=$1; shift ;; esac
 [ "$1" = -- ] && shift
 run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 secret_dirs=(.ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker)
@@ -88,18 +89,41 @@ bubblewrap() {
   esac
 }
 
+# the kernel's Landlock version, 0 without it: its own answer (landlock_create_ruleset asked for its version;
+# 444 on x86_64), through hIDEx's Python
+landlock_abi() {
+  local f=$run/hidex/landlock-abi
+  # (kept until the next boot, when the runtime folder empties: the kernel's answer cannot change before)
+  local ask='import ctypes; print(max(ctypes.CDLL(None).syscall(444, None, 0, 1), 0))'
+  [ -s "$f" ] || { mkdir -p "${f%/*}"; python3 -I -c "$ask" > "$f" 2>/dev/null || echo 0 > "$f"; }
+  cat "$f"
+}
+
 # the sandbox this machine allows: Landlock when the kernel has it, else bubblewrap when it may run here
 which_sandbox() {
-  if grep -qw landlock /sys/kernel/security/lsm 2>/dev/null && command -v landrun >/dev/null; then echo landlock
+  if [ "$(landlock_abi)" -ge 1 ] && command -v landrun >/dev/null; then echo landlock
   elif command -v bwrap >/dev/null && bwrap --dev-bind / / true 2>/dev/null; then echo bubblewrap
   else echo none
   fi
 }
 
+# what this machine's sandbox leaves unprotected, one line each (nothing when all is)
+gaps() {
+  case $(which_sandbox) in
+    landlock)
+      abi=$(landlock_abi)
+      [ "$abi" -ge 3 ] || echo "read-only files can still be emptied (Linux 6.2 or later prevents it)"
+      [ "$abi" -ge 4 ] || echo "the network stays open to the trees, yazi and lazygit (Linux 6.7 or later closes it)" ;;
+    none) echo "no sandbox: the trees, yazi and the read-only lazygit do not start, Helix runs without one" ;;
+  esac
+  return 0
+}
+
 case $mode in
   --which) which_sandbox; exit 0 ;;
+  --gaps) gaps; exit 0 ;;
   read|write|machine) ;;
-  *) echo "hidex-sandbox: read DIR, write DIR, machine or --which" >&2; exit 2 ;;
+  *) echo "hidex-sandbox: read DIR, write DIR, machine, --which or --gaps" >&2; exit 2 ;;
 esac
 case $(which_sandbox) in
   landlock) landlock "$@" ;;

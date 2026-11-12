@@ -103,9 +103,6 @@ elif [ "${HIDEX_NO_MODIFY_PATH:-}" != 1 ] && ours "$rc"; then
 else
   echo "  add $prefix/bin to your PATH (until then: $prefix/bin/hidex)"
 fi
-case $(PATH="$versions/$v/tools/bin:$PATH" "$versions/$v/bin/hidex-sandbox" --which) in
-  landlock) ;;
-  bubblewrap) echo "  this kernel has no Landlock: the sandbox is bubblewrap" ;;
-  *) echo "  this machine allows no sandbox: the file tree, yazi and lazygit will not start, Helix runs without its sandbox" ;;
-esac
+# what this machine's sandbox leaves unprotected (older kernels), if anything
+PATH="$versions/$v/tools/bin:$PATH" "$versions/$v/bin/hidex-sandbox" --gaps | sed 's/^/  not protected here: /'
 echo "  running sessions: /update moves them to this version"
