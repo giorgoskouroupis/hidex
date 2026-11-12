@@ -94,9 +94,9 @@ of `bin/hidex-cmd` and one small function; those that need a list or a result op
   without a restart (`bin/hidex-pyright` hands basedpyright the env's interpreter).
 - `/reload` (files changed on disk), `/lsp` (restart the language servers), `/git`, `/git-write`, `/yazi`,
   `/terminal`, `/side`, `/collapse`, `/keys`, `/about` (version, install folder, tools, the sandbox here), `/quit`.
-- `/copy`: the last command run in the terminal you were last in, with its output below it, to the clipboard
-  (the window's, through the terminal, so over ssh too). Read from the screen: the bottom line is the prompt, and
-  the last earlier line starting with it is the command, so unusual prompts can fool it.
+- `/copy`: the output of the last command run in the terminal you were last in (`/copy zsh 2`: in that one), to
+  the clipboard: zellij's own copy, which knows where the output starts and ends from the marks the shell sets
+  (shell integration), and reaches the window's clipboard through the terminal, so over ssh too.
 - `/update`: after installing a newer hIDEx, moves the running session to it without a restart:
   terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
   everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
@@ -175,7 +175,7 @@ concern lives in one place (named below).
   (folding), `status` and `bar`, `scripts` (the scripts it runs, and how their answers are told apart), `timers`.
   Its `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/hidex-msg`.
 - **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,
-  `bin/hidex-helix-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-copy`, `bin/hidex-quit-ask`.
+  `bin/hidex-helix-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-quit-ask`.
 - **Panes:** `bin/hidex-shell` (terminals, and side terminals after Claude: `bin/hidex-side`), `bin/hidex-tree`
   and `bin/hidex-tree-enter` (the trees), `bin/hidex-helix` (Helix), `bin/hidex-lazygit` and `bin/hidex-yazi`
   (pop-ups), `bin/hidex-open` (a picked file to Helix or lnav).

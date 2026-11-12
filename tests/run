@@ -133,7 +133,7 @@ echo "copy"
 key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-copy-marker
 '; pause 1
 msg copy; pause 2
-check "/copy takes the terminal's last command and its output" '[ "$("$out/bin/hidex-copy" --from "$XDG_RUNTIME_DIR/hidex/$S/copy.txt" | tail -1)" = hidex-copy-marker ] && "$out/bin/hidex-copy" --from "$XDG_RUNTIME_DIR/hidex/$S/copy.txt" | head -1 | grep -q "echo hidex-copy-marker"'
+check "/copy: zellij copies the terminal's last output to the window's clipboard" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | grep -q hidex-copy-marker'
 
 echo "memory"
 in_session "$out/bin/hidex-theme" Dracula

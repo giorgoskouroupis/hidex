@@ -82,11 +82,18 @@ impl State {
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
-            // no such terminal: hidex-copy empties the clipboard, so nothing stale gets pasted
+            // zellij's own copy of the terminal's last command output (its shell marks it: OSC 133), the focus back
+            // where it was
             Action::Copy(name) => {
                 let id = if name.is_empty() { self.panes.last_terminal() } else { self.panes.terminal(&name) };
-                let pane = id.map(|id| format!("terminal_{id}")).unwrap_or_default();
-                scripts::run(&["hidex-copy", &pane], None);
+                if let Some(id) = id {
+                    let back = self.panes.tiled().filter(|b| *b != id);
+                    panes::focus(id);
+                    run_action(zellij_tile::prelude::actions::Action::CopyLastCommandOutput, BTreeMap::new());
+                    if let Some(back) = back {
+                        panes::focus(back);
+                    }
+                }
             }
         }
     }
@@ -172,6 +179,7 @@ impl ZellijPlugin for State {
             PermissionType::RunCommands,
             PermissionType::WriteToStdin, // to type commands into Helix
             PermissionType::ReadCliPipes, // to answer scripts' messages (hidex-msg), which zellij resends otherwise
+            PermissionType::RunActionsAsUser, // zellij's own actions (copying the last command output: /copy)
         ]);
         subscribe(&[
             EventType::PaneUpdate,

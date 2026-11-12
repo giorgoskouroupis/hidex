@@ -15,6 +15,8 @@ pushing the version's tag (the release Action stops when the section is missing)
 - `/about`: the version, the install folder, the tools and their versions, the sandbox this machine allows.
 - `Alt+z`: zen, the focused pane covers the whole window, the bar too (zellij's own); `Alt+\`: back to the pane
   you were in before.
+- `/copy` is zellij's own copy of the last command's output (exact, from the shell's marks), no longer read off the
+  screen; the command line itself is not part of it.
 - Shell integration in the terminals (bash, zsh; fish has its own): the standard prompt and output marks (OSC 133),
   from WezTerm's script (MIT), loaded after your own config without changing it. zellij then jumps between
   prompts (`[` and `]` in its scroll mode), selects a command's output with a triple click, and copies the last

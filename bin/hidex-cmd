@@ -16,7 +16,7 @@ yazi	yazi, the file manager
 terminal	a new terminal, stacked with the others
 side	a new side terminal (Claude, or a shell for any AI tool)
 collapse	fold the last used pane to a strip, or unfold it
-copy	copy the last command of the terminal last used ("copy zsh 2", "copy claude 1": of that one), with its output below it, to the clipboard
+copy	copy the output of the last command in the terminal last used ("copy zsh 2", "copy claude 1": in that one), zellij'"'"'s own copy
 keys	every hIDEx key
 about	this hIDEx: its version, where it is installed, its tools, the sandbox on this machine, links
 update	move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers

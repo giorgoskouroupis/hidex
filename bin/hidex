@@ -93,7 +93,7 @@ mkdir -p "${p%/*}"; touch "$p"
 awk -v this="\"$HIDEX_PLUGIN\" {" '$0 == this || /^"\/nix\/store\/[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next }
   skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
 printf '"%s" {\n' "$HIDEX_PLUGIN" >> "$p.new"
-for permission in ReadApplicationState ChangeApplicationState RunCommands WriteToStdin ReadCliPipes; do
+for permission in ReadApplicationState ChangeApplicationState RunCommands WriteToStdin ReadCliPipes RunActionsAsUser; do
   printf '    %s\n' "$permission"
 done >> "$p.new"
 echo "}" >> "$p.new"

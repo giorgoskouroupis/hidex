@@ -20,8 +20,8 @@ pub enum Action {
     Quit(String),
     /// read the branch, Python and theme again for the bar
     Status,
-    /// a terminal's last command and its output, to the clipboard (hidex-copy): the one named ("term 2",
-    /// "side1"), or "" for the terminal last used
+    /// a terminal's last command output to the clipboard (zellij's own copy): the one named ("zsh 2",
+    /// "claude1"), or "" for the terminal last used
     Copy(String),
 }
 

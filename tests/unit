@@ -85,16 +85,6 @@ hidex-langs < /dev/null > /dev/null
 check "counts the project's languages" 'grep -q "^  bash" "$T/langs" && grep -q "^  markdown" "$T/langs"'
 check "with their language servers found" 'grep "^  bash" "$T/langs" | grep -q "✓ bash-language-server"'
 
-echo "copy"
-printf '%s\n' '[me@host: proj] main     10:01:02' '❯ ls' 'a.py' '[me@host: proj] main     10:01:05' '❯ echo hi; echo there' 'hi' 'there' '' '[me@host: proj] main     10:01:09' '❯' '' > "$T/starship.txt"
-check "a two-line prompt: the last command and its output, no prompt lines" '[ "$(hidex-copy --from "$T/starship.txt")" = "$(printf "❯ echo hi; echo there\nhi\nthere")" ]'
-printf '%s\n' 'me@host:~/p$ make' 'building' 'done' 'me@host:~/p$ ' > "$T/bash.txt"
-check "a one-line prompt" '[ "$(hidex-copy --from "$T/bash.txt")" = "$(printf "me@host:~/p$ make\nbuilding\ndone")" ]'
-printf '%s\n' 'just text' 'no prompt here' > "$T/none.txt"
-check "no command found: nothing copied" '[ -z "$(hidex-copy --from "$T/none.txt")" ]'
-: > "$T/tty"; hidex-copy ""
-check "no terminal: the clipboard is emptied, nothing stale left" '[ "$(cat "$T/tty")" = "$(printf "\033]52;c;\033\\")" ]'
-
 echo "commands"
 check "every command has its function" 'for c in $(hidex-cmd --list | cut -f1); do grep -q "^cmd_$(echo $c | tr - _)()" "$out/bin/hidex-cmd" || exit 1; done'
 check "suggestions: commands starting with the line" '[ "$(hidex-cmd --suggest co | cut -f1 | tr "\n" " ")" = "collapse copy " ]'
