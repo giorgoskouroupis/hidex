@@ -73,6 +73,8 @@ text: no icon font needed.
   without a restart (`bin/hidex-pyright` hands basedpyright the env's interpreter).
 - `/reload` (files changed on disk), `/lsp` (restart the language servers), `/git`, `/git-write`, `/yazi`,
   `/terminal`, `/side`, `/collapse`, `/keys`, `/quit`.
+- `/output`: the whole output (scrollback and screen) of the terminal you were last in, opened in Helix at its
+  end, just after the last command's output: select there and copy (`space` `y` for the clipboard).
 - `/update`: after `nix profile upgrade hidex`, moves the running session to the new hIDEx without a restart:
   terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
   everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
@@ -113,12 +115,15 @@ keeps them in their place, so no key pressed there can reach further.
 - They see the Nix store, `/etc`, and the project: read-only for the trees and lazygit, writable for yazi
   (a file manager). An empty home folder: not your `~/.ssh`, `~/.gitconfig` or anything else in it. No network.
 - They still open files: `Enter` reaches Helix and lnav through zellij's socket, the one way out.
-- Helix itself is not sandboxed (it saves files, runs the language servers): its `:open` can reach any file.
+- Helix runs in a lighter sandbox (`bin/hidex-helix`): it sees the machine as usual (it saves files, runs the
+  language servers, uses your envs and the clipboard), except the secrets: `~/.ssh`, `~/.gnupg`, password
+  stores, `~/.aws`, `~/.kube`, `~/.docker`, `.netrc`, `.git-credentials` look empty to it and to anything it
+  starts. Other system files stay readable (opening `/etc/hosts` is harmless).
 - In the read-only lazygit any change (stage, commit, checkout, fetch, push) fails with "read-only file
   system"; `Alt+Shift+g` swaps it for the plain lazygit.
 - It guards against accidents, not against hostile code.
 - Limits: it needs unprivileged user namespaces, which some servers turn off (then the trees and the
-  read-only lazygit do not start); in a git worktree the repo's data lives outside the folder, so the
+  read-only lazygit do not start, and Helix runs without its sandbox); in a git worktree the repo's data lives outside the folder, so the
   read-only lazygit cannot see it; the trees and yazi refuse, as above, off-limits folders.
 
 ## Layout
@@ -136,6 +141,7 @@ keeps them in their place, so no key pressed there can reach further.
 - `bin/hidex-lazygit`, `bin/hidex-yazi`: the pop-ups (sandboxed); `bin/hidex-popup-colors` their colours, from
   `bin/hidex-bg` (the window's background, dark or light), which also gives lazygit light diffs (`bin/hidex-delta`);
   `bin/hidex-guard`: the off-limits folders
+- `bin/hidex-helix`: Helix's sandbox; `bin/hidex-output`: `/output`
 - `bin/hidex-cmd`: the `/` commands; `bin/hidex-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-helix-theme`, `bin/hidex-pyright`
   (basedpyright on the project's Python, switched live), `bin/hidex-update` (`/update`), `bin/hidex-config` (the
   session's zellij config), `bin/hidex-status` (the bar's line), `bin/hidex-state` (per-session state),

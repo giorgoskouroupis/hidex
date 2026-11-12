@@ -80,6 +80,12 @@ impl Panes {
     pub fn tiled(&self) -> Option<u32> {
         self.focused_tiled
     }
+
+    /// the terminal (or side terminal) last used: the one focused, else the terminals' last one
+    pub fn last_terminal(&self) -> Option<u32> {
+        let focused = self.focused_tiled.filter(|id| self.get(*id).and_then(role).is_some_and(|r| r == "terminals" || r == "side"));
+        focused.or_else(|| self.for_role("terminals"))
+    }
 }
 
 pub fn focus(id: u32) {
@@ -215,5 +221,16 @@ pub mod tests {
         assert_eq!(title(&p, p.numbered(2)), "tree: b");
         assert_eq!(p.numbered(9), None);
         assert_eq!(p.numbered(0), None);
+    }
+
+    #[test]
+    fn output_comes_from_the_terminal_last_used() {
+        let list = |focus: &str| panes(["Helix", "term 1", "term 2", "side 1"].iter().enumerate().map(|(i, t)| pane(i as u32, t, *t == focus)).collect());
+        let p = list("term 2");
+        assert_eq!(title(&p, p.last_terminal()), "term 2");
+        let p = list("side 1");
+        assert_eq!(title(&p, p.last_terminal()), "side 1");
+        let p = list("Helix");
+        assert_eq!(title(&p, p.last_terminal()), "term 1");
     }
 }

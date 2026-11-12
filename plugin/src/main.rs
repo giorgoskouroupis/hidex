@@ -75,6 +75,13 @@ impl State {
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
+            Action::Output => {
+                if let Some(id) = self.panes.last_terminal() {
+                    let name = self.panes.get(id).map(|p| p.title.clone()).unwrap_or_default();
+                    let pane = format!("terminal_{id}");
+                    run_command(&["hidex-output", &self.status.session, &pane, &name], BTreeMap::new());
+                }
+            }
         }
     }
 

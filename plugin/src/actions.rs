@@ -20,6 +20,8 @@ pub enum Action {
     Quit(String),
     /// read the branch, Python and theme again for the bar
     Status,
+    /// the last used terminal's whole output, opened in Helix (hidex-output)
+    Output,
 }
 
 impl Action {
@@ -35,6 +37,7 @@ impl Action {
             "helix" if !payload.is_empty() => Action::Helix(arg),
             "quit" => Action::Quit(arg),
             "status" => Action::Status,
+            "output" => Action::Output,
             _ => return None,
         })
     }
