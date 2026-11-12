@@ -1,12 +1,10 @@
 //! What the bar shows besides the buttons: the git branch, the project Python and the colour theme, read
 //! by the hidex-status script every few seconds (and at once when a script says it changed).
-use std::collections::BTreeMap;
+use crate::scripts;
 use std::path::PathBuf;
-use zellij_tile::prelude::*;
 
 #[derive(Default)]
 pub struct Status {
-    pub session: String,
     pub project: String,
     pub branch: String,
     pub python: String,
@@ -19,12 +17,7 @@ impl Status {
     }
 
     pub fn refresh(&self, cwd: &PathBuf) {
-        if self.session.is_empty() {
-            return;
-        }
-        let mut context = BTreeMap::new();
-        context.insert("status".to_string(), String::new());
-        run_command(&["hidex-status", &self.session, &cwd.to_string_lossy()], context);
+        scripts::run(&["hidex-status", &cwd.to_string_lossy()], Some(scripts::STATUS_LINE));
     }
 
     /// hidex-status's line: branch, Python, theme, tab-separated. Says whether anything changed.
@@ -37,12 +30,6 @@ impl Status {
         changed
     }
 
-    /// stop what still runs in the shells (hidex-stop), the last step of quitting (answer: context "stopped")
-    pub fn stop_all(&self) {
-        let mut context = BTreeMap::new();
-        context.insert("stopped".to_string(), String::new());
-        run_command(&["hidex-stop", &self.session], context);
-    }
 }
 
 #[cfg(test)]

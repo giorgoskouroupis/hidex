@@ -11,7 +11,8 @@ mkdir -p "$T/fake" "$T/run" "$T/home"
 # fake tools: zellij and delta write down how they were called; fzf picks the first line matching $PICK
 printf '#!/bin/sh\necho "$*" >> %s/zellij.calls\n' "$T" > "$T/fake/zellij"
 printf '#!/bin/sh\necho "$*" > %s/delta.args\n' "$T" > "$T/fake/delta"
-printf '#!/bin/sh\ngrep -m1 -- "${PICK:-.}"\n' > "$T/fake/fzf"
+# (reading all its input, as fzf does)
+printf '#!/bin/sh\nawk -v p="${PICK:-.}" '"'"'$0 ~ p && !done { print; done = 1 }'"'"'\n' > "$T/fake/fzf"
 chmod +x "$T/fake"/*
 export PATH=$T/fake:$out/bin:$out/tools/bin:$PATH HOME=$T/home XDG_RUNTIME_DIR=$T/run XDG_STATE_HOME=$T/state
 export HIDEX_SHARE=$out/share/hidex ZELLIJ_SESSION_NAME=unit HIDEX_PROJECT=$T/state/project
@@ -72,9 +73,9 @@ hidex-python set none
 check "none: hIDEx's own Python, also kept" '[ ! -f "$s/python" ] && grep -qx none "$HIDEX_PROJECT/python"'
 
 echo "bar status"
-check "a Python project shows its Python" '[ "$(hidex-status unit "$T/proj" | cut -f2)" != "" ]'
+check "a Python project shows its Python" '[ "$(hidex-status "$T/proj" | cut -f2)" != "" ]'
 mkdir -p "$T/docs" && echo hi > "$T/docs/a.md"
-check "another project shows none" '[ "$(hidex-status unit "$T/docs" | cut -f2)" = "" ]'
+check "another project shows none" '[ "$(hidex-status "$T/docs" | cut -f2)" = "" ]'
 
 echo "languages"
 echo 'echo hi' > "$T/proj/a.sh"; echo '# hi' > "$T/proj/README.md"

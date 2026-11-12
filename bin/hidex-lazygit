@@ -1,7 +1,7 @@
 #!/bin/sh
-# hidex-lazygit [--write]: lazygit on the project's repo. By default read-only: it runs in a bubblewrap
-# sandbox where the repo is mounted read-only and there is no network, so browsing (log, diffs, branches)
-# works and any change (stage, commit, checkout, push) fails. --write: the plain lazygit.
+# hidex-lazygit [--write]: lazygit on the project's repo. By default read-only: sandboxed (hidex-sandbox read),
+# the repo read-only and no network, so browsing (log, diffs, branches) works and any change (stage, commit,
+# checkout, push) fails. --write: the plain lazygit.
 
 # the background, asked once: for the pop-up's colours, and light diffs on a light one (hidex-delta)
 bg=$(hidex-bg)
@@ -12,10 +12,4 @@ case $bg in *light) export HIDEX_DELTA_LIGHT=1 ;; esac
 top=$(git rev-parse --show-toplevel 2>/dev/null) || top=$PWD
 # lazygit reads several config files, comma-separated, the later ones winning
 export LG_CONFIG_FILE="$LG_CONFIG_FILE,$HIDEX_SHARE/lazygit-readonly.yml"
-# the session's state too: its "current" link leads to hIDEx's tools and config
-run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-exec bwrap --die-with-parent --unshare-all \
-  --ro-bind /nix /nix --ro-bind /etc /etc \
-  --proc /proc --dev /dev --tmpfs /tmp --tmpfs "$HOME" \
-  --ro-bind "$run/hidex" "$run/hidex" --ro-bind "$top" "$top" --chdir "$PWD" \
-  lazygit
+exec hidex-sandbox read "$top" -- lazygit

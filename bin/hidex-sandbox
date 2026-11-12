@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# hidex-sandbox MODE [DIR] -- COMMAND...: runs COMMAND under bubblewrap, hIDEx's one sandbox policy:
+#   read DIR   DIR read-only, the Nix store and /etc, an empty home, no network (the trees, the read-only lazygit)
+#   write DIR  the same, DIR writable (yazi, a file manager)
+#   machine    the whole machine as usual but the secrets folders and files, emptied (Helix)
+# read and write also see zellij's socket and the session's state (its "current" link to hIDEx), so files picked
+# there still open in Helix. Where the kernel allows no sandbox (some servers), machine runs COMMAND without one
+# (an editor matters more); read and write fail.
+mode=$1; shift
+[ "$mode" != machine ] && { dir=$1; shift; }
+[ "$1" = -- ] && shift
+run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+
+case $mode in
+  read|write)
+    project=--ro-bind; [ "$mode" = write ] && project=--bind
+    # inside DIR the program starts where it was asked to; else in DIR
+    case $PWD/ in "$dir"/*) start=$PWD ;; *) start=$dir ;; esac
+    exec bwrap --die-with-parent --unshare-all \
+      --ro-bind /nix /nix --ro-bind /etc /etc --proc /proc --dev /dev --tmpfs /tmp --tmpfs "$HOME" \
+      --bind "$run/zellij" "$run/zellij" --ro-bind "$run/hidex" "$run/hidex" \
+      "$project" "$dir" "$dir" --chdir "$start" -- "$@" ;;
+  machine)
+    hide=()
+    for d in .ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker; do
+      [ -d "$HOME/$d" ] && hide+=(--tmpfs "$HOME/$d")
+    done
+    for f in .netrc .git-credentials .pgpass; do
+      [ -f "$HOME/$f" ] && hide+=(--ro-bind /dev/null "$HOME/$f")
+    done
+    bwrap --dev-bind / / true 2>/dev/null || exec "$@"
+    exec bwrap --dev-bind / / --die-with-parent "${hide[@]}" -- "$@" ;;
+  *) echo "hidex-sandbox: read DIR, write DIR or machine" >&2; exit 2 ;;
+esac

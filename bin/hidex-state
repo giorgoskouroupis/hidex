@@ -1,5 +1,5 @@
 #!/bin/sh
-# hidex-state [SESSION]: prints (and creates) the session's state folder, where hIDEx keeps what can change
+# hidex-state: prints (and creates) the session's (ZELLIJ_SESSION_NAME) state folder, where hIDEx keeps what can change
 # while it runs: the colour theme, the project Python, the window's terminal. Gone when the machine restarts.
-d=${XDG_RUNTIME_DIR:-/tmp}/hidex/${1:-${ZELLIJ_SESSION_NAME:?not in a hIDEx session}}
+d=${XDG_RUNTIME_DIR:-/tmp}/hidex/${ZELLIJ_SESSION_NAME:?not in a hIDEx session}
 mkdir -p "$d" && echo "$d"

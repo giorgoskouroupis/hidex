@@ -1,7 +1,6 @@
 //! Pop-ups (floating panes): each opened once by its key, then hidden and brought back by the same key;
 //! several tile side by side, one alone is centred.
-use crate::panes::Panes;
-use std::collections::BTreeMap;
+use crate::panes::{self, Panes};
 use std::path::PathBuf;
 use zellij_tile::prelude::*;
 
@@ -53,8 +52,7 @@ pub fn toggle(name: &str, panes: &Panes, floating_visible: bool, cwd: &PathBuf) 
             if let Some(p) = other {
                 close_pane_with_id(PaneId::Terminal(p.id));
             }
-            let mut context = BTreeMap::new();
-            context.insert("name".to_string(), name.to_string());
+            let context = panes::named(name);
             let run = CommandToRun {
                 path: (*program).into(),
                 args: args.iter().map(|a| a.to_string()).collect(),
@@ -106,8 +104,7 @@ impl Popups {
 /// it is closed, tiled and coloured like the other pop-ups
 pub fn open_command(words: &[String], cwd: &PathBuf) {
     let args = std::iter::once("--popup".to_string()).chain(words.iter().cloned()).collect();
-    let mut context = BTreeMap::new();
-    context.insert("name".to_string(), "commands".to_string());
+    let context = panes::named("commands");
     let run = CommandToRun { path: COMMANDS.into(), args, cwd: Some(cwd.clone()) };
     open_command_pane_floating(run, None, context);
 }

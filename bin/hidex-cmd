@@ -1,5 +1,5 @@
 #!/bin/sh
-# hidex-cmd [--session NAME] [--popup] [NAME [ARG]]: hIDEx's / commands, the one table of them: each command
+# hidex-cmd [--popup] [NAME [ARG]]: hIDEx's / commands, the one table of them: each command
 # is one line below (name, whether it needs a screen, description) and one function. The bar's command line
 # (Alt+p) reads the table (--list) and runs the commands; with no name, a list to pick from ("cmds" on the
 # bar). --popup: started as a pop-up, so it takes the pop-ups' colours.
@@ -43,8 +43,6 @@ cmd_keys() {
 cmd_update() { hidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
 cmd_quit() { hidex-msg quit ask; }
 
-# --session NAME: run for that session (the bar runs commands in the background, outside any pane)
-[ "$1" = --session ] && { export ZELLIJ_SESSION_NAME=$2; shift 2; }
 [ "$1" = --popup ] && { shift; hidex-popup-colors; }
 case $1 in
   --list) printf '%s\n' "$COMMANDS" ;;

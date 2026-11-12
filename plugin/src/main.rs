@@ -12,6 +12,7 @@ mod collapse;
 mod panes;
 mod popups;
 mod prompt;
+mod scripts;
 mod status;
 mod timers;
 mod typist;
@@ -87,17 +88,17 @@ impl State {
             Action::Copy => {
                 if let Some(id) = self.panes.last_terminal() {
                     let pane = format!("terminal_{id}");
-                    run_command(&["hidex-copy", &self.status.session, &pane], BTreeMap::new());
+                    scripts::run(&["hidex-copy", &pane], None);
                 }
             }
         }
     }
 
-    /// the Helix theme kept for the project (hidex-helix-theme), once Helix runs and the session is known
+    /// the Helix theme kept for the project (hidex-helix-theme), once Helix runs
     fn restore(&mut self) {
-        if !self.restored && self.cwd_known && !self.status.session.is_empty() {
+        if !self.restored && self.cwd_known {
             self.restored = true;
-            run_command(&["hidex-helix-theme", "restore", &self.status.session], BTreeMap::new());
+            scripts::run(&["hidex-helix-theme", "restore"], None);
         }
     }
 
@@ -110,12 +111,9 @@ impl State {
         }
         match run {
             prompt::Run::Popup(words) => popups::open_command(&words, &self.cwd),
-            // zellij's own environment (PATH…), the session named as an argument: given variables would replace it
             prompt::Run::Background(words) => {
-                let session = ["--session", self.status.session.as_str()];
-                let command: Vec<&str> =
-                    [popups::COMMANDS].into_iter().chain(session).chain(words.iter().map(String::as_str)).collect();
-                run_command(&command, BTreeMap::new());
+                let command: Vec<&str> = [popups::COMMANDS].into_iter().chain(words.iter().map(String::as_str)).collect();
+                scripts::run(&command, None);
             }
             prompt::Run::Nothing => {}
         }
@@ -147,11 +145,7 @@ impl State {
             return;
         }
         self.ending = true;
-        if self.status.session.is_empty() {
-            quit_zellij();
-        } else {
-            self.status.stop_all();
-        }
+        scripts::run(&["hidex-stop"], Some(scripts::STOPPED));
     }
 
     fn on_panes(&mut self, manifest: PaneManifest) {
@@ -201,7 +195,6 @@ impl ZellijPlugin for State {
         subscribe(&[
             EventType::PaneUpdate,
             EventType::TabUpdate,
-            EventType::ModeUpdate,
             EventType::CommandPaneOpened,
             EventType::Timer,
             EventType::RunCommandResult,
@@ -225,29 +218,19 @@ impl ZellijPlugin for State {
                     self.floating_visible = t.are_floating_panes_visible;
                 }
             }
-            Event::ModeUpdate(mode) => {
-                if let Some(name) = mode.session_name {
-                    if self.status.session.is_empty() {
-                        self.status.session = name;
-                        self.status.refresh(&self.cwd);
-                        self.restore();
-                    }
-                }
-            }
             Event::Timer(elapsed) => self.on_tick(Tick::from_elapsed(elapsed)),
             Event::CommandPaneOpened(id, context) => panes::on_opened(id, &context),
-            Event::RunCommandResult(_, stdout, _, context) if context.contains_key("status") => {
-                return self.status.read(&stdout);
-            }
-            Event::RunCommandResult(_, _, _, context) if context.contains_key("stopped") => quit_zellij(),
+            // a script's answer, by its tag
+            Event::RunCommandResult(_, stdout, _, context) => match scripts::tag(&context) {
+                Some(scripts::STATUS_LINE) => return self.status.read(&stdout),
+                Some(scripts::STOPPED) => quit_zellij(),
+                Some(scripts::COMMAND_LIST) => self.prompt.read_commands(&stdout),
+                _ => {}
+            },
             // the / commands, for the command line: asked once the plugin may run commands (asked in load,
             // they would be refused)
             Event::PermissionRequestResult(PermissionStatus::Granted) => {
-                let context = BTreeMap::from([("commands".to_string(), String::new())]);
-                run_command(&[popups::COMMANDS, "--list"], context);
-            }
-            Event::RunCommandResult(_, stdout, _, context) if context.contains_key("commands") => {
-                self.prompt.read_commands(&stdout);
+                scripts::run(&[popups::COMMANDS, "--list"], Some(scripts::COMMAND_LIST));
             }
             Event::Key(key) if self.prompt.active => {
                 self.on_prompt_key(&key);

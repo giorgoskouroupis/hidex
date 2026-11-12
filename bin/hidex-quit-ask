@@ -3,7 +3,7 @@
 # quits, s saves Helix's files too, any other key cancels. Unsaved files are never dropped: Helix refuses.
 # (Alt+Shift+q quits without asking, dropping them.)
 hidex-popup-colors
-running=$(hidex-running "$ZELLIJ_SESSION_NAME")
+running=$(hidex-running)
 printf '\n  \033[1mquit hIDEx?\033[0m\n\n'
 if [ -n "$running" ]; then
   printf '  Still running, stopped by both q and s (Ctrl+c, then harder):\n\n'

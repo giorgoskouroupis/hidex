@@ -1,5 +1,5 @@
 #!/bin/sh
-# hidex-copy SESSION PANE: copies the last command run in that terminal and its output, the command on top, to
+# hidex-copy PANE: copies the last command run in that terminal and its output, the command on top, to
 # the clipboard (/copy; the plugin passes the terminal last used). Read from the screen: the bottom line is the
 # prompt, so the last earlier line starting with it is the command; a header line above the prompt (two-line
 # prompts) is left out. The clipboard is the window's, through the terminal (OSC 52), so it also works over ssh.
@@ -22,10 +22,9 @@ last() {
 }
 
 if [ "$1" = --from ]; then last "$2"; exit; fi
-export ZELLIJ_SESSION_NAME=$1
 s=$(hidex-state) || exit 1
 dump=$s/copy.txt
-zellij action dump-screen --pane-id "$2" --full --path "$dump" || exit 1
+zellij action dump-screen --pane-id "$1" --full --path "$dump" || exit 1
 text=$(last "$dump")
 [ -n "$text" ] || exit 0
 

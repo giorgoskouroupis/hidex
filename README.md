@@ -130,25 +130,32 @@ keeps them in their place, so no key pressed there can reach further.
 
 ## Layout
 
-- `flake.nix`, `package.nix`: the `hidex` package, its tools on its PATH, the config in the store
-- `bin/hidex`: starts or reattaches a session
-- `bin/hidex-open`: opens a picked file in Helix, or in lnav for logs and big files
-- `bin/hidex-tree`: a tree, broot in a bubblewrap sandbox that sees only its folder, read-only; `bin/hidex-tree-enter`:
-  its `Enter` on folders, which stops at that folder
-- `plugin/`, `plugin.nix`: the zellij plugin (Rust), which is also the bar, one module per job: `panes`
-  (roles, jumps, new terminals), `popups`, `typist` (commands typed into Helix), `collapse` (folding),
-  `status` and `bar`, `actions` (what keys, clicks and `hidex-msg` can ask), `timers`. Its `zellij-tile`
-  version must match the zellij in `flake.lock`
-- `bin/hidex-side`, `bin/hidex-shell`: what runs in a side terminal or a shell pane
-- `bin/hidex-lazygit`, `bin/hidex-yazi`: the pop-ups (sandboxed); `bin/hidex-popup-colors` their colours, from
-  `bin/hidex-bg` (the window's background, dark or light), which also gives lazygit light diffs (`bin/hidex-delta`);
-  `bin/hidex-guard`: the off-limits folders
-- `bin/hidex-helix`: Helix's sandbox; `bin/hidex-copy`: `/copy`
-- `bin/hidex-cmd`: the `/` commands; `bin/hidex-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-helix-theme`, `bin/hidex-pyright`
-  (basedpyright on the project's Python, switched live), `bin/hidex-update` (`/update`), `bin/hidex-config` (the
-  session's zellij config), `bin/hidex-status` (the bar's line), `bin/hidex-state` (per-session state),
-  `bin/hidex-msg` (messages to the plugin)
-- `config/`: zellij config and theme, the layout, broot's, lazygit's and lnav's config, `config/xdg/`: Helix's, yazi's and pudb's
+One job per file; each script says at its top what it does and who calls it. Two rules hold throughout: the
+session is found in `ZELLIJ_SESSION_NAME` (set once by `bin/hidex`), never passed around, and each shared
+concern lives in one place (named below).
+
+- **Build:** `flake.nix`, `package.nix` (the `hidex` package: its tools, config and plugin, reached through each
+  session's `current` link), `plugin.nix`.
+- **Start and state:** `bin/hidex` starts or reattaches a session; `bin/hidex-state` (the session's state
+  folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`).
+- **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks,
+  the command line and `hidex-msg` can ask), `panes` (roles, jumps, new panes), `popups`, `typist` (commands
+  typed into Helix), `collapse` (folding), `status` and `bar`, `prompt` (the bar's command line), `scripts` (the
+  scripts it runs, and how their answers are told apart), `timers`. Its
+  `zellij-tile` version must match the zellij in `flake.lock`. Scripts reach it through `bin/hidex-msg`.
+- **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,
+  `bin/hidex-helix-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-copy`, `bin/hidex-quit-ask`.
+- **Panes:** `bin/hidex-shell` (terminals, and side terminals after Claude: `bin/hidex-side`), `bin/hidex-tree`
+  and `bin/hidex-tree-enter` (the trees), `bin/hidex-helix` (Helix), `bin/hidex-lazygit` and `bin/hidex-yazi`
+  (pop-ups), `bin/hidex-open` (a picked file to Helix or lnav).
+- **Shared pieces, one each:** `bin/hidex-sandbox` (every sandbox), `bin/hidex-guard` (the off-limits folders),
+  `bin/hidex-osc` (codes to the window: colours, clipboard), `bin/hidex-bg` and `config/brightness.awk` (the
+  window's background, dark or light), `bin/hidex-popup-colors` (the pop-ups' colours), `bin/hidex-env` (the
+  project Python for a program), `bin/hidex-running` and `bin/hidex-stop` (what runs in the shells, stopping
+  it), `bin/hidex-status` (the bar's line), `bin/hidex-pyright` (basedpyright on the project Python, live),
+  `bin/hidex-delta` (light diffs).
+- **Config:** `config/` (zellij's keys and layout, broot, lazygit, lnav), `config/xdg/` (Helix, yazi, pudb).
+- **Tests:** `tests/unit` and the plugin's `cargo test` (`nix flake check`), `tests/run` (end to end).
 
 ## Tests
 

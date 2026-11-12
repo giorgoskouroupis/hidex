@@ -102,8 +102,7 @@ pub fn open_new(kind: &str, panes: &Panes, cwd: &PathBuf) {
         "side" | "claude" => ("side", "side", "hidex-side"),
         _ => ("terminals", "term", "hidex-shell"),
     };
-    let mut context = BTreeMap::new();
-    context.insert("name".to_string(), next_name(name, panes));
+    let mut context = named(&next_name(name, panes));
     if let Some(target) = panes.for_role(area) {
         context.insert("stack_with".to_string(), target.to_string());
     }
@@ -121,6 +120,11 @@ fn next_name(kind: &str, panes: &Panes) -> String {
     let taken: Vec<&str> = panes.all().iter().map(|p| p.title.as_str()).collect();
     let n = (1..).find(|n| !taken.contains(&format!("{kind} {n}").as_str())).unwrap_or(1);
     format!("{kind} {n}")
+}
+
+/// what a pane about to be opened carries, so it is named once open (on_opened)
+pub fn named(name: &str) -> BTreeMap<String, String> {
+    BTreeMap::from([("name".to_string(), name.to_string())])
 }
 
 /// a pane opened by hIDEx: name it, stack it onto its area if asked, focus it

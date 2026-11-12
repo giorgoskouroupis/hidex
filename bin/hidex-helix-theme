@@ -1,5 +1,5 @@
 #!/bin/sh
-# hidex-helix-theme [pick | NAME | restore SESSION]: a theme of Helix's own, for Helix only, remembered for the
+# hidex-helix-theme [pick | NAME | restore]: a theme of Helix's own, for Helix only, remembered for the
 # project (HIDEX_PROJECT). "hidex" (or "terminal") is hIDEx's own, in the window's colours. pick: Helix's
 # themes, previewed in Helix as you move; Enter keeps, Esc goes back. restore: the project's, once Helix runs
 # (the bar asks for it at start).
@@ -18,7 +18,6 @@ themes() {
 }
 case ${1:-pick} in
   restore)
-    export ZELLIJ_SESSION_NAME=$2
     t=$(current)
     # Helix has only just started: give it a moment before typing into it
     [ "$t" = hidex ] || { sleep 1; hidex-msg helix "theme $t"; } ;;

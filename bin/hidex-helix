@@ -1,15 +1,5 @@
-#!/usr/bin/env bash
-# hidex-helix [ARGS]: Helix in a bubblewrap sandbox that sees the machine as usual (the project, envs, git, the
-# clipboard) except the secrets folders and files, replaced by empty ones: what the trees and yazi refuse,
-# Helix cannot open either, nor anything it starts (language servers, :sh). HIDEX_HELIX: another program to
-# run there instead (the tests).
-sandbox=(--dev-bind / / --die-with-parent)
-for d in .ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker; do
-  [ -d "$HOME/$d" ] && sandbox+=(--tmpfs "$HOME/$d")
-done
-for f in .netrc .git-credentials .pgpass; do
-  [ -f "$HOME/$f" ] && sandbox+=(--ro-bind /dev/null "$HOME/$f")
-done
-# where the kernel allows no sandbox (some servers): Helix without one, rather than no editor
-bwrap --dev-bind / / true 2>/dev/null || exec "${HIDEX_HELIX:-hx}" "$@"
-exec bwrap "${sandbox[@]}" -- "${HIDEX_HELIX:-hx}" "$@"
+#!/bin/sh
+# hidex-helix [ARGS]: Helix, sandboxed so it cannot open the secrets folders (hidex-sandbox machine): what the
+# trees and yazi refuse, Helix cannot open either, nor anything it starts (language servers, :sh).
+# HIDEX_HELIX: another program to run there instead (the tests).
+exec hidex-sandbox machine -- "${HIDEX_HELIX:-hx}" "$@"

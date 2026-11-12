@@ -143,8 +143,8 @@ stop
 
 echo "Helix's sandbox"
 mkdir -p "$T/home/.ssh" "$T/home/notes" && touch "$T/home/.ssh/id_test" "$T/home/notes/a"
-check "hides ~/.ssh from Helix" '[ -z "$(HOME=$T/home HIDEX_HELIX=ls "$out/bin/hidex-helix" -A "$T/home/.ssh")" ]'
-check "but not the rest" '[ "$(HOME=$T/home HIDEX_HELIX=ls "$out/bin/hidex-helix" "$T/home/notes")" = a ]'
+check "hides ~/.ssh from Helix" 'seen=$(PATH="$out/bin:$PATH" HOME=$T/home HIDEX_HELIX=ls "$out/bin/hidex-helix" -A "$T/home/.ssh") && [ -z "$seen" ]'
+check "but not the rest" '[ "$(PATH="$out/bin:$PATH" HOME=$T/home HIDEX_HELIX=ls "$out/bin/hidex-helix" "$T/home/notes")" = a ]'
 
 echo "guard"
 check "refuses /" '! "$out/bin/hidex-guard" / 2>/dev/null'

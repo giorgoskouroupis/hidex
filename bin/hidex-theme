@@ -1,10 +1,10 @@
 #!/bin/sh
-# hidex-theme NAME | pick | reset | list | apply SESSION | off SESSION | preview NAME: recolours the window hIDEx runs
+# hidex-theme NAME | pick | reset | list | apply | off | preview NAME: recolours the window hIDEx runs
 # in, live. Every hIDEx colour is one of the terminal's 16, so zellij, Helix (unless given its own theme), the
 # trees, lazygit and pudb all follow (Claude Code keeps its own). The colour codes go straight to the window
 # (hidex-osc). Schemes: iTerm2-Color-Schemes' kitty files (share/hidex/themes). pick: favourites, then every dark
 # and light scheme, previewed as you move. reset: the terminal's own colours. apply: the session's theme again
-# (hidex does it on reattach). off SESSION: the terminal's own colours, keeping the choice (hidex, on leaving).
+# (hidex does it on reattach). off: the terminal's own colours, keeping the choice (hidex, on leaving).
 themes=$HIDEX_SHARE/themes
 FAVOURITES='Atom One Dark
 Dracula
@@ -22,8 +22,7 @@ RESET='104 110 111 112 117 119'
 case ${1:-list} in
   list) ls "$themes" | sed -n 's/\.conf$//p'; exit ;;
 esac
-session=; case $1 in apply|off) session="--session $2" ;; esac
-s=$(hidex-state ${session#--session }) || exit 1
+s=$(hidex-state) || exit 1
 
 # codes NAME: the scheme's colours as terminal codes (kitty format: "colorN #hex", "background #hex"…)
 codes() {
@@ -33,9 +32,9 @@ codes() {
 }
 paint() {
   [ -f "$themes/$1.conf" ] || { echo "hIDEx: no theme $1 (hidex-theme list)" >&2; return 1; }
-  hidex-osc $session $RESET $(codes "$1")
+  hidex-osc $RESET $(codes "$1")
 }
-reset() { hidex-osc $session $RESET; }
+reset() { hidex-osc $RESET; }
 # back to the session's theme, or the terminal's own colours
 restore() { if [ -f "$s/theme" ]; then paint "$(cat "$s/theme")"; else reset; fi; }
 

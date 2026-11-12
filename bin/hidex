@@ -16,17 +16,20 @@ cd "${1:-.}" || exit 1
 # named after the folder and its parent (e.g. code-myproject): two folders with the same name do not collide
 n=$(basename "$(dirname "$PWD")")-$(basename "$PWD")
 export HIDEX_SIDE=$side
+# every pane, pop-up and command of the session (the plugin's too) finds its session here: no script takes it
+# as an argument
+export ZELLIJ_SESSION_NAME=$n
 # what is kept for the project between sessions (themes, the Python picked), in ~/.local/state
 HIDEX_PROJECT=${XDG_STATE_HOME:-$HOME/.local/state}/hidex/projects/$n-$(printf %s "$PWD" | md5sum | cut -c1-8)
 export HIDEX_PROJECT
 mkdir -p "$HIDEX_PROJECT"
-s=$(hidex-state "$n")
+s=$(hidex-state)
 # the window's terminal, for live colour themes (hidex-theme); reset to its own colours when hIDEx ends
 tty > "$s/tty" 2>/dev/null || rm -f "$s/tty"
-end() { hidex-theme off "$n"; }
+end() { hidex-theme off; }
 case $(zellij ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
-  ?*) hidex-theme apply "$n"; zellij attach "$n"; end; exit ;;
+  ?*) hidex-theme apply; zellij attach "$n"; end; exit ;;
 esac
 
 # a new session reaches its hIDEx through $s/current, which /update (hidex-update) moves to a newer one without
@@ -51,8 +54,8 @@ if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
 fi
 
 # the project's window theme, else the terminal's own; the Python (hidex-python detect)
-if [ -f "$HIDEX_PROJECT/theme" ]; then cp "$HIDEX_PROJECT/theme" "$s/theme"; hidex-theme apply "$n"; else rm -f "$s/theme"; fi
-ZELLIJ_SESSION_NAME=$n hidex-python detect
+if [ -f "$HIDEX_PROJECT/theme" ]; then cp "$HIDEX_PROJECT/theme" "$s/theme"; hidex-theme apply; else rm -f "$s/theme"; fi
+hidex-python detect
 # the layout with one tree per folder, stacked; the first (code) tree is the open one
 trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
   printf 'pane name="tree: %s" command="hidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1

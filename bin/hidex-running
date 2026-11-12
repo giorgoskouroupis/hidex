@@ -1,8 +1,8 @@
 #!/bin/sh
-# hidex-running SESSION [--pids]: what still runs in the session's shells (terminals, side terminals): one
+# hidex-running [--pids]: what still runs in the session's shells (terminals, side terminals): one
 # "pane: command" line each, or with --pids every process under them (for hidex-stop). Claude does not count.
-s=$(hidex-state "$1") || exit 1
-names=$(zellij -s "$1" action list-panes 2>/dev/null)
+s=$(hidex-state) || exit 1
+names=$(zellij action list-panes 2>/dev/null)
 for f in "$s"/panes/*; do
   [ -f "$f" ] || continue
   pid=$(cat "$f")
@@ -10,7 +10,7 @@ for f in "$s"/panes/*; do
   name=$(printf '%s\n' "$names" | awk -v id="terminal_${f##*/}" '$1 == id { $1 = $2 = ""; sub(/^ +/, ""); print }')
   # the pane's shell is a child of its hidex-shell / hidex-side; what runs in it, the shell's children
   for sh in $(pgrep -P "$pid" -x "${SHELL##*/}"); do
-    if [ "$2" = --pids ]; then
+    if [ "$1" = --pids ]; then
       # every descendant, depth first, from the process table
       ps -e -o pid=,ppid= | awk -v root="$sh" '{ kids[$2] = kids[$2] " " $1 }
         END { n = split(kids[root], q, " "); for (i = 1; i <= n; i++) { print q[i]; m = split(kids[q[i]], c, " ")
