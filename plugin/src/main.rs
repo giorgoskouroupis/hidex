@@ -5,7 +5,7 @@
 //!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
 //!   status    branch, Python and theme for the bar; bar  the bar itself
-//!   prompt    the bar as a command line (Alt+p), with what fits shown as you type
+//!   prompt    the bar as a command line (Alt+p), what fits shown in it as you type
 //!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
 mod actions;
 mod bar;

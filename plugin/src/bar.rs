@@ -93,34 +93,42 @@ pub fn layout(cols: usize, status: &Status, typing: bool) -> Layout {
     Layout { left: 0, field: Some((0, cols)), buttons: 0 }
 }
 
-/// the command line's field: "/" and what is typed (its end, when longer) in the accent colour, then what fits,
-/// dim, the one chosen with Tab or the arrows reversed, and, for a single or chosen command, its description
+/// the command line's field: "/" and what is typed (its end, when longer), bold in the accent colour; then "›"
+/// and what fits, separated by "·", the one chosen with Tab or the arrows reversed, "+N" for those left out;
+/// the chosen (or only) one's description at the field's right end, dim and italic
 fn field(prompt: &Prompt, width: usize) -> String {
     let typed: Vec<char> = format!("/{}█", prompt.text).chars().collect();
     let shown: String = typed[typed.len().saturating_sub(width.saturating_sub(1))..].iter().collect();
     let mut room = width.saturating_sub(shown.chars().count() + 1);
     let mut out = format!(" \u{1b}[1;38;5;{ACCENT}m{shown}{RESET}");
     let items = prompt.items();
-    let note = match (items.len(), prompt.selected()) {
-        (_, Some(i)) => items.get(i).map(|item| item.note.clone()),
-        (1, None) => Some(items[0].note.clone()),
-        _ => None,
-    };
+    let chosen = prompt.selected().or(if items.len() == 1 { Some(0) } else { None });
+    let note = chosen.and_then(|i| items.get(i)).map(|item| item.note.clone()).unwrap_or_default();
+    // the note keeps its room, up to a third of the field
+    let note: String = note.chars().take(room / 3).collect();
+    let note_room = if note.is_empty() { 0 } else { note.chars().count() + 3 };
+    room -= note_room.min(room);
+    let mut list = String::new();
+    let mut used = 0;
     for (i, item) in items.iter().enumerate() {
-        let w = item.label.chars().count() + 2;
-        if w > room {
+        let sep = if i == 0 { "  ›  " } else { " · " };
+        let w = sep.chars().count() + item.label.chars().count();
+        let more = format!(" +{}", items.len() - i);
+        if used + w + more.chars().count() > room && i + 1 < items.len() || used + w > room {
+            list.push_str(&format!("{DIM}{more}{RESET}"));
+            used += more.chars().count();
             break;
         }
-        let style = if prompt.selected() == Some(i) { "\u{1b}[7m" } else { DIM };
-        out.push_str(&format!("  {style}{}{RESET}", item.label));
-        room -= w;
+        let style = if prompt.selected() == Some(i) { "\u{1b}[7m" } else { "" };
+        list.push_str(&format!("{DIM}{sep}{RESET}{style}{}{RESET}", item.label));
+        used += w;
     }
-    if let Some(note) = note.filter(|n| !n.is_empty()) {
-        let note: String = format!("   {note}").chars().take(room).collect();
-        room -= note.chars().count();
-        out.push_str(&format!("{DIM}{note}{RESET}"));
+    out.push_str(&list);
+    out.push_str(&" ".repeat(room.saturating_sub(used)));
+    if !note.is_empty() {
+        out.push_str(&format!("   {DIM}\u{1b}[3m{note}{RESET}"));
     }
-    out + &" ".repeat(room)
+    out
 }
 
 impl Bar {
@@ -207,6 +215,32 @@ mod tests {
         // narrow: the whole bar
         let l = layout(20, &status, true);
         assert_eq!((l.left, l.field, l.buttons), (0, Some((0, 20)), 0));
+    }
+
+    #[test]
+    fn the_field_stays_within_its_width() {
+        let mut prompt = Prompt::default();
+        let names: Vec<String> = (0..20).map(|i| format!("command{i}\t-\ta description number {i}")).collect();
+        prompt.read_commands(names.join("\n").as_bytes());
+        prompt.open(None);
+        let plain = |s: String| {
+            let mut out = String::new();
+            let mut esc = false;
+            for c in s.chars() {
+                match (esc, c) {
+                    (false, '\u{1b}') => esc = true,
+                    (true, 'm') => esc = false,
+                    (true, _) => {}
+                    (false, c) => out.push(c),
+                }
+            }
+            out
+        };
+        for width in [30, 50, 80, 120] {
+            let shown = plain(field(&prompt, width));
+            assert!(shown.chars().count() <= width + 1, "width {width}: {shown:?}");
+            assert!(shown.contains("command0") && shown.contains(" +"));
+        }
     }
 
     #[test]
