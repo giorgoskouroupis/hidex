@@ -4,6 +4,7 @@
 #                                      colour schemes, tools.lock and BUNDLES (what install.sh fetches next)
 #   hidex-lsp-HASH.tar.gz              the Node language servers (release/lsp), named after their lock file
 #   hidex-pudb-HASH.tar.gz             pudb (release/pudb.txt), named after it
+#   hidex-broot-HASH.tar.gz            broot's Linux program, out of its official download for every system
 # A bundle keeps its name while its content does not change, so an update downloads it only when it changed; the
 # tools come from their own downloads (tools.lock). Prints the core's path. Needs cargo with the wasm32-wasip1
 # target, curl, tar, xz (nix develop gives them).
@@ -13,7 +14,7 @@ version=${1:-$(git -C "$repo" describe --tags --always --dirty)}
 name=hidex-$version
 dist=$repo/dist out=$repo/dist/$name store=$repo/dist/store
 export HIDEX_CACHE=$repo/dist/cache
-rm -rf "$out" "$dist"/hidex-lsp-*.tar.gz "$dist"/hidex-pudb-*.tar.gz
+rm -rf "$out" "$dist"/hidex-lsp-*.tar.gz "$dist"/hidex-pudb-*.tar.gz "$dist"/hidex-broot-*.tar.gz
 mkdir -p "$out/bin" "$out/share" "$store"
 tools() { "$repo/bin/hidex-tools" "$@"; }
 
@@ -22,6 +23,7 @@ tools fetch "$repo/tools.lock" "$store" node python
 tools fetch "$repo/release/build.lock" "$store"
 node=$(ls -d "$store"/node-*/bin) python=$(ls -d "$store"/python-*/bin/python3) themes=$(ls -d "$store"/themes-*)
 shell=$(ls -d "$store"/shell-integration-[0-9a-f]*) shell_license=$(ls -d "$store"/shell-integration-license-*)
+broot=$(ls -d "$store"/broot-*)
 
 # bundle NAME DIR: DIR packed as hidex-NAME-HASH.tar.gz (HASH: of its inputs, $hash); its BUNDLES line
 bundle() {
@@ -42,6 +44,12 @@ bundle lsp "$work/lsp" tools/lsp
   -r "$repo/release/pudb.txt" >&2
 hash=$(sha256sum "$repo/release/pudb.txt" | cut -c1-12)
 bundle pudb "$work/pudb" share/hidex/python/lib
+
+# broot: its Linux program alone, out of its official download for every system
+mkdir -p "$work/broot/bin"
+cp "$broot/broot" "$work/broot/bin/"
+hash=$(awk -F'\t' '$1 == "broot" { print substr($3, 1, 12) }' "$repo/release/build.lock")
+bundle broot "$work/broot" tools/broot
 
 # the core: hIDEx's own files
 cp -r "$repo/config" "$out/share/hidex"

@@ -16,7 +16,8 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; overlays = [ rust-overlay.overlays.default ]; };
-      rust = pkgs.rust-bin.stable.latest.minimal.override { targets = [ "wasm32-wasip1" ]; };
+      # the compiler pinned in plugin/rust-toolchain.toml, as the release build uses it
+      rust = pkgs.rust-bin.fromRustupToolchainFile ./plugin/rust-toolchain.toml;
     in
     {
       devShells.${system}.default = pkgs.mkShell {

@@ -22,8 +22,8 @@ jobs:
             plugin/target
           key: release-${{ hashFiles('tools.lock', 'release/lsp/package-lock.json', 'plugin/Cargo.lock') }}
           restore-keys: release-
-      - name: Rust with the wasm32-wasip1 target (the zellij plugin)
-        run: rustup target add wasm32-wasip1
+      - name: Rust as pinned in plugin/rust-toolchain.toml (the zellij plugin)
+        run: cd plugin && rustup toolchain install
       - name: Plugin tests
         run: cd plugin && cargo test --locked
       - name: Build the archive
@@ -42,5 +42,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/hidex-lsp-*.tar.gz dist/hidex-pudb-*.tar.gz \
+          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/hidex-lsp-*.tar.gz dist/hidex-pudb-*.tar.gz dist/hidex-broot-*.tar.gz \
             --title "hIDEx $GITHUB_REF_NAME" --notes-file notes.md

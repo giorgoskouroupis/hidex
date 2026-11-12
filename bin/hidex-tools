@@ -7,7 +7,7 @@
 #   programs in tools/bin, a "dir" tool as tools/NAME.
 # hidex-tools bundles LIST STORE VERSION SOURCE: hIDEx's own bundles (LIST: name, file, sha256, path), each from
 #   SOURCE (the release's download address, or a folder) unpacked once into STORE/NAME-HASH and linked at
-#   VERSION/PATH; a bundle of Node programs (node_modules/.bin) also gets them in VERSION/tools/bin.
+#   VERSION/PATH; its programs (node_modules/.bin, bin/) also in VERSION/tools/bin.
 # Used by install.sh and scripts/release, so both unpack the same way.
 set -euo pipefail
 cmd=$1 lock=$2 store=$3
@@ -134,8 +134,9 @@ bundle_one() {
   fi
   mkdir -p "$(dirname "$target/$path")" "$target/tools/bin"
   ln -sfn "$dest" "$target/$path"
-  for b in "$dest/node_modules/.bin"/*; do
-    [ -e "$b" ] && ln -sf "$target/$path/node_modules/.bin/${b##*/}" "$target/tools/bin/${b##*/}"
+  # its programs in tools/bin: Node's (node_modules/.bin) and plain ones (bin/)
+  for b in "$dest/node_modules/.bin"/* "$dest/bin"/*; do
+    [ -e "$b" ] && ln -sf "$target/$path/${b#"$dest"/}" "$target/tools/bin/${b##*/}"
   done
   return 0
 }
