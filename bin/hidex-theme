@@ -22,7 +22,7 @@ case ${1:-list} in
 esac
 if [ "$1" = apply ]; then s=$(hidex-state "$2"); else s=$(hidex-state); fi || exit 1
 tty=$(cat "$s/tty" 2>/dev/null) && [ -w "$tty" ] || { echo "hIDEx: no window to recolour" >&2; exit 1; }
-osc() { printf '\033]%s\033\\' "$1" > "$tty"; }
+osc() { printf '\033]%s\033\\' "$1" >> "$tty"; }
 reset() { osc 104; osc 110; osc 111; osc 112; osc 117; osc 119; }
 
 # paint NAME: the scheme's colours to the window (kitty format: "colorN #hex", "background #hex"…)
@@ -58,7 +58,7 @@ listing() {
 }
 
 case $1 in
-  reset) reset; rm -f "$s/theme" ;;
+  reset) reset; rm -f "$s/theme" ${HIDEX_PROJECT:+"$HIDEX_PROJECT/theme"} ;;
   apply) [ -f "$s/theme" ] && paint "$(cat "$s/theme")" ;;
   preview) case $2 in reset) reset ;; '') ;; *) paint "$2" ;; esac ;;
   pick)
@@ -71,6 +71,7 @@ case $1 in
       reset) "$0" reset ;;
       *) "$0" "$name" ;;
     esac ;;
-  *) paint "$1" && echo "$1" > "$s/theme" ;;
+  # kept for the session, and for the project's next sessions (HIDEX_PROJECT)
+  *) paint "$1" && echo "$1" > "$s/theme" && { [ -z "$HIDEX_PROJECT" ] || echo "$1" > "$HIDEX_PROJECT/theme"; } ;;
 esac
 [ "$1" = preview ] || hidex-msg status >/dev/null 2>&1

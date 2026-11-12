@@ -2,8 +2,8 @@
 # hidex-cmd [NAME [ARG]]: hIDEx's / commands. With no name, a list to pick from (Alt+p, or "cmds" on the
 # bar): type to filter, Enter runs. Each command is one function below and one line in the table.
 
-COMMANDS='theme	colour theme for the whole window, previewed as you move; "theme reset" for the terminal'"'"'s own
-helix-theme	a theme of Helix'"'"'s own, for Helix only (its prompt, previewed as you type); "terminal" to follow /theme again
+COMMANDS='theme	colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
+helix-theme	a theme of Helix'"'"'s own, for Helix only, previewed as you move, kept for the project; "terminal" to follow /theme again
 langs	the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
 reload	reload every file open in Helix from disk
 lsp	restart Helix'"'"'s language servers
@@ -14,17 +14,11 @@ terminal	a new terminal, stacked with the others
 side	a new side terminal (Claude, or a shell for any AI tool)
 collapse	fold the last used pane to a strip, or unfold it
 keys	every hIDEx key
-quit	quit hIDEx (Helix first; it refuses while files are unsaved)'
+update	move this session to the hIDEx installed in your profile (after nix profile upgrade), keeping terminals and buffers
+quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
 cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; }
-# Helix's own :theme prompt; "terminal" is hIDEx's theme, the one in the terminal's colours
-cmd_helix_theme() {
-  case $1 in
-    '') hidex-msg helix "theme " ;;
-    terminal) hidex-msg helix "theme hidex" ;;
-    *) hidex-msg helix "theme $1" ;;
-  esac
-}
+cmd_helix_theme() { hidex-helix-theme "${1:-pick}"; }
 cmd_langs() { hidex-langs "$@"; }
 cmd_reload() { hidex-msg helix reload-all; }
 cmd_lsp() { hidex-msg helix lsp-restart; }
@@ -39,6 +33,8 @@ cmd_keys() {
   awk -F' [|] ' '/^[|] Keys/ { on = 1; next } on && !/^[|]/ { exit } on && !/^[|]---/ {
     sub(/^[|] /, "", $1); sub(/ [|]$/, "", $2); gsub(/`/, ""); printf "%-34s %s\n", $1, $2 }' "$HIDEX_SHARE/README.md" | less
 }
+# the result stays on screen until a key: the pop-up closes when the command ends
+cmd_update() { hidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
 cmd_quit() { hidex-msg quit ask; }
 
 case $1 in

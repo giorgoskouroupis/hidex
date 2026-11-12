@@ -24,14 +24,19 @@ let
     hash = "sha256-qIvFd6jTUbM9f7KzD4N84yKOy047CcO/IudJzlc0Hl8=";
   };
 in
-runCommand "hidex" { nativeBuildInputs = [ makeWrapper ]; } ''
+runCommand "hidex" { nativeBuildInputs = [ makeWrapper python3 ]; } ''
   mkdir -p $out/bin $out/share
   cp -r ${./config} $out/share/hidex
   chmod -R u+w $out/share/hidex
   mkdir $out/share/hidex/themes
   cp ${schemes}/kitty/*.conf ${schemes}/LICENSE ${schemes}/licenses.yml $out/share/hidex/themes/
-  substituteInPlace $out/share/hidex/config.kdl $out/share/hidex/layouts/hidex.kdl \
-    --replace-fail @plugin@ ${plugin}/hidex-panes.wasm
+  # the plugin and every tool inside hIDEx's own folder: a session reaches them through its "current" link
+  # (bin/hidex), which /update moves to a newer hIDEx; config.kdl and the layout keep @plugin@ for the launcher
+  cp ${plugin}/hidex-panes.wasm $out/share/hidex/hidex-panes.wasm
+  mkdir -p $out/tools/bin
+  for t in ${lib.concatMapStringsSep " " (t: "${t}/bin") tools}; do
+    for f in $t/*; do [ -e $out/tools/bin/$(basename $f) ] || ln -s $f $out/tools/bin/; done
+  done
   # the keys table, for the keys command (hidex-cmd)
   cp ${./README.md} $out/share/hidex/README.md
   substituteInPlace $out/share/hidex/xdg/pudb/pudb.cfg --replace-fail @theme@ $out/share/hidex/xdg/pudb/theme.py
@@ -66,17 +71,21 @@ runCommand "hidex" { nativeBuildInputs = [ makeWrapper ]; } ''
   for s in ${./bin}/*; do
     install -m755 $s $out/bin/$(basename $s)
   done
-  # /bin/sh does not exist in the tree's sandbox: point the scripts at the store's shell
+  # /bin/sh does not exist in the tree's sandbox: point the scripts at the store's shell (and Python)
   patchShebangs $out/bin
-  # hIDEx's Helix reads hIDEx's config (share/hidex/xdg/helix), not the machine's
-  makeWrapper ${helix}/bin/hx $out/bin/hx --set XDG_CONFIG_HOME $out/share/hidex/xdg
+  # hIDEx's Helix reads hIDEx's config (share/hidex/xdg/helix), not the machine's; through HIDEX_SHARE when set,
+  # so :config-reload after /update reads the newer one
+  makeWrapper ${helix}/bin/hx $out/bin/hx \
+    --run 'export XDG_CONFIG_HOME="''${HIDEX_SHARE:-'"$out"'/share/hidex}/xdg"'
+  # bin/hidex points every $out below at the session's "current" link instead
   wrapProgram $out/bin/hidex \
-    --prefix PATH : $out/bin:${lib.makeBinPath tools} \
+    --prefix PATH : $out/bin:$out/tools/bin \
+    --set HIDEX_HOME $out \
     --set ZELLIJ_CONFIG_DIR $out/share/hidex \
     --set LG_CONFIG_FILE $out/share/hidex/lazygit.yml \
     --set YAZI_CONFIG_HOME $out/share/hidex/xdg/yazi \
     --set HIDEX_SHARE $out/share/hidex \
-    --set HIDEX_PLUGIN ${plugin}/hidex-panes.wasm \
+    --set HIDEX_PLUGIN $out/share/hidex/hidex-panes.wasm \
     --prefix PYTHONPATH : $out/share/hidex/python \
     --set PYTHONBREAKPOINT pudb.set_trace \
     --suffix PATH : ${python3}/bin

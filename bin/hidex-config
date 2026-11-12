@@ -1,0 +1,6 @@
+#!/bin/sh
+# hidex-config STATE: writes the session's zellij config (STATE/config/config.kdl) from hIDEx's, with the plugin's
+# path filled in: the one through the session's "current" link, so keys keep reaching the bar after /update.
+# zellij re-reads the file when it changes.
+mkdir -p "$1/config"
+sed "s|@plugin@|$1/current/share/hidex/hidex-panes.wasm|g" "$1/current/share/hidex/config.kdl" > "$1/config/config.kdl"

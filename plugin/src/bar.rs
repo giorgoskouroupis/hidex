@@ -81,3 +81,32 @@ impl Bar {
         self.hits.iter().find(|(from, to, _)| (*from..=*to).contains(&col)).map(|(_, _, a)| a.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clicks_hit_the_buttons_drawn() {
+        let mut bar = Bar::default();
+        bar.render(160, &Status { project: "proj".into(), ..Default::default() });
+        let actions: Vec<Action> = buttons().into_iter().map(|(_, a)| a).collect();
+        assert_eq!(bar.hits.iter().map(|(_, _, a)| a.clone()).collect::<Vec<_>>(), actions);
+        // each button's first and last column, inside the bar, one after the other
+        let mut previous = 0;
+        for (from, to, action) in &bar.hits {
+            assert!(from <= to && *from >= previous && *to < 160);
+            assert_eq!(bar.click(*from), Some(action.clone()));
+            assert_eq!(bar.click(*to), Some(action.clone()));
+            previous = to + 1;
+        }
+        assert_eq!(bar.click(0), None);
+    }
+
+    #[test]
+    fn a_narrow_bar_has_no_buttons() {
+        let mut bar = Bar::default();
+        bar.render(20, &Status { project: "proj".into(), ..Default::default() });
+        assert!(bar.hits.is_empty());
+    }
+}

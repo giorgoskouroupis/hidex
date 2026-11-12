@@ -9,7 +9,7 @@ run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 exec bwrap --die-with-parent --unshare-all \
   --ro-bind /nix /nix --ro-bind /etc /etc \
   --proc /proc --dev /dev --tmpfs /tmp --tmpfs "$HOME" \
-  --bind "$run/zellij" "$run/zellij" \
+  --bind "$run/zellij" "$run/zellij" --ro-bind "$run/hidex" "$run/hidex" \
   --bind "$dir" "$dir" --chdir "$dir" \
   --setenv EDITOR hidex-open \
   yazi "$dir"

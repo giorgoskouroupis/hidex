@@ -34,6 +34,8 @@ struct State {
     floating_visible: bool,
     /// quitting: Helix has gone, the shells' commands are being stopped
     ending: bool,
+    /// the project's Helix theme has been asked for (once both the session and Helix are known)
+    restored: bool,
 }
 
 register_plugin!(State);
@@ -60,7 +62,7 @@ impl State {
             }
             Action::Helix(command) => {
                 if let Some(pane) = self.panes.for_role("helix") {
-                    let focus = command.starts_with("open") || command.ends_with(' ');
+                    let focus = command.starts_with("open");
                     self.typist.request(typist::Job { pane, command, focus, quit: false });
                 }
             }
@@ -73,6 +75,14 @@ impl State {
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
+        }
+    }
+
+    /// the Helix theme kept for the project (hidex-helix-theme), once Helix runs and the session is known
+    fn restore(&mut self) {
+        if !self.restored && self.cwd_known && !self.status.session.is_empty() {
+            self.restored = true;
+            run_command(&["hidex-helix-theme", "restore", &self.status.session], BTreeMap::new());
         }
     }
 
@@ -119,6 +129,7 @@ impl State {
                 self.cwd = cwd;
                 self.cwd_known = true;
                 self.status.refresh(&self.cwd);
+                self.restore();
             }
         }
         // Helix has gone after a quit request: end the session
@@ -182,6 +193,7 @@ impl ZellijPlugin for State {
                     if self.status.session.is_empty() {
                         self.status.session = name;
                         self.status.refresh(&self.cwd);
+                        self.restore();
                     }
                 }
             }

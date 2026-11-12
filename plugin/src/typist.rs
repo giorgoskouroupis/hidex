@@ -54,9 +54,7 @@ impl Typist {
             Tick::Step.start();
             return;
         }
-        // a command ending in a space stays open in Helix's prompt, for its completion and live preview
-        let enter = if job.command.ends_with(' ') { "" } else { "\r" };
-        write_chars_to_pane_id(&format!(":{}{enter}", job.command), pane);
+        write_chars_to_pane_id(&format!(":{}\r", job.command), pane);
         if job.quit {
             self.quit_waits += 1;
             Tick::QuitWait.start();

@@ -56,21 +56,26 @@ text: no icon font needed.
 **`/` commands** (`Alt+p`, or `cmds` on the bar), one small function each in `bin/hidex-cmd`:
 
 - `/theme`: recolours the whole window live, with any of the ~900 [iTerm2-Color-Schemes] (favourites first,
-  then dark and light ones; each is previewed as you move, `Esc` goes back); `reset` gives the terminal's colours back, and so does leaving hIDEx. Every hIDEx colour is one
+  then dark and light ones; each is previewed as you move, `Esc` goes back), kept for the project's next sessions;
+  `reset` gives the terminal's colours back, and so does leaving hIDEx. Every hIDEx colour is one
   of the terminal's 16, so zellij, Helix, the trees, lazygit and pudb follow (Claude Code keeps its own). The
   terminal must accept colour-setting sequences (alacritty, foot, kitty, wezterm do). Fonts stay the terminal's.
-- `/helix-theme`: one of Helix's own themes, for Helix only (its `:theme` prompt opens, previewed as you type);
-  `/helix-theme terminal` follows `/theme` again.
+- `/helix-theme`: one of Helix's own themes, for Helix only, previewed in Helix as you move, kept for the
+  project; `/helix-theme terminal` (or `hidex`) follows `/theme` again.
 - `/langs`: the project's languages, most files first, with their language servers (found or missing). hIDEx
   brings servers for Python and the files most projects have (shell, Markdown, TOML, Nix, YAML, JSON, HTML,
   CSS, JavaScript/TypeScript, Dockerfile); others (rust-analyzer, gopls, …) are used when on the PATH, e.g.
   from the project's dev shell. Enter on a language shows Helix's health report for it.
 - `/langs python` (or Enter on Python): the project's Python env, the one Helix checks the code against: at
-  start, the env active when `hidex` was run (micromamba, conda, virtualenv), else the project's `.venv`;
-  here another, grouped: the project's (uv, venv), micromamba, conda, other virtualenvs (poetry, virtualenvwrapper). The bar shows it, and
-  new shells, side terminals and Claude start in it (`bin/hidex-env`).
+  start, the env active when `hidex` was run (micromamba, conda, virtualenv), else the one last picked here for
+  the project, else its `.venv`; here another, grouped: the project's (uv, venv), micromamba, conda, other virtualenvs (poetry, virtualenvwrapper). The bar shows it, and
+  new shells, side terminals and Claude start in it (`bin/hidex-env`). Helix's checker follows a switch at once,
+  without a restart (`bin/hidex-pyright` hands basedpyright the env's interpreter).
 - `/reload` (files changed on disk), `/lsp` (restart the language servers), `/git`, `/git-write`, `/yazi`,
   `/terminal`, `/side`, `/collapse`, `/keys`, `/quit`.
+- `/update`: after `nix profile upgrade hidex`, moves the running session to the new hIDEx without a restart:
+  terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
+  everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
 
 Scripts can ask the same of hIDEx: `hidex-msg popup yazi`, `hidex-msg helix reload-all`, …
 
@@ -131,10 +136,21 @@ keeps them in their place, so no key pressed there can reach further.
 - `bin/hidex-lazygit`, `bin/hidex-yazi`: the pop-ups (sandboxed); `bin/hidex-popup-colors` their colours, from
   `bin/hidex-bg` (the window's background, dark or light), which also gives lazygit light diffs (`bin/hidex-delta`);
   `bin/hidex-guard`: the off-limits folders
-- `bin/hidex-cmd`: the `/` commands; `bin/hidex-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-pyright` (basedpyright
-  on the project's Python), `bin/hidex-status` (the bar's line), `bin/hidex-state` (per-session state),
+- `bin/hidex-cmd`: the `/` commands; `bin/hidex-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-helix-theme`, `bin/hidex-pyright`
+  (basedpyright on the project's Python, switched live), `bin/hidex-update` (`/update`), `bin/hidex-config` (the
+  session's zellij config), `bin/hidex-status` (the bar's line), `bin/hidex-state` (per-session state),
   `bin/hidex-msg` (messages to the plugin)
 - `config/`: zellij config and theme, the layout, broot's, lazygit's and lnav's config, `config/xdg/`: Helix's, yazi's and pudb's
+
+## Tests
+
+`nix flake check` runs the unit tests in under a minute: the plugin's logic (`cargo test`: pane names and jumps,
+focus after a close, the bar's buttons, messages, folding) and the scripts' rules (`tests/unit`: the folder guard,
+pop-up colours, themes, the Python picked and kept, languages), with fake fzf, zellij and delta.
+
+`tests/run`, the end-to-end test, starts hIDEx in hidden sessions (no window), drives it with keys and messages, and checks the panes:
+new panes, jumps, folding, pop-ups, what is kept per project, `/update`, quitting, the folder guard. It runs in
+its own temporary folders, never in your sessions or settings, in a few minutes; fine to leave in the background.
 
 [Helix]: https://helix-editor.com
 [zellij]: https://zellij.dev

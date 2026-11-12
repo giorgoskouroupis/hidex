@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# tests/unit [HIDEX]: the scripts' rules, each checked on its own in a second or two, with fake fzf, zellij and
+# delta standing in where a script would need a person or a session. Run by nix flake check (with the plugin's
+# cargo tests); tests/run is the end-to-end one. HIDEX: a built hIDEx (default: nix build of this repo).
+set -u
+repo=$(cd "$(dirname "$0")/.." && pwd)
+out=${1:-$(nix build "$repo" --no-link --print-out-paths)} || exit 1
+T=$(mktemp -d)
+trap 'rm -rf "$T"' EXIT
+mkdir -p "$T/fake" "$T/run" "$T/home"
+# fake tools: zellij and delta write down how they were called; fzf picks the first line matching $PICK
+printf '#!/bin/sh\necho "$*" >> %s/zellij.calls\n' "$T" > "$T/fake/zellij"
+printf '#!/bin/sh\necho "$*" > %s/delta.args\n' "$T" > "$T/fake/delta"
+printf '#!/bin/sh\ngrep -m1 -- "${PICK:-.}"\n' > "$T/fake/fzf"
+chmod +x "$T/fake"/*
+export PATH=$T/fake:$out/bin:$out/tools/bin:$PATH HOME=$T/home XDG_RUNTIME_DIR=$T/run XDG_STATE_HOME=$T/state
+export HIDEX_SHARE=$out/share/hidex ZELLIJ_SESSION_NAME=unit HIDEX_PROJECT=$T/state/project
+mkdir -p "$HIDEX_PROJECT"
+s=$(hidex-state)
+failed=0
+check() { if eval "$2" >/dev/null 2>&1; then printf '  ok    %s\n' "$1"; else printf '  FAIL  %s\n' "$1"; failed=$((failed + 1)); fi; }
+
+echo "guard"
+check "refuses /, system folders and inside them" '! hidex-guard / && ! hidex-guard /etc && ! hidex-guard /nix/store'
+check "refuses the home folder and its hidden ones" '! hidex-guard "$HOME" && ! hidex-guard "$HOME/.config"'
+check "refuses any .ssh" '! hidex-guard "$T/proj/.ssh"'
+check "allows a project folder" 'hidex-guard "$T/proj"'
+
+echo "pop-up colours"
+hidex-popup-colors "#252938 dark"
+check "dark: 45% lighter, more saturated, white text" 'grep -qx -- "action set-pane-color --bg #373f5b --fg #ffffff" "$T/zellij.calls"'
+: > "$T/zellij.calls"; hidex-popup-colors "#fafafa light"
+check "light: 18% darker, text as it is" 'grep -qx -- "action set-pane-color --bg #cdcdcd" "$T/zellij.calls"'
+: > "$T/zellij.calls"; hidex-popup-colors " "
+check "nothing known: nothing set" '[ ! -s "$T/zellij.calls" ]'
+
+echo "background"
+echo Dracula > "$s/theme"
+check "a dark /theme is read as dark" '[ "$(hidex-bg </dev/null)" = "#282a36 dark" ]'
+echo "Catppuccin Latte" > "$s/theme"
+check "a light /theme is read as light" '[ "$(hidex-bg </dev/null | cut -d" " -f2)" = light ]'
+rm "$s/theme"
+
+echo "delta"
+HIDEX_DELTA_LIGHT=1 hidex-delta --paging=never
+check "light colours when asked" 'grep -q -- "--light --paging=never" "$T/delta.args"'
+hidex-delta --paging=never
+check "dark ones otherwise" '! grep -q -- "--light" "$T/delta.args"'
+
+echo "window theme"
+: > "$T/tty"; echo "$T/tty" > "$s/tty"
+hidex-theme Nord
+check "paints the window" 'grep -q "]4;0;" "$T/tty"'
+check "is kept for the session and the project" 'grep -qx Nord "$s/theme" && grep -qx Nord "$HIDEX_PROJECT/theme"'
+hidex-theme reset
+check "reset forgets it" '[ ! -f "$s/theme" ] && [ ! -f "$HIDEX_PROJECT/theme" ]'
+check "lists the ~900 schemes" '[ "$(hidex-theme list | wc -l)" -gt 800 ]'
+
+echo "python"
+mkdir -p "$T/proj" && echo 'print("hi")' > "$T/proj/a.py"
+mkdir -p "$T/proj/.venv/bin" && printf '#!/bin/sh\n' > "$T/proj/.venv/bin/python" && chmod +x "$T/proj/.venv/bin/python"
+printf 'version_info = 3.12.4\nuv = 0.5.0\n' > "$T/proj/.venv/pyvenv.cfg"
+cd "$T/proj"
+PICK=venv hidex-python pick
+check "the project's .venv is listed (as uv) and picked" 'grep -qx "$T/proj/.venv" "$s/python" && grep -qx ".venv 3.12" "$s/python-label"'
+check "the pick is kept for the project" 'grep -qx "$T/proj/.venv" "$HIDEX_PROJECT/python"'
+rm "$s/python"; CONDA_PREFIX= VIRTUAL_ENV= hidex-python detect
+check "the next session finds it again" 'grep -qx "$T/proj/.venv" "$s/python"'
+hidex-env sh -c 'echo "$VIRTUAL_ENV $PATH"' > "$T/env"
+check "new shells start in it" 'grep -q "^$T/proj/.venv $T/proj/.venv/bin:" "$T/env"'
+hidex-python set none
+check "none: hIDEx's own Python, also kept" '[ ! -f "$s/python" ] && grep -qx none "$HIDEX_PROJECT/python"'
+
+echo "bar status"
+check "a Python project shows its Python" '[ "$(hidex-status unit "$T/proj" | cut -f2)" != "" ]'
+mkdir -p "$T/docs" && echo hi > "$T/docs/a.md"
+check "another project shows none" '[ "$(hidex-status unit "$T/docs" | cut -f2)" = "" ]'
+
+echo "languages"
+echo 'echo hi' > "$T/proj/a.sh"; echo '# hi' > "$T/proj/README.md"
+PICK=nothing-matches hidex-langs < /dev/null > /dev/null
+printf '#!/bin/sh\ncat > %s/langs\n' "$T" > "$T/fake/fzf"
+hidex-langs < /dev/null > /dev/null
+check "counts the project's languages" 'grep -q "^  bash" "$T/langs" && grep -q "^  markdown" "$T/langs"'
+check "with their language servers found" 'grep "^  bash" "$T/langs" | grep -q "✓ bash-language-server"'
+
+echo "commands"
+check "every command has its function" 'for c in $(hidex-cmd --list | cut -f1); do grep -q "^cmd_$(echo $c | tr - _)()" "$out/bin/hidex-cmd" || exit 1; done'
+
+echo "$failed failed"
+exit "$failed"

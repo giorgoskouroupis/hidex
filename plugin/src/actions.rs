@@ -39,3 +39,25 @@ impl Action {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Action::*;
+    use super::*;
+
+    #[test]
+    fn messages_become_actions() {
+        assert_eq!(Action::from_message("new", "terminal"), Some(New("terminal".into())));
+        assert_eq!(Action::from_message("jump", "2"), Some(Jump(2)));
+        assert_eq!(Action::from_message("quit", "now"), Some(Quit("now".into())));
+        assert_eq!(Action::from_message("helix", "reload-all"), Some(Helix("reload-all".into())));
+        assert_eq!(Action::from_message("status", "-"), Some(Status));
+    }
+
+    #[test]
+    fn nonsense_does_nothing() {
+        assert_eq!(Action::from_message("jump", "x"), None);
+        assert_eq!(Action::from_message("helix", ""), None);
+        assert_eq!(Action::from_message("dance", "now"), None);
+    }
+}

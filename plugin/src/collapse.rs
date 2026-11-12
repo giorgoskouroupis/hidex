@@ -110,3 +110,21 @@ impl Collapse {
         self.folded.retain(|id, _| panes.get(*id).is_some());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::panes::tests::panes;
+
+    fn at(id: u32, x: usize, y: usize, cols: usize, rows: usize) -> PaneInfo {
+        PaneInfo { id, pane_x: x, pane_y: y, pane_columns: cols, pane_rows: rows, ..Default::default() }
+    }
+
+    #[test]
+    fn panes_fold_across_their_narrow_side() {
+        // a 100x40 screen: Helix tall on the left, the shell wide along the bottom
+        let p = panes(vec![at(1, 0, 0, 40, 30), at(2, 0, 30, 100, 10), at(3, 40, 0, 60, 30)]);
+        assert!(matches!(sides_for(1, &p)[0], Left));
+        assert!(matches!(sides_for(2, &p)[0], Up));
+    }
+}

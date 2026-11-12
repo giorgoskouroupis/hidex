@@ -12,8 +12,10 @@ case $bg in *light) export HIDEX_DELTA_LIGHT=1 ;; esac
 top=$(git rev-parse --show-toplevel 2>/dev/null) || top=$PWD
 # lazygit reads several config files, comma-separated, the later ones winning
 export LG_CONFIG_FILE="$LG_CONFIG_FILE,$HIDEX_SHARE/lazygit-readonly.yml"
+# the session's state too: its "current" link leads to hIDEx's tools and config
+run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 exec bwrap --die-with-parent --unshare-all \
   --ro-bind /nix /nix --ro-bind /etc /etc \
   --proc /proc --dev /dev --tmpfs /tmp --tmpfs "$HOME" \
-  --ro-bind "$top" "$top" --chdir "$PWD" \
+  --ro-bind "$run/hidex" "$run/hidex" --ro-bind "$top" "$top" --chdir "$PWD" \
   lazygit

@@ -44,3 +44,18 @@ impl Status {
         run_command(&["hidex-stop", &self.session], context);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_status_line_is_read_and_changes_noticed() {
+        let mut s = Status::default();
+        assert!(s.read(b"main\ttrace5 3.12\tDracula\n"));
+        assert_eq!((s.branch.as_str(), s.python.as_str(), s.theme.as_str()), ("main", "trace5 3.12", "Dracula"));
+        assert!(!s.read(b"main\ttrace5 3.12\tDracula\n"));
+        assert!(s.read(b"dev\t\t\n"));
+        assert_eq!(s.python, "");
+    }
+}

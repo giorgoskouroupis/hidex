@@ -1,6 +1,95 @@
-#!/bin/sh
-# basedpyright for Helix (languages.toml), on the project's Python (hidex-python): that env's bin goes first
-# on the PATH, which is where basedpyright finds the interpreter and so the packages. Restarted by
-# hidex-python when the choice changes.
-p=$(cat "$(hidex-state 2>/dev/null)/python" 2>/dev/null) && PATH=$p/bin:$PATH
-exec basedpyright-langserver "$@"
+#!/usr/bin/env python3
+"""hidex-pyright: basedpyright for Helix (languages.toml), on the project's Python (hidex-python), switched live.
+
+A small relay between Helix and basedpyright. When basedpyright asks its client for the "python" settings, the
+relay adds the chosen env's interpreter (python.pythonPath). When the choice changes, it tells basedpyright its
+settings changed: basedpyright asks again and reads the new env's packages. No restart, nothing to do in Helix
+(whose :lsp-restart only works from a Python file)."""
+import json
+import os
+import subprocess
+import sys
+import threading
+import time
+
+
+def interpreter():
+    """the chosen env's python (hidex-python writes its folder to the session's state), or None"""
+    session = os.environ.get("ZELLIJ_SESSION_NAME")
+    if not session:
+        return None
+    state = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "hidex", session, "python")
+    try:
+        with open(state) as f:
+            python = os.path.join(f.read().strip(), "bin", "python")
+    except OSError:
+        return None
+    return python if os.access(python, os.X_OK) else None
+
+
+def read(stream):
+    """one LSP message: headers, an empty line, then Content-Length bytes of JSON; None at the end"""
+    length = 0
+    while True:
+        line = stream.readline()
+        if not line:
+            return None
+        line = line.strip()
+        if not line:
+            break
+        name, _, value = line.decode("ascii").partition(":")
+        if name.lower() == "content-length":
+            length = int(value)
+    return json.loads(stream.read(length))
+
+
+def write(stream, lock, message):
+    body = json.dumps(message).encode()
+    with lock:
+        stream.write(b"Content-Length: %d\r\n\r\n%s" % (len(body), body))
+        stream.flush()
+
+
+def with_interpreter(item, result):
+    """a "python" settings section, with the chosen interpreter in it"""
+    python = interpreter()
+    if python and item.get("section") == "python":
+        result = dict(result or {}, pythonPath=python)
+    return result
+
+
+def main():
+    server = subprocess.Popen(["basedpyright-langserver", *sys.argv[1:]], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    to_server, to_client = threading.Lock(), threading.Lock()
+    asked = {}  # basedpyright's workspace/configuration requests: id -> the sections asked for
+
+    def from_client():
+        while (message := read(sys.stdin.buffer)) is not None:
+            items = asked.pop(message.get("id"), None) if "method" not in message else None
+            if items is not None and isinstance(message.get("result"), list):
+                message["result"] = [with_interpreter(i, r) for i, r in zip(items, message["result"])]
+            write(server.stdin, to_server, message)
+        server.stdin.close()
+
+    def from_server():
+        while (message := read(server.stdout)) is not None:
+            if message.get("method") == "workspace/configuration":
+                asked[message["id"]] = message["params"]["items"]
+            write(sys.stdout.buffer, to_client, message)
+
+    def watch():
+        last = interpreter()
+        while server.poll() is None:
+            time.sleep(1)
+            if (now := interpreter()) != last:
+                last = now
+                change = {"jsonrpc": "2.0", "method": "workspace/didChangeConfiguration", "params": {"settings": {}}}
+                write(server.stdin, to_server, change)
+
+    for job in (from_client, from_server, watch):
+        threading.Thread(target=job, daemon=True).start()
+    sys.exit(server.wait())
+
+
+if __name__ == "__main__":
+    main()

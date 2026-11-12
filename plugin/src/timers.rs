@@ -41,3 +41,18 @@ impl Tick {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Tick::*;
+    use super::*;
+
+    #[test]
+    fn each_timer_is_told_apart_by_its_length() {
+        for tick in [Fold, Step, Refresh, QuitWait] {
+            assert_eq!(Tick::from_elapsed(tick.secs()), tick);
+            // zellij reports a little more than asked
+            assert_eq!(Tick::from_elapsed(tick.secs() * 1.2), tick);
+        }
+    }
+}

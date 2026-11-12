@@ -13,18 +13,13 @@ esac
 hidex-guard "${1:-.}" "$@" || exit 1
 cd "${1:-.}" || exit 1
 [ $# -gt 0 ] && shift
-# the plugin runs in the bar, where zellij cannot ask for its permissions: approve them, replacing the entries
-# of earlier hIDEx builds
-p=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
-mkdir -p "${p%/*}"; touch "$p"
-if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
-  awk '/^"[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next } skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
-  printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n    ReadCliPipes\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
-  mv "$p.new" "$p"
-fi
 # named after the folder and its parent (e.g. code-myproject): two folders with the same name do not collide
 n=$(basename "$(dirname "$PWD")")-$(basename "$PWD")
 export HIDEX_SIDE=$side
+# what is kept for the project between sessions (themes, the Python picked), in ~/.local/state
+HIDEX_PROJECT=${XDG_STATE_HOME:-$HOME/.local/state}/hidex/projects/$n-$(printf %s "$PWD" | md5sum | cut -c1-8)
+export HIDEX_PROJECT
+mkdir -p "$HIDEX_PROJECT"
 s=$(hidex-state "$n")
 # the window's terminal, for live colour themes (hidex-theme); reset to its own colours when hIDEx ends
 tty > "$s/tty" 2>/dev/null || rm -f "$s/tty"
@@ -33,15 +28,37 @@ case $(zellij ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
   ?*) hidex-theme apply "$n"; zellij attach "$n"; end; exit ;;
 esac
-# a new session: a fresh theme, and the project Python found now (hidex-python detect)
-rm -f "$s/theme"
+
+# a new session reaches its hIDEx through $s/current, which /update (hidex-update) moves to a newer one without
+# a restart: every path to this hIDEx below goes through that link instead
+c=$s/current
+ln -sfn "$HIDEX_HOME" "$c"
+swap() { printf '%s' "$1" | sed "s|$HIDEX_HOME|$c|g"; }
+PATH=$(swap "$PATH") PYTHONPATH=$(swap "$PYTHONPATH") LG_CONFIG_FILE=$(swap "$LG_CONFIG_FILE")
+YAZI_CONFIG_HOME=$(swap "$YAZI_CONFIG_HOME") HIDEX_SHARE=$c/share/hidex HIDEX_PLUGIN=$c/share/hidex/hidex-panes.wasm
+ZELLIJ_CONFIG_DIR=$s/config
+export PATH PYTHONPATH LG_CONFIG_FILE YAZI_CONFIG_HOME HIDEX_SHARE HIDEX_PLUGIN ZELLIJ_CONFIG_DIR
+hidex-config "$s"
+
+# the plugin runs in the bar, where zellij cannot ask for its permissions: approve them (for this session's
+# path, which stays the same across /update), dropping entries of hIDEx builds from before the link
+p=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
+mkdir -p "${p%/*}"; touch "$p"
+if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
+  awk '/^"\/nix\/store\/[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next } skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
+  printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n    ReadCliPipes\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
+  mv "$p.new" "$p"
+fi
+
+# the project's window theme, else the terminal's own; the Python (hidex-python detect)
+if [ -f "$HIDEX_PROJECT/theme" ]; then cp "$HIDEX_PROJECT/theme" "$s/theme"; hidex-theme apply "$n"; else rm -f "$s/theme"; fi
 ZELLIJ_SESSION_NAME=$n hidex-python detect
 # the layout with one tree per folder, stacked; the first (code) tree is the open one
 trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
   printf 'pane name="tree: %s" command="hidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1
 layout=$s/layout.kdl
-awk -v t="$trees" -v side="$side" '/@TREES@/ && !/\/\// { print t; next }
-  side == "none" && /name="side 1"/ { next } side == "none" { sub(/ size="60%"/, "") } { print }' \
-  "$ZELLIJ_CONFIG_DIR/layouts/hidex.kdl" > "$layout"
+awk -v t="$trees" -v side="$side" -v plugin="$HIDEX_PLUGIN" '/@TREES@/ && !/\/\// { print t; next }
+  side == "none" && /name="side 1"/ { next } side == "none" { sub(/ size="60%"/, "") } { gsub(/@plugin@/, plugin); print }' \
+  "$HIDEX_SHARE/layouts/hidex.kdl" > "$layout"
 zellij -s "$n" -n "$layout"
 end

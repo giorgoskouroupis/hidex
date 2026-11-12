@@ -142,3 +142,78 @@ impl Panes {
         members.into_iter().find(|p| p.title == name).map(|p| p.id)
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    /// a tiled terminal pane
+    fn pane(id: u32, title: &str, focused: bool) -> PaneInfo {
+        PaneInfo { id, title: title.into(), is_focused: focused, ..Default::default() }
+    }
+
+    pub fn panes(list: Vec<PaneInfo>) -> Panes {
+        let mut p = Panes::default();
+        p.update(PaneManifest { panes: [(0, list)].into() });
+        p
+    }
+
+    fn title(p: &Panes, id: Option<u32>) -> String {
+        id.and_then(|i| p.get(i)).map(|x| x.title.clone()).unwrap_or_default()
+    }
+
+    #[test]
+    fn roles_come_from_titles() {
+        assert_eq!(role(&pane(1, "tree: proj", false)), Some("tree"));
+        assert_eq!(role(&pane(1, "Helix", false)), Some("helix"));
+        assert_eq!(role(&pane(1, "side 2", false)), Some("side"));
+        assert_eq!(role(&pane(1, "term 4", false)), Some("terminals"));
+        assert_eq!(role(&PaneInfo { is_floating: true, ..pane(1, "lazygit", false) }), None);
+        assert_eq!(role(&PaneInfo { is_plugin: true, ..pane(1, "bar", false) }), None);
+    }
+
+    #[test]
+    fn numbers_and_new_names() {
+        assert_eq!(number("term 3"), 3);
+        assert!(number("Helix") > 1000);
+        let p = panes(vec![pane(1, "term 1", false), pane(2, "term 3", false)]);
+        assert_eq!(next_name("term", &p), "term 2");
+        assert_eq!(next_name("side", &p), "side 1");
+    }
+
+    #[test]
+    fn a_closed_terminal_hands_the_focus_to_its_nearest_neighbour() {
+        let mut p = panes(vec![pane(1, "Helix", false), pane(2, "term 1", false), pane(3, "term 2", true), pane(4, "term 3", false)]);
+        // zellij focuses Helix when term 2 goes; the next number up gets it
+        let next = p.update(PaneManifest { panes: [(0, vec![pane(1, "Helix", true), pane(2, "term 1", false), pane(4, "term 3", false)])].into() });
+        assert_eq!(title(&p, next), "term 3");
+        // the last one: the one before
+        let mut p = panes(vec![pane(1, "Helix", false), pane(2, "term 1", false), pane(3, "term 2", true)]);
+        let next = p.update(PaneManifest { panes: [(0, vec![pane(1, "Helix", true), pane(2, "term 1", false)])].into() });
+        assert_eq!(title(&p, next), "term 1");
+    }
+
+    #[test]
+    fn closing_something_else_moves_nothing() {
+        let mut p = panes(vec![pane(1, "Helix", true), pane(2, "term 1", false)]);
+        assert_eq!(p.update(PaneManifest { panes: [(0, vec![pane(2, "term 1", true)])].into() }), None);
+    }
+
+    #[test]
+    fn numbered_jumps_stay_in_the_focused_kind() {
+        let all = |focus: &str| {
+            let list = ["tree: a", "tree: b", "Helix", "term 1", "term 2", "side 1", "side 2"];
+            panes(list.iter().enumerate().map(|(i, t)| pane(i as u32, t, *t == focus)).collect())
+        };
+        let p = all("term 1");
+        assert_eq!(title(&p, p.numbered(2)), "term 2");
+        let p = all("side 1");
+        assert_eq!(title(&p, p.numbered(2)), "side 2");
+        let p = all("Helix");
+        assert_eq!(title(&p, p.numbered(2)), "term 2");
+        let p = all("tree: a");
+        assert_eq!(title(&p, p.numbered(2)), "tree: b");
+        assert_eq!(p.numbered(9), None);
+        assert_eq!(p.numbered(0), None);
+    }
+}
