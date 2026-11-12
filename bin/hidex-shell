@@ -5,8 +5,17 @@
 kind=${1:-term}
 # noted for hidex-running (Alt+q asks while a command runs here)
 mkdir -p "$(hidex-state)/panes" && echo "$$" > "$(hidex-state)/panes/$ZELLIJ_PANE_ID"
+# your shell, with the shell integration added (share/hidex/shell: zellij's prompt jumps and output selection);
+# fish brings it by itself
+shell() {
+  case ${SHELL##*/} in
+    bash) hidex-env "$SHELL" --rcfile "$HIDEX_SHARE/shell/bashrc" -i ;;
+    zsh) HIDEX_USER_ZDOTDIR=${ZDOTDIR:-$HOME} ZDOTDIR=$HIDEX_SHARE/shell/zsh hidex-env "$SHELL" -l ;;
+    *) hidex-env "${SHELL:-sh}" -l ;;
+  esac
+}
 while :; do
-  hidex-env "${SHELL:-sh}" -l
+  shell
   [ "$(hidex-panes "$kind" | wc -l)" -gt 1 ] &&
     exec zellij action close-pane -p "terminal_$ZELLIJ_PANE_ID"
 done

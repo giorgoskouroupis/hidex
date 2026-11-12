@@ -1,0 +1,6 @@
+# hIDEx's bash (hidex-shell): your login files as bash -l reads them, then the shell integration: the standard
+# prompt and output marks (OSC 133) zellij reads to jump between prompts and select a command's output
+[ -f /etc/profile ] && . /etc/profile
+for f in ~/.bash_profile ~/.bash_login ~/.profile; do [ -f "$f" ] && { . "$f"; break; }; done
+unset f
+WEZTERM_SHELL_SKIP_USER_VARS=1 . "$HIDEX_SHARE/shell/wezterm.sh"

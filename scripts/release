@@ -21,6 +21,7 @@ tools() { "$repo/bin/hidex-tools" "$@"; }
 tools fetch "$repo/tools.lock" "$store" node python
 tools fetch "$repo/release/build.lock" "$store"
 node=$(ls -d "$store"/node-*/bin) python=$(ls -d "$store"/python-*/bin/python3) themes=$(ls -d "$store"/themes-*)
+shell=$(ls -d "$store"/shell-integration-[0-9a-f]*) shell_license=$(ls -d "$store"/shell-integration-license-*)
 
 # bundle NAME DIR: DIR packed as hidex-NAME-HASH.tar.gz (HASH: of its inputs, $hash); its BUNDLES line
 bundle() {
@@ -47,6 +48,9 @@ cp -r "$repo/config" "$out/share/hidex"
 mkdir "$out/share/hidex/themes"
 cp "$themes/kitty"/*.conf "$themes/LICENSE" "$out/share/hidex/themes/"
 cp "$repo/README.md" "$out/share/hidex/"
+mkdir -p "$out/share/hidex/shell"
+cp "$shell/wezterm.sh" "$out/share/hidex/shell/"
+cp "$shell_license/LICENSE.md" "$out/share/hidex/shell/LICENSE-wezterm.md"
 (cd "$repo/plugin" && cargo build --release --locked --target wasm32-wasip1 >&2)
 cp "$repo/plugin/target/wasm32-wasip1/release/hidex-panes.wasm" "$out/share/hidex/"
 install -m755 "$repo/bin"/* "$out/bin/"

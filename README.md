@@ -49,7 +49,9 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 |---|---|
 | `Alt+←/→/↑/↓` | move between panes, and through a stack |
 | `Alt+e` / `Alt+h` / `Alt+t` / `Alt+c` | jump to the explorer / Helix / the terminals / the side terminal (unfolds it) |
-| `Alt+f`, `Shift+Esc` | max out the focused pane, and back |
+| `Alt+f`, `Shift+Esc` | max out the focused pane (the bar stays), and back |
+| `Alt+z` | zen: the focused pane covers the whole window, the bar too, and back |
+| `Alt+\` | back to the pane you were in before |
 | `Alt+=` / `Alt+-` | grow / shrink the focused pane |
 | `Alt+Shift+arrows` / `Alt+Ctrl+arrows` | grow the focused pane on that side / shrink it from that side |
 | `Alt+n` | a new pane of the kind you are on, stacked with it: a terminal or a side terminal (from Helix or a tree: a terminal; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |

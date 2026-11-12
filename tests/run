@@ -75,6 +75,11 @@ start
 check "layout: tree, Helix, term 1, side 1" 'has "tree: proj" && has Helix && has "term 1" && has "side 1"'
 check "the tree runs (broot listening on its socket)" 'wait_for "ls /tmp/broot-server-hidex-$S-* >/dev/null 2>&1"'
 check "terminals are named after what runs in them: bash 1, and the side one bash 1 too" 'wait_for "named \"bash 1\" && named \"bash 1$MARK\""'
+key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 4
+'
+check "a name follows what runs: sleep 1 while sleep runs" 'wait_for "named \"sleep 1\""'
+# (the test sessions run in the background, where Ctrl+C reaches nothing: a command that ends by itself)
+check "and back to bash 1 when it ends" 'wait_for "named \"bash 1\""'
 check "running hidex again attaches to the live session" '! (cd "$T/proj" && timeout 4 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null </dev/null 2>&1) | grep -q "panicked\|not supported" && has Helix'
 # (until that second window has gone, zellij may still count it: a focus change could land there)
 wait_for '[ "$("$Z" -s "$S" action list-clients 2>/dev/null | tail -n +2 | wc -l)" = 1 ]'; pause 1
@@ -167,11 +172,11 @@ key '\x1bq' 4
 check "Alt+q asks" 'has "quit?"'
 key 'x' 2
 check "another key cancels" '! has "quit?" && has Helix'
-key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 300
+key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 40
 '; pause 1
 key '\x1bQ' 10
 check "Alt+Shift+q ends the session" '! "$Z" ls -n 2>/dev/null | grep -q "^$S .*" || "$Z" ls -n 2>/dev/null | grep -q "^$S .*EXITED"'
-check "and stops what ran in it" '! pgrep -f "^sleep 300$" >/dev/null'
+check "and stops what ran in it" '! pgrep -f "^sleep 40$" >/dev/null'
 # the ended session is left to hidex, as after a real quit
 exec 3>&-; pause 1
 

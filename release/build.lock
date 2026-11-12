@@ -1,3 +1,6 @@
-# Downloads only the release build uses (scripts/release), not installed as tools: the colour schemes for
-# /theme (iTerm2-Color-Schemes, MIT), whose kitty files go into the core archive. Same format as tools.lock.
+# Downloads only the release build uses (scripts/release), not installed as tools: the colour schemes for /theme
+# (iTerm2-Color-Schemes, MIT), whose kitty files go into the core archive; WezTerm's shell integration for bash and
+# zsh (MIT), the standard prompt and output marks (OSC 133) zellij reads (share/hidex/shell). Same format as tools.lock.
 themes	314a551	4ee03a7a0f337cd5c74bcce49403a71e405053ce8b71c318afacaa484c25d9b8	https://github.com/mbadolato/iTerm2-Color-Schemes/archive/314a551246c00f9c954b581ade61855e5aaf3ab2.tar.gz	dir
+shell-integration	ce8e6b1	8635895db5fd8828e6f7654e015ddb8564ccec21179d2aca627e0329edf9b408	https://raw.githubusercontent.com/wezterm/wezterm/ce8e6b140c2a52c8be1cc31c1274104b01422fdc/assets/shell-integration/wezterm.sh	wezterm.sh
+shell-integration-license	ce8e6b1	37db33bbbd7348969eda397b89a16f252d56c1ca7481b6ccaf56ccdcbab5dcca	https://raw.githubusercontent.com/wezterm/wezterm/ce8e6b140c2a52c8be1cc31c1274104b01422fdc/LICENSE.md	LICENSE.md
