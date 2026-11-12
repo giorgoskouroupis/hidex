@@ -5,6 +5,19 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.2.0] - 2026-11-12
+
+### Changed
+- Updates download only what changed: hIDEx's own files (a few MB), and a tool only when its version in
+  `tools.lock` changed. Each tool is kept once in `~/.local/share/hidex/tools/`, shared by the installed
+  versions, and comes from its official download; the language servers and pudb are bundles of their own.
+  Versions and tools no longer used are removed.
+
+### Added
+- `hidex --uninstall`: removes hIDEx and everything it brought (its sessions, versions, tools, what it kept per
+  project, its PATH line, its zellij permissions), after saying what and asking.
+- `hidex --version`.
+
 ## [v0.1.1] - 2026-11-12
 
 ### Changed

@@ -13,9 +13,14 @@ Install (Linux x86_64, any distribution, no root), and the same again to update:
 curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/hidex/main/install.sh | sh
 ```
 
-It goes to `~/.local/share/hidex/VERSION`, with `~/.local/bin/hidex` pointing at the newest (`~/.local/bin` is added to
-PATH in your `~/.bashrc` or `~/.zshrc` when needed and that file is yours to change); older versions are
-removed once no session uses them. Node and Python come with it, for the language servers and the debugger.
+Everything goes to `~/.local/share/hidex`: hIDEx's own files per version (`versions/VERSION`, a few MB) and each
+tool once (`tools/`, shared by the versions), with `~/.local/bin/hidex` pointing at the newest. The first install
+downloads it all (about 280 MB, every tool from its official release, checked against `tools.lock`); an update
+downloads hIDEx's own files and only the tools that changed. Versions and tools no session uses are removed. Node
+and Python come with it, for the language servers and the debugger. `~/.local/bin` is added to PATH in your
+`~/.bashrc` or `~/.zshrc` when needed and that file is yours to change.
+
+`hidex --uninstall` removes hIDEx and everything it brought (it says what, and asks first); `hidex --version`.
 
 ```sh
 hidex ~/some/project
@@ -149,13 +154,15 @@ One job per file; each script says at its top what it does and who calls it. Two
 session is found in `ZELLIJ_SESSION_NAME` (set once by `bin/hidex`), never passed around, and each shared
 concern lives in one place (named below).
 
-- **Build:** `scripts/release` (the archive: scripts, config, plugin, and the tools of `tools.lock`, the Node
-  language servers of `release/lsp`, pudb of `release/pudb.txt`), `install.sh` (one folder per version, reached
+- **Build:** `scripts/release` (the core archive: scripts, config, plugin; and the bundles: the Node
+  language servers of `release/lsp`, pudb of `release/pudb.txt`), `tools.lock` (the tools, fetched by
+  `bin/hidex-tools` for the installer and the build alike), `install.sh` (one folder per version, reached
   through each session's `current` link), `.github/workflows/release.yml` (a `v*` tag publishes the archive),
   `flake.nix` (optional, only to build hIDEx on a machine with Nix: `nix develop` gives Rust and the tools
   `scripts/release` needs; installing and running hIDEx never use Nix), `CHANGELOG.md` (each release's text).
 - **Start and state:** `bin/hidex` starts or reattaches a session; `bin/hidex-state` (the session's state
-  folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`).
+  folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`),
+  `bin/hidex-uninstall` (`hidex --uninstall`).
 - **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks,
   the command line and `hidex-msg` can ask), `panes` (roles, jumps, new panes), `popups`, `typist` (commands
   typed into Helix), `collapse` (folding), `status` and `bar`, `scripts` (the

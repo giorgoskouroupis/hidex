@@ -1,44 +1,55 @@
 #!/bin/sh
 # install.sh: installs hIDEx for this user, no root needed, or updates it:
 #   curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/hidex/main/install.sh | sh
-# Each version goes to its own folder, ~/.local/share/hidex/VERSION, and ~/.local/bin/hidex points at the newest.
-# Older versions are removed, but for the previous one and those a running session still uses (/update moves
-# sessions to the newest without a restart).
-# HIDEX_VERSION: a release (default: the latest); HIDEX_ARCHIVE: a local archive instead (scripts/release);
-# HIDEX_PREFIX: instead of ~/.local.
+# In ~/.local/share/hidex: versions/VERSION (hIDEx's own files, a few MB) and tools/ (each tool and bundle once,
+# shared by the versions), with ~/.local/bin/hidex pointing at the newest. An update downloads hIDEx's own files
+# and only the tools and bundles that changed. Versions no longer used are removed (but for the previous one and
+# those a running session uses: /update moves sessions to the newest), then the tools none of them uses.
+# hidex --uninstall removes it all.
+# HIDEX_VERSION: a release (default: the latest); HIDEX_ARCHIVE: a local core archive instead (scripts/release,
+# its bundles next to it); HIDEX_PREFIX: instead of ~/.local; HIDEX_CACHE: a folder of downloads to use first.
 set -eu
 repo=giorgoskouroupis/hidex
 prefix=${HIDEX_PREFIX:-$HOME/.local}
-versions=$prefix/share/hidex
+root=$prefix/share/hidex
+versions=$root/versions store=$root/tools
 
 fail() { echo "hIDEx: $*" >&2; exit 1; }
 [ "$(uname -sm)" = "Linux x86_64" ] || fail "only Linux x86_64 for now"
+for t in curl tar gzip xz sha256sum; do command -v $t >/dev/null || fail "$t is needed"; done
 
-mkdir -p "$versions" "$prefix/bin"
-tmp=$(mktemp -d "$versions/.install.XXXXXX")
+mkdir -p "$versions" "$store" "$prefix/bin"
+tmp=$(mktemp -d "$root/.install.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 
-# the archive: a local one, or the release's, checked against its .sha256
+# the core: a local one (its bundles next to it), or the release's, checked against its .sha256
 archive=${HIDEX_ARCHIVE:-}
-if [ -z "$archive" ]; then
+if [ -n "$archive" ]; then
+  source=$(cd "$(dirname "$archive")" && pwd)
+else
   v=${HIDEX_VERSION:-$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" |
     sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)}
   [ -n "$v" ] || fail "no release found on github.com/$repo"
-  url=https://github.com/$repo/releases/download/$v/hidex-$v-x86_64-linux.tar.gz
+  source=https://github.com/$repo/releases/download/$v
+  url=$source/hidex-$v-x86_64-linux.tar.gz
   archive=$tmp/hidex.tar.gz
   echo "hIDEx: downloading $v"
-  curl -fL --progress-bar -o "$archive" "$url" || fail "could not download $url"
+  curl -fsSL -o "$archive" "$url" || fail "could not download $url"
   sum=$(curl -fsSL "$url.sha256" | cut -d' ' -f1) || fail "no checksum for $url"
   [ "$(sha256sum "$archive" | cut -d' ' -f1)" = "$sum" ] || fail "the download does not match its checksum"
 fi
-
 tar xzf "$archive" -C "$tmp"
 new=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d -name 'hidex-*' | head -1)
 [ -f "$new/VERSION" ] || fail "$archive is not a hIDEx archive"
 v=$(cat "$new/VERSION")
+
+# the tools and bundles not there yet, then the version linked to them; ~/.local/bin/hidex moves last
+"$new/bin/hidex-tools" fetch "$new/tools.lock" "$store"
 before=$(readlink -f "$prefix/bin/hidex" 2>/dev/null || true)
 rm -rf "${versions:?}/$v"
 mv "$new" "$versions/$v"
+"$versions/$v/bin/hidex-tools" link "$versions/$v/tools.lock" "$store" "$versions/$v"
+"$versions/$v/bin/hidex-tools" bundles "$versions/$v/BUNDLES" "$store" "$versions/$v" "$source"
 ln -sfn "$versions/$v/bin/hidex" "$prefix/bin/hidex"
 
 # in use: the version just installed, the one before it, and those running sessions point at
@@ -49,9 +60,22 @@ in_use() {
   done
   return 1
 }
-for d in "$versions"/*/; do
-  d=${d%/}
-  [ "$d" = "$versions/$v" ] || in_use "$d" || rm -rf "$d"
+# every version: those in versions/, and those of hIDEx 0.1 (any other folder straight in share/hidex)
+all_versions() {
+  for d in "$versions"/*/ "$root"/*/; do
+    d=${d%/}
+    [ -d "$d" ] && [ "$d" != "$versions" ] && [ "$d" != "$store" ] && echo "$d"
+  done
+  return 0
+}
+# the versions no longer used, then the tools no version links to
+for d in $(all_versions); do
+  if [ "$d" != "$versions/$v" ] && ! in_use "$d"; then rm -rf "$d"; fi
+done
+used=$(all_versions | xargs -r -I{} find {} -maxdepth 6 -type l | xargs -r readlink | sed -n "s|^$store/\([^/]*\).*|\1|p" | sort -u)
+for t in "$store"/*; do
+  [ -e "$t" ] || continue
+  echo "$used" | grep -qx "${t##*/}" || rm -rf "$t"
 done
 
 echo "hIDEx $v installed: $prefix/bin/hidex"

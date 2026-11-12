@@ -103,5 +103,19 @@ check "suggestions: nothing fits, nothing listed" '[ -z "$(hidex-cmd --suggest z
 mkdir -p "$T/panes"; printf '#!/bin/sh\nprintf "1 terminal term 2\\n0 terminal Helix\\n3 terminal side 1\\n"\n' > "$T/panes/zellij"; chmod +x "$T/panes/zellij"
 check "copy: the open terminals suggested" '[ "$(PATH=$T/panes:$PATH hidex-cmd --suggest "copy " | cut -f1 | tr "\n" ,)" = "copy side 1,copy term 2," ]'
 
+
+echo "uninstall"
+p=$T/pfx; mkdir -p "$p/share/hidex/versions/v9/bin" "$p/share/hidex/tools/zellij-1" "$p/bin" "$T/state/hidex"
+ln -s "$p/share/hidex/versions/v9/bin/hidex" "$p/bin/hidex"
+printf 'alias ll=ls\nexport PATH="%s/bin:$PATH"  # hIDEx\n' "$p" > "$HOME/.bashrc"
+mkdir -p "$HOME/.cache/zellij"; printf '"/x/hidex-panes.wasm" {\n    RunCommands\n}\n"/y/other.wasm" {\n    RunCommands\n}\n' > "$HOME/.cache/zellij/permissions.kdl"
+echo n | env -u ZELLIJ_SESSION_NAME HIDEX_PREFIX="$p" hidex-uninstall >/dev/null
+check "asks first: N keeps everything" '[ -d "$p/share/hidex" ] && [ -L "$p/bin/hidex" ]'
+env -u ZELLIJ_SESSION_NAME HIDEX_PREFIX="$p" hidex-uninstall --yes >/dev/null
+check "removes versions, tools, the command and what was kept" '[ ! -e "$p/share/hidex" ] && [ ! -L "$p/bin/hidex" ] && [ ! -e "$T/state/hidex" ]'
+check "takes its PATH line out, leaves the rest" '[ "$(cat "$HOME/.bashrc")" = "alias ll=ls" ]'
+check "drops only its plugin permissions" '! grep -q hidex-panes "$HOME/.cache/zellij/permissions.kdl" && grep -q other.wasm "$HOME/.cache/zellij/permissions.kdl"'
+mkdir -p "$XDG_RUNTIME_DIR/hidex/unit"
+check "refuses inside a hIDEx session" '! HIDEX_PREFIX="$p" ZELLIJ_SESSION_NAME=unit hidex-uninstall --yes'
 echo "$failed failed"
 exit "$failed"

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# hidex-tools fetch LOCK STORE [NAME…]: the tools of LOCK (tools.lock's format; only NAMEs when given), each
+#   unpacked once into STORE/NAME-VERSION, from its official download checked against its sha256; tools already
+#   there are kept (an update downloads only what changed). HIDEX_CACHE: a folder of downloads to use first and
+#   fill (the release build's dist/cache).
+# hidex-tools link LOCK STORE VERSION: VERSION/tools as hIDEx's scripts expect it, links into STORE: each tool's
+#   programs in tools/bin, a "dir" tool as tools/NAME.
+# hidex-tools bundles LIST STORE VERSION SOURCE: hIDEx's own bundles (LIST: name, file, sha256, path), each from
+#   SOURCE (the release's download address, or a folder) unpacked once into STORE/NAME-HASH and linked at
+#   VERSION/PATH; a bundle of Node programs (node_modules/.bin) also gets them in VERSION/tools/bin.
+# Used by install.sh and scripts/release, so both unpack the same way.
+set -euo pipefail
+cmd=$1 lock=$2 store=$3
+shift 3
+
+# the lock's lines: name, version, sha256, url, take
+lines() { grep -v '^#' "$lock" | grep .; }
+
+# download URL SHA256 → the checked file's path
+download() {
+  local f
+  if [ -n "${HIDEX_CACHE:-}" ]; then f=$HIDEX_CACHE/${1##*/}; mkdir -p "$HIDEX_CACHE"; else f=$work/${1##*/}; fi
+  if [ ! -f "$f" ]; then
+    echo "hIDEx: downloading ${1##*/}" >&2
+    curl -fsSL -o "$f.part" "$1" && mv "$f.part" "$f"
+  fi
+  echo "$2  $f" | sha256sum -c --quiet - >&2 || { echo "hIDEx: ${1##*/} does not match its checksum" >&2; exit 1; }
+  echo "$f"
+}
+
+# a zip, with unzip or else with the Python already fetched (minimal systems have no unzip)
+unzip_into() {
+  if command -v unzip >/dev/null; then unzip -q "$1" -d "$2"; return; fi
+  local py; py=$(ls -d "$store"/python-*/bin/python3 2>/dev/null | head -1)
+  [ -n "$py" ] || { echo "hIDEx: unzip is needed for ${1##*/}" >&2; exit 1; }
+  "$py" -m zipfile -e "$1" "$2"
+}
+
+# unpack FILE DIR NAME: an archive's content into DIR; a single program (gzipped or not) as DIR/NAME
+unpack() {
+  case $1 in
+    *.tar.gz | *.tgz) tar xzf "$1" -C "$2" ;;
+    *.tar.xz) tar xJf "$1" -C "$2" ;;
+    *.zip) unzip_into "$1" "$2" ;;
+    *.gz) gunzip -c "$1" > "$2/$3" ;;
+    *) cp "$1" "$2/$3" ;;
+  esac
+}
+
+# one tool into STORE/NAME-VERSION: a "dir" tool's folder as it is; else its programs, found by name (or by the
+# end of their path)
+fetch_one() {
+  local name=$1 v=$2 sha=$3 url=$4 take=$5 dest=$store/$1-$2 d f t p
+  [ -e "$dest" ] && return
+  f=$(download "$url" "$sha")
+  d=$work/$name
+  mkdir -p "$d" "$store"
+  unpack "$f" "$d" "${take%%,*}"
+  if [[ $take == dir* ]]; then
+    mv "$(find "$d" -mindepth 1 -maxdepth 1 -type d | head -1)" "$dest.part"
+  else
+    mkdir "$dest.part"
+    for t in ${take//,/ }; do
+      p=$(find "$d" -type f -path "*/$t" | head -1)
+      [ -n "$p" ] || { echo "hIDEx: $t not found in ${url##*/}" >&2; exit 1; }
+      install -m755 "$p" "$dest.part/${t##*/}"
+    done
+  fi
+  mv "$dest.part" "$dest"
+  rm -rf "$d"
+}
+
+# a "dir" tool is linked as tools/NAME, its programs named after "dir:" in tools/bin; another tool's programs
+# straight in tools/bin
+link_one() {
+  local name=$1 v=$2 take=$5 src=$store/$1-$2 t
+  if [[ $take == dir* ]]; then
+    ln -sfn "$src" "$target/tools/$name"
+    [[ $take == dir:* ]] && t=${take#dir:} && for t in ${t//,/ }; do ln -sf "../$name/$t" "$target/tools/bin/${t##*/}"; done
+  else
+    for t in ${take//,/ }; do ln -sf "$src/${t##*/}" "$target/tools/bin/${t##*/}"; done
+  fi
+  return 0
+}
+
+
+# one bundle: FILE (hidex-lsp-HASH.tar.gz) unpacked once as STORE/lsp-HASH, linked at VERSION/PATH
+bundle_one() {
+  local file=$2 sha=$3 path=$4 dest f b
+  dest=$store/${file#hidex-}; dest=${dest%.tar.gz}
+  if [ ! -e "$dest" ]; then
+    case $source in
+      http*) f=$(download "$source/$file" "$sha") ;;
+      *) f=$source/$file; echo "$sha  $f" | sha256sum -c --quiet - >&2 || { echo "hIDEx: $file does not match" >&2; exit 1; } ;;
+    esac
+    mkdir -p "$dest.part"
+    tar xzf "$f" -C "$dest.part"
+    mv "$dest.part" "$dest"
+  fi
+  mkdir -p "$(dirname "$target/$path")" "$target/tools/bin"
+  ln -sfn "$dest" "$target/$path"
+  for b in "$dest/node_modules/.bin"/*; do
+    [ -e "$b" ] && ln -sf "$target/$path/node_modules/.bin/${b##*/}" "$target/tools/bin/${b##*/}"
+  done
+  return 0
+}
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+case $cmd in
+  fetch)
+    # zips last: they may need the Python
+    { lines | grep -v '\.zip	'; lines | grep '\.zip	' || true; } | while IFS=$'\t' read -r n v sha url take; do
+      [ $# -eq 0 ] || [[ " $* " == *" $n "* ]] || continue
+      fetch_one "$n" "$v" "$sha" "$url" "$take"
+    done ;;
+  link)
+    target=$1
+    mkdir -p "$target/tools/bin"
+    lines | while IFS=$'\t' read -r n v sha url take; do link_one "$n" "$v" "$sha" "$url" "$take"; done ;;
+  bundles)
+    target=$1 source=$2
+    lines | while IFS=$'\t' read -r n file sha path; do bundle_one "$n" "$file" "$sha" "$path"; done ;;
+  *) echo "hidex-tools fetch LOCK STORE [NAME…] | link LOCK STORE VERSION | bundles LIST STORE VERSION SOURCE" >&2; exit 2 ;;
+esac

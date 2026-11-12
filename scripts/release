@@ -1,83 +1,56 @@
 #!/usr/bin/env bash
-# scripts/release [VERSION]: hIDEx's release archive, dist/hidex-VERSION-x86_64-linux.tar.gz, from this checkout:
-# the scripts and config, the plugin (cargo, wasm32-wasip1), the tools of tools.lock (downloaded once into
-# dist/cache, checked against their sha256), the Node language servers (release/lsp) and pudb (release/pudb.txt).
-# Prints the archive's path. Needs cargo with the wasm32-wasip1 target, curl, tar, xz, unzip
-# (nix develop gives them all).
+# scripts/release [VERSION]: hIDEx's release files in dist/, from this checkout:
+#   hidex-VERSION-x86_64-linux.tar.gz  the core: scripts, config, the plugin (cargo, wasm32-wasip1), the /theme
+#                                      colour schemes, tools.lock and BUNDLES (what install.sh fetches next)
+#   hidex-lsp-HASH.tar.gz              the Node language servers (release/lsp), named after their lock file
+#   hidex-pudb-HASH.tar.gz             pudb (release/pudb.txt), named after it
+# A bundle keeps its name while its content does not change, so an update downloads it only when it changed; the
+# tools come from their own downloads (tools.lock). Prints the core's path. Needs cargo with the wasm32-wasip1
+# target, curl, tar, xz (nix develop gives them).
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
 version=${1:-$(git -C "$repo" describe --tags --always --dirty)}
 name=hidex-$version
-dist=$repo/dist cache=$repo/dist/cache out=$repo/dist/$name
-rm -rf "$out"
-mkdir -p "$cache" "$out/bin" "$out/tools/bin" "$out/share"
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+dist=$repo/dist out=$repo/dist/$name store=$repo/dist/store
+export HIDEX_CACHE=$repo/dist/cache
+rm -rf "$out" "$dist"/hidex-lsp-*.tar.gz "$dist"/hidex-pudb-*.tar.gz
+mkdir -p "$out/bin" "$out/share" "$store"
+tools() { "$repo/bin/hidex-tools" "$@"; }
 
-# fetch URL SHA256: the download's path in the cache (downloaded the first time), checked
-fetch() {
-  local f=$cache/${1##*/}
-  if [ ! -f "$f" ]; then curl -fsSL -o "$f.part" "$1"; mv "$f.part" "$f"; fi
-  echo "$2  $f" | sha256sum -c --quiet - >&2 || { echo "release: $1 does not match tools.lock" >&2; exit 1; }
-  echo "$f"
+# the build's own tools: Node and Python (to make the bundles), the colour schemes
+tools fetch "$repo/tools.lock" "$store" node python
+tools fetch "$repo/release/build.lock" "$store"
+node=$(ls -d "$store"/node-*/bin) python=$(ls -d "$store"/python-*/bin/python3) themes=$(ls -d "$store"/themes-*)
+
+# bundle NAME DIR: DIR packed as hidex-NAME-HASH.tar.gz (HASH: of its inputs, $hash); its BUNDLES line
+bundle() {
+  local file=hidex-$1-$hash.tar.gz
+  tar -C "$2" -czf "$dist/$file" .
+  printf '%s\t%s\t%s\t%s\n' "$1" "$file" "$(sha256sum "$dist/$file" | cut -d' ' -f1)" "$3" >> "$out/BUNDLES"
 }
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
 
-# unpack FILE DIR NAME: an archive's content into DIR; a single program (gzipped or not) as DIR/NAME
-unpack() {
-  case $1 in
-    *.tar.gz | *.tgz) tar xzf "$1" -C "$2" ;;
-    *.tar.xz) tar xJf "$1" -C "$2" ;;
-    *.zip) unzip -q "$1" -d "$2" ;;
-    *.gz) gunzip -c "$1" > "$2/$3" ;;
-    *) cp "$1" "$2/$3" ;;
-  esac
-}
+mkdir "$work/lsp"
+cp "$repo/release/lsp/package.json" "$repo/release/lsp/package-lock.json" "$work/lsp/"
+PATH=$node:$PATH npm ci --prefix "$work/lsp" --omit=dev --ignore-scripts --no-audit --no-fund >&2
+hash=$(sha256sum "$repo/release/lsp/package-lock.json" | cut -c1-12)
+bundle lsp "$work/lsp" tools/lsp
 
-# tool NAME VERSION SHA256 URL TAKE: the programs named in TAKE into tools/bin (found by name, or by the end of
-# their path); "dir": the whole download as tools/NAME
-tool() {
-  local name=$1 url=$4 take=$5 f d t p
-  f=$(fetch "$url" "$3")
-  d=$tmp/$name
-  mkdir -p "$d"
-  unpack "$f" "$d" "${take%%,*}"
-  if [ "$take" = dir ]; then
-    # archives hold one folder: that is the tool's
-    mv "$(find "$d" -mindepth 1 -maxdepth 1 -type d | head -1)" "$out/tools/$name"
-    return
-  fi
-  for t in ${take//,/ }; do
-    p=$(find "$d" -type f -path "*/$t" | head -1)
-    [ -n "$p" ] || { echo "release: $t not found in $url" >&2; exit 1; }
-    install -m755 "$p" "$out/tools/bin/${t##*/}"
-  done
-}
+"$python" -m pip install --quiet --no-deps --no-compile --disable-pip-version-check --target "$work/pudb" \
+  -r "$repo/release/pudb.txt" >&2
+hash=$(sha256sum "$repo/release/pudb.txt" | cut -c1-12)
+bundle pudb "$work/pudb" share/hidex/python/lib
 
-grep -v '^#' "$repo/tools.lock" | while IFS=$'\t' read -r n v sha url take; do tool "$n" "$v" "$sha" "$url" "$take"; done
-
-# Node: only the program (npm is used once below, for the language servers)
-mkdir -p "$out/tools/lsp"
-cp "$repo/release/lsp/package.json" "$repo/release/lsp/package-lock.json" "$out/tools/lsp/"
-PATH=$out/tools/node/bin:$PATH npm ci --prefix "$out/tools/lsp" --omit=dev --ignore-scripts --no-audit --no-fund >&2
-for b in "$out/tools/lsp/node_modules/.bin"/*; do ln -s "../lsp/node_modules/.bin/${b##*/}" "$out/tools/bin/"; done
-find "$out/tools/node" -mindepth 1 -maxdepth 1 ! -name bin ! -name LICENSE -exec rm -rf {} +
-find "$out/tools/node/bin" -mindepth 1 ! -name node -delete
-ln -s ../node/bin/node "$out/tools/bin/node"
-
-# hIDEx's own: config, the colour schemes for /theme (kitty format), the plugin, the scripts
+# the core: hIDEx's own files
 cp -r "$repo/config" "$out/share/hidex"
 mkdir "$out/share/hidex/themes"
-cp "$out/tools/themes/kitty"/*.conf "$out/tools/themes/LICENSE" "$out/share/hidex/themes/"
-rm -rf "$out/tools/themes"
+cp "$themes/kitty"/*.conf "$themes/LICENSE" "$out/share/hidex/themes/"
 cp "$repo/README.md" "$out/share/hidex/"
 (cd "$repo/plugin" && cargo build --release --locked --target wasm32-wasip1 >&2)
 cp "$repo/plugin/target/wasm32-wasip1/release/hidex-panes.wasm" "$out/share/hidex/"
-# Python: hIDEx's own (the Python relay, files outside any env), which also installs pudb
-ln -s ../python/bin/python3 "$out/tools/bin/python3"
-"$out/tools/python/bin/python3" -m pip install --quiet --no-deps --no-compile --disable-pip-version-check \
-  --target "$out/share/hidex/python/lib" -r "$repo/release/pudb.txt" >&2
 install -m755 "$repo/bin"/* "$out/bin/"
-cp "$repo/install.sh" "$repo/LICENSE" "$out/"
+cp "$repo/install.sh" "$repo/LICENSE" "$repo/tools.lock" "$out/"
 echo "$version" > "$out/VERSION"
 
 tar -C "$dist" -czf "$dist/$name-x86_64-linux.tar.gz" "$name"

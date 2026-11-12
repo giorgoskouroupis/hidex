@@ -1,6 +1,7 @@
-# hIDEx's tools, pinned: what scripts/release downloads into the archive, checked against its sha256.
-# name  version  sha256  url  what to take (programs found in the download, put in tools/bin; "dir": the whole
-# download unpacked as tools/NAME, e.g. Helix and its runtime)
+# hIDEx's tools, pinned, each checked against its sha256.
+# name  version  sha256  url  what to take (programs found in the download, linked in tools/bin; "dir": the whole
+# download as tools/NAME, e.g. Helix and its runtime; "dir:PROGRAM…": also those programs in tools/bin).
+# install.sh fetches each tool from its official download into ~/.local/share/hidex/tools/NAME-VERSION, once.
 zellij	0.46.0	a8ee599eb357b6142443c91506a4ece3aa8811cb75dcf2b28d194bd66853c79d	https://github.com/zellij-org/zellij/releases/download/v0.46.0/zellij-x86_64-unknown-linux-musl.tar.gz	zellij
 helix	25.07.1	3f08e63ecd388fff657ad39722f88bb03dcf326f1f2da2700d99e1dc40ab2e8b	https://github.com/helix-editor/helix/releases/download/25.07.1/helix-25.07.1-x86_64-linux.tar.xz	dir
 broot	1.62.0	13630ae5d3b011ddc81fca05cb80dbee6189dad3ba393dd477f5f687c7b5106d	https://github.com/Canop/broot/releases/download/v1.62.0/broot_1.62.0.zip	x86_64-unknown-linux-musl/broot
@@ -14,6 +15,5 @@ landrun	0.1.17	6ada66a06669e8994e174a7271af2db636308e55a0d6ec896cc7d326b46727f6	
 ruff	0.17.4	d1d6ec9ce1ce0c01e23532a157a677077ba1f82f7cd2cde6f0bd75e65f85df93	https://github.com/astral-sh/ruff/releases/download/0.17.4/ruff-x86_64-unknown-linux-musl.tar.gz	ruff
 markdown-oxide	0.25.12	ad4248cf5d3f0e9d9f120b579501c45dad9c46bfcb4ddec36d2cb85d68a58828	https://github.com/Feel-ix-343/markdown-oxide/releases/download/v0.25.12/markdown-oxide-v0.25.12-x86_64-unknown-linux-gnu.tar.gz	markdown-oxide
 taplo	0.10.0	8fe196b894ccf9072f98d4e1013a180306e17d244830b03986ee5e8eabeb6156	https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-x86_64.gz	taplo
-node	24.22.3	4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb	https://nodejs.org/dist/v24.22.3/node-v24.22.3-linux-x64.tar.xz	dir
-themes	314a551	4ee03a7a0f337cd5c74bcce49403a71e405053ce8b71c318afacaa484c25d9b8	https://github.com/mbadolato/iTerm2-Color-Schemes/archive/314a551246c00f9c954b581ade61855e5aaf3ab2.tar.gz	dir
-python	3.13.18	f2d2199eb25880e07863b391cf7124e7ffa1338b0d65600dfcec117c4223a7fb	https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz	dir
+node	24.22.3	4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb	https://nodejs.org/dist/v24.22.3/node-v24.22.3-linux-x64.tar.xz	dir:bin/node
+python	3.13.18	f2d2199eb25880e07863b391cf7124e7ffa1338b0d65600dfcec117c4223a7fb	https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz	dir:bin/python3

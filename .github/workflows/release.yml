@@ -1,5 +1,5 @@
-# a version tag (v0.1.0…) builds hIDEx's archive (scripts/release) and publishes it as that tag's release, with
-# its checksum (for install.sh) and its section of CHANGELOG.md as the text
+# a version tag (v0.1.0…) builds hIDEx's release files (scripts/release: the core, the bundles) and publishes them,
+# with the core's checksum (for install.sh), as that tag's release, its section of CHANGELOG.md as the text
 name: release
 on:
   push:
@@ -16,6 +16,7 @@ jobs:
         with:
           path: |
             dist/cache
+            dist/store
             ~/.npm
             ~/.cargo/registry
             plugin/target
@@ -40,4 +41,6 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" --title "hIDEx $GITHUB_REF_NAME" --notes-file notes.md
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/hidex-lsp-*.tar.gz dist/hidex-pudb-*.tar.gz \
+            --title "hIDEx $GITHUB_REF_NAME" --notes-file notes.md

@@ -23,7 +23,8 @@ env_args() {
 }
 
 # the system's programs and settings, wherever the distribution keeps them
-system=(/usr /bin /sbin /lib /lib64 /etc /opt /nix /run/current-system ${HIDEX_HOME:+"$HIDEX_HOME"})
+# hIDEx: the whole install (versions/VERSION links its tools in tools/), else the folder it runs from
+system=(/usr /bin /sbin /lib /lib64 /etc /opt /nix /run/current-system ${HIDEX_HOME:+"${HIDEX_HOME%/versions/*}"})
 
 # everything from DIR down but the secrets: Landlock only allows, so a folder holding a secret (/, /home, HOME,
 # .local/share…) is listed entry by entry instead. Entries made later in those folders stay out of reach.
