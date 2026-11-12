@@ -73,8 +73,9 @@ text: no icon font needed.
   without a restart (`bin/hidex-pyright` hands basedpyright the env's interpreter).
 - `/reload` (files changed on disk), `/lsp` (restart the language servers), `/git`, `/git-write`, `/yazi`,
   `/terminal`, `/side`, `/collapse`, `/keys`, `/quit`.
-- `/output`: the whole output (scrollback and screen) of the terminal you were last in, opened in Helix at its
-  end, just after the last command's output: select there and copy (`space` `y` for the clipboard).
+- `/copy`: the last command run in the terminal you were last in, with its output below it, to the clipboard
+  (the window's, through the terminal, so over ssh too). Read from the screen: the bottom line is the prompt, and
+  the last earlier line starting with it is the command, so unusual prompts can fool it.
 - `/update`: after `nix profile upgrade hidex`, moves the running session to the new hIDEx without a restart:
   terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
   everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
@@ -141,7 +142,7 @@ keeps them in their place, so no key pressed there can reach further.
 - `bin/hidex-lazygit`, `bin/hidex-yazi`: the pop-ups (sandboxed); `bin/hidex-popup-colors` their colours, from
   `bin/hidex-bg` (the window's background, dark or light), which also gives lazygit light diffs (`bin/hidex-delta`);
   `bin/hidex-guard`: the off-limits folders
-- `bin/hidex-helix`: Helix's sandbox; `bin/hidex-output`: `/output`
+- `bin/hidex-helix`: Helix's sandbox; `bin/hidex-copy`: `/copy`
 - `bin/hidex-cmd`: the `/` commands; `bin/hidex-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-helix-theme`, `bin/hidex-pyright`
   (basedpyright on the project's Python, switched live), `bin/hidex-update` (`/update`), `bin/hidex-config` (the
   session's zellij config), `bin/hidex-status` (the bar's line), `bin/hidex-state` (per-session state),

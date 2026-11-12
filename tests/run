@@ -88,12 +88,11 @@ check "Alt+g opens lazygit" 'has "lazygit (read-only)"'
 key 'q' 3
 check "q closes it" '! has "lazygit (read-only)"'
 
-echo "output"
-key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-output-marker
+echo "copy"
+key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-copy-marker
 '; pause 1
-msg output; pause 2
-check "/output saves the terminal's output" 'grep -q hidex-output-marker "$XDG_RUNTIME_DIR"/hidex/$S/output/*.txt'
-check "and opens it in Helix" 'wait_for "screen Helix | grep -q hidex-output-marker"'
+msg copy; pause 2
+check "/copy takes the terminal's last command and its output" '[ "$("$out/bin/hidex-copy" --from "$XDG_RUNTIME_DIR/hidex/$S/copy.txt" | tail -1)" = hidex-copy-marker ] && "$out/bin/hidex-copy" --from "$XDG_RUNTIME_DIR/hidex/$S/copy.txt" | head -1 | grep -q "echo hidex-copy-marker"'
 
 echo "memory"
 in_session "$out/bin/hidex-theme" Dracula

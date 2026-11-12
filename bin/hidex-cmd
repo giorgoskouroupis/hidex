@@ -13,7 +13,7 @@ yazi	yazi, the file manager
 terminal	a new terminal, stacked with the others
 side	a new side terminal (Claude, or a shell for any AI tool)
 collapse	fold the last used pane to a strip, or unfold it
-output	the last used terminal'"'"'s whole output in Helix, at its end: select and copy from there
+copy	copy the last command of the terminal last used, with its output below it, to the clipboard
 keys	every hIDEx key
 update	move this session to the hIDEx installed in your profile (after nix profile upgrade), keeping terminals and buffers
 quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
@@ -29,7 +29,7 @@ cmd_yazi() { hidex-msg popup yazi; }
 cmd_terminal() { hidex-msg new terminal; }
 cmd_side() { hidex-msg new side; }
 cmd_collapse() { hidex-msg collapse; }
-cmd_output() { hidex-msg output; }
+cmd_copy() { hidex-msg copy; }
 # the keys table of the README, as two columns
 cmd_keys() {
   awk -F' [|] ' '/^[|] Keys/ { on = 1; next } on && !/^[|]/ { exit } on && !/^[|]---/ {

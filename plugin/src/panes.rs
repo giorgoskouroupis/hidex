@@ -224,7 +224,7 @@ pub mod tests {
     }
 
     #[test]
-    fn output_comes_from_the_terminal_last_used() {
+    fn copy_takes_the_terminal_last_used() {
         let list = |focus: &str| panes(["Helix", "term 1", "term 2", "side 1"].iter().enumerate().map(|(i, t)| pane(i as u32, t, *t == focus)).collect());
         let p = list("term 2");
         assert_eq!(title(&p, p.last_terminal()), "term 2");
