@@ -55,6 +55,7 @@ echo "hIDEx tests ($out)"
 echo "start"
 start
 check "layout: tree, Helix, term 1, side 1" 'has "tree: proj" && has Helix && has "term 1" && has "side 1"'
+check "running hidex again attaches to the live session" '! (cd "$T/proj" && timeout 4 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null </dev/null 2>&1) | grep -q "panicked\|not supported" && has Helix'
 
 echo "new panes"
 msg new terminal

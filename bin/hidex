@@ -29,7 +29,8 @@ tty > "$s/tty" 2>/dev/null || rm -f "$s/tty"
 end() { hidex-theme off; }
 case $(zellij ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
-  ?*) hidex-theme apply; zellij attach "$n"; end; exit ;;
+  # (zellij refuses to attach from what looks like inside the session)
+  ?*) hidex-theme apply; env -u ZELLIJ_SESSION_NAME zellij attach "$n"; end; exit ;;
 esac
 
 # a new session reaches its hIDEx through $s/current, which /update (hidex-update) moves to a newer one without
