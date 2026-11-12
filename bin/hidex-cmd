@@ -1,8 +1,8 @@
 #!/bin/sh
 # hidex-cmd [--popup] [NAME [ARG]]: hIDEx's / commands, the one table of them: each command
-# is one line below (name, whether it needs a screen, description) and one function. The bar's command line
-# (Alt+p) reads the table (--list) and runs the commands; with no name, a list to pick from ("cmds" on the
-# bar). --popup: started as a pop-up, so it takes the pop-ups' colours.
+# is one line below (name, whether it needs a screen, description) and one function. With no name, the
+# palette (Alt+p, "cmds" on the bar): a line to type in, what fits listed below as you type (--suggest).
+# --popup: started as a pop-up, so it takes the pop-ups' colours.
 # Screen: "screen", always (a list or a result to read); "pick", when given no argument (a list to pick from);
 # "-", never: run in the background. A command taking arguments also has an args_ function listing them
 # (--complete NAME, for the command line's menu).
@@ -47,14 +47,37 @@ cmd_keys() {
 cmd_update() { hidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
 cmd_quit() { hidex-msg quit ask; }
 
+# what fits the typed line: commands starting with it, then containing it; after "NAME ", its arguments
+suggest() {
+  case $1 in
+    *' '*)
+      c=${1%% *} a=${1#* } f=args_$(printf '%s' "$c" | tr - _)
+      command -v "$f" >/dev/null && "$f" | awk -v c="$c" -v a="$a" 'index($0, a) == 1 { print c " " $0 "\t" }' ;;
+    *)
+      printf '%s\n' "$COMMANDS" | awk -F'\t' -v q="$1" '{ l = $1 "\t\033[2m" $3 "\033[0m" }
+        index($1, q) == 1 { print l; next } index($1, q) { rest[++n] = l } END { for (i = 1; i <= n; i++) print rest[i] }' ;;
+  esac
+}
+
+# the palette: Enter runs the chosen line, or the typed one when nothing fits; Tab takes the chosen line
+palette() {
+  out=$(hidex-fzf --disabled --print-query --ansi --prompt '/' --delimiter '\t' --with-nth 1,2 --tabstop 14 \
+    --bind 'start,change:reload:hidex-cmd --suggest {q}' --bind 'tab:transform-query:printf "%s " {1}' \
+    --header 'Tab completes · Enter runs · Esc closes')
+  [ $? -eq 130 ] && exit 0
+  line=$(printf '%s\n' "$out" | sed -n 2p | cut -f1)
+  line=${line:-$(printf '%s\n' "$out" | sed -n 1p)}
+  # the line's words: the command, then its arguments
+  # shellcheck disable=SC2086
+  [ -n "$line" ] && exec "$0" $line
+}
+
 [ "$1" = --popup ] && { shift; hidex-popup-colors; }
 case $1 in
   --list) printf '%s\n' "$COMMANDS" ;;
   --complete) f=args_$(printf '%s' "$2" | tr - _); if command -v "$f" >/dev/null; then "$f"; fi ;;
-  '')
-    pick=$(printf '%s\n' "$COMMANDS" | fzf --prompt '/' --delimiter '\t' --with-nth 1,3 --tabstop 12 \
-           --height 100% --reverse --no-info) || exit 0
-    exec "$0" "$(printf '%s' "$pick" | cut -f1)" ;;
+  --suggest) suggest "$2" ;;
+  '') palette ;;
   *)
     f=cmd_$(printf '%s' "$1" | tr - _)
     printf '%s\n' "$COMMANDS" | cut -f1 | grep -qx -- "$1" || { echo "hIDEx: no command /$1" >&2; exit 1; }

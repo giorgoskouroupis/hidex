@@ -24,7 +24,7 @@ case ${1:-pick} in
     [ "$t" = hidex ] || { sleep 1; hidex-msg helix "theme $t"; } ;;
   pick)
     was=$(current)
-    t=$(themes | fzf --prompt 'helix theme > ' --height 100% --reverse \
+    t=$(themes | hidex-fzf --prompt 'helix theme > ' \
           --header "hidex: in the window's colours. Moving previews; Enter keeps, Esc goes back" \
           --bind 'focus:execute-silent(hidex-msg helix "theme {}")') || { hidex-msg helix "theme $was"; exit 0; }
     keep "$t" ;;

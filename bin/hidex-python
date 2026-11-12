@@ -76,8 +76,8 @@ case ${1:-pick} in
          echo "hIDEx $(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)" ;;
   pick)
     # a group's header line picks nothing; typing filters on names and group names
-    choice=$(listing | fzf --ansi --no-sort --prompt 'python > ' --delimiter '\t' --with-nth 1 --nth 1,2 \
-      --height 100% --reverse) || exit 0
+    choice=$(listing | hidex-fzf --ansi --no-sort --prompt 'python > ' --delimiter '\t' --with-nth 1 --nth 1,2 \
+      ) || exit 0
     p=$(printf '%s' "$choice" | cut -f3)
     [ -n "$p" ] && set_prefix "$p" ;;
 esac

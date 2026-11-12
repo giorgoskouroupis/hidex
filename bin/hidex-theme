@@ -56,8 +56,8 @@ case $1 in
   off) [ -f "$s/theme" ] && reset ;;
   preview) case $2 in reset) reset ;; '') ;; *) paint "$2" ;; esac ;;
   pick)
-    choice=$(listing | fzf --ansi --no-sort --prompt 'theme > ' --delimiter '\t' --with-nth 1 \
-      --height 100% --reverse --header 'moving previews; Enter keeps, Esc goes back' \
+    choice=$(listing | hidex-fzf --ansi --no-sort --prompt 'theme > ' --delimiter '\t' --with-nth 1 \
+      --header 'moving previews; Enter keeps, Esc goes back' \
       --bind 'focus:execute-silent(hidex-theme preview {2})') || { restore; exit 0; }
     name=$(printf '%s' "$choice" | cut -f2)
     case $name in

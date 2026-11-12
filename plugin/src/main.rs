@@ -5,7 +5,7 @@
 //!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
 //!   status    branch, Python and theme for the bar; bar  the bar itself
-//!   prompt    the bar as a command line (Alt+p), what fits shown in it as you type
+//!   prompt    the bar as a command line (Alt+Shift+p), what fits shown in it as you type
 //!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
 mod actions;
 mod bar;
@@ -39,7 +39,7 @@ struct State {
     ending: bool,
     /// the project's Helix theme has been asked for (once both the session and Helix are known)
     restored: bool,
-    /// the bar's command line (Alt+p)
+    /// the bar's command line (Alt+Shift+p)
     prompt: prompt::Prompt,
 }
 
@@ -208,7 +208,7 @@ impl ZellijPlugin for State {
             EventType::Key,
             EventType::PermissionRequestResult,
         ]);
-        // the bar is not a pane to move to (but for its command line, Alt+p)
+        // the bar is not a pane to move to (but for its command line, Alt+Shift+p)
         set_selectable(false);
         self.cwd = get_plugin_ids().initial_cwd;
         self.status.set_project(&self.cwd);

@@ -35,8 +35,8 @@ listing() {
   done
 }
 
-choice=$(listing | fzf --ansi --no-sort --prompt 'langs > ' --delimiter '\t' --with-nth 1 --height 100% \
-  --reverse --header 'Enter: Python'"'"'s env, or a language'"'"'s health in Helix') || exit 0
+choice=$(listing | hidex-fzf --ansi --no-sort --prompt 'langs > ' --delimiter '\t' --with-nth 1 \
+  --header 'Enter: Python'"'"'s env, or a language'"'"'s health in Helix') || exit 0
 l=$(printf '%s' "$choice" | cut -f2)
 case $l in
   python) hidex-python pick ;;
