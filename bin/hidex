@@ -56,7 +56,9 @@ esac
 # with the session's own zellij: a newer one may refuse to talk to its older server
 attach() {
   z=$s/current/tools/bin/zellij; [ -x "$z" ] || z=zellij
-  hidex-theme apply; env -u ZELLIJ_SESSION_NAME "$z" attach "$n"; end; exit
+  # messages to its bar at its own address (the one through its "current" link)
+  HIDEX_PLUGIN=$s/current/share/hidex/hidex-panes.wasm hidex-theme apply
+  env -u ZELLIJ_SESSION_NAME "$z" attach "$n"; end; exit
 }
 if [ -n "$running" ]; then
   [ "$(readlink -f "$s/current")" = "$HIDEX_HOME" ] && attach

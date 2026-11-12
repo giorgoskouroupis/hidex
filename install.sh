@@ -80,15 +80,26 @@ done
 
 echo "hIDEx $v installed: $prefix/bin/hidex"
 
-# PATH: the shell's own rc file gets the line, when it is a plain file of the user's (not one a system manages,
-# e.g. NixOS/home-manager's read-only links); else the hint
+# PATH, as other installers do (uv, rustup): one line, marked "# hIDEx", in the login shell's own file (created
+# when missing), never in one a system manages (a link, e.g. NixOS/home-manager's, or read-only); fish gets a file
+# of its own. HIDEX_NO_MODIFY_PATH=1: only the hint. hidex --uninstall takes it out again.
 on_path() { case :$PATH: in *":$prefix/bin:"*) return 0 ;; esac; return 1; }
-rc=$HOME/.${SHELL##*/}rc
-line="export PATH=\"$prefix/bin:\$PATH\"  # hIDEx"
-if on_path || grep -qF "$line" "$rc" 2>/dev/null; then :
-elif [ -f "$rc" ] && [ ! -L "$rc" ] && [ -w "$rc" ]; then
+# the shell that ran the installer (curl … | sh: the parent of this sh), else the login shell
+shell=$(cat "/proc/$PPID/comm" 2>/dev/null)
+case $shell in bash|zsh|fish) ;; *) shell=${SHELL##*/} ;; esac
+case $shell in
+  bash) rc=$HOME/.bashrc line="export PATH=\"$prefix/bin:\$PATH\"  # hIDEx" ;;
+  zsh) rc=${ZDOTDIR:-$HOME}/.zshrc line="export PATH=\"$prefix/bin:\$PATH\"  # hIDEx" ;;
+  fish) rc=${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/hidex.fish line="fish_add_path -g $prefix/bin  # hIDEx" ;;
+  *) rc=$HOME/.profile line="export PATH=\"$prefix/bin:\$PATH\"  # hIDEx" ;;
+esac
+# a file the user owns and may change: a plain writable one, or none yet in a writable folder
+ours() { if [ -e "$1" ]; then [ -f "$1" ] && [ ! -L "$1" ] && [ -w "$1" ]; else mkdir -p "${1%/*}" 2>/dev/null && [ -w "${1%/*}" ]; fi; }
+if on_path || grep -qF "# hIDEx" "$rc" 2>/dev/null; then :
+elif [ "${HIDEX_NO_MODIFY_PATH:-}" != 1 ] && ours "$rc"; then
   printf '\n%s\n' "$line" >> "$rc"
-  echo "  $prefix/bin added to your PATH in $rc: open a new terminal"
+  now=" (or run: export PATH=\"$prefix/bin:\$PATH\")"; [ "${rc##*.}" = fish ] && now=
+  echo "  $prefix/bin added to your PATH in $rc: open a new terminal$now"
 else
   echo "  add $prefix/bin to your PATH (until then: $prefix/bin/hidex)"
 fi

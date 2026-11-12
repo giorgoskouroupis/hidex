@@ -16,13 +16,48 @@ shift 3
 # the lock's lines: name, version, sha256, url, take
 lines() { grep -v '^#' "$lock" | grep .; }
 
-# download URL SHA256 → the checked file's path
+# bytes as "12.3 MB"
+mb() { printf '%d.%d MB' $(($1 / 1048576)) $(($1 % 1048576 * 10 / 1048576)); }
+
+# one line, redrawn: spinner, LABEL, a bar, percent, size so far / total, speed (bar and percent need the total)
+draw() {
+  local label=$1 size=$2 total=$3 ms=$4 spin=${5:-} w=24 n pct bar rest speed
+  speed=$((ms > 0 ? size * 1000 / ms : 0))
+  if [ "$total" -gt 0 ]; then
+    pct=$((size * 100 / total)) n=$((size * w / total))
+    printf -v bar '%*s' "$n" ''; printf -v rest '%*s' $((w - n)) ''
+    printf '\r  \033[33m%s\033[0m %-22s \033[33m%s\033[2m%s\033[0m %4d%%   %s / %s   %s/s\033[K' "$spin" "$label" \
+      "${bar// /━}" "${rest// /─}" "$pct" "$(mb "$size")" "$(mb "$total")" "$(mb "$speed")" >&2
+  else
+    printf '\r  \033[33m%s\033[0m %-22s %s   %s/s\033[K' "$spin" "$label" "$(mb "$size")" "$(mb "$speed")" >&2
+  fi
+}
+
+# fetch URL FILE LABEL: the download, with its progress line when someone watches (a terminal); plain in the
+# release build's log
+fetch() {
+  local url=$1 out=$2 label=$3 total pid t0 i=0 frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+  if [ ! -t 2 ]; then echo "hIDEx: downloading $label" >&2; curl -fsSL -o "$out" "$url"; return; fi
+  total=$(curl -fsIL "$url" | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n + 0 }')
+  t0=$(date +%s%N)
+  curl -fsSL -o "$out" "$url" & pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    draw "$label" "$(stat -c %s "$out" 2>/dev/null || echo 0)" "$total" $((($(date +%s%N) - t0) / 1000000)) \
+      "${frames[i++ % 10]}"
+    sleep 0.1
+  done
+  wait "$pid" || { printf '\r  \033[31m✗\033[0m %s: download failed\033[K\n' "$label" >&2; return 1; }
+  printf '\r  \033[32m✓\033[0m %-22s %s\033[K\n' "$label" "$(mb "$(stat -c %s "$out")")" >&2
+}
+
+# download URL SHA256 LABEL → the checked file's path
 download() {
   local f
-  if [ -n "${HIDEX_CACHE:-}" ]; then f=$HIDEX_CACHE/${1##*/}; mkdir -p "$HIDEX_CACHE"; else f=$work/${1##*/}; fi
+  # in the cache by checksum too: a file name can stay the same across versions (zellij's does)
+  if [ -n "${HIDEX_CACHE:-}" ]; then f=$HIDEX_CACHE/${2:0:12}-${1##*/}; mkdir -p "$HIDEX_CACHE"; else f=$work/${1##*/}; fi
   if [ ! -f "$f" ]; then
-    echo "hIDEx: downloading ${1##*/}" >&2
-    curl -fsSL -o "$f.part" "$1" && mv "$f.part" "$f"
+    fetch "$1" "$f.part" "${3:-${1##*/}}"
+    mv "$f.part" "$f"
   fi
   echo "$2  $f" | sha256sum -c --quiet - >&2 || { echo "hIDEx: ${1##*/} does not match its checksum" >&2; exit 1; }
   echo "$f"
@@ -52,7 +87,7 @@ unpack() {
 fetch_one() {
   local name=$1 v=$2 sha=$3 url=$4 take=$5 dest=$store/$1-$2 d f t p
   [ -e "$dest" ] && return
-  f=$(download "$url" "$sha")
+  f=$(download "$url" "$sha" "$name $v")
   d=$work/$name
   mkdir -p "$d" "$store"
   unpack "$f" "$d" "${take%%,*}"
@@ -90,7 +125,7 @@ bundle_one() {
   dest=$store/${file#hidex-}; dest=${dest%.tar.gz}
   if [ ! -e "$dest" ]; then
     case $source in
-      http*) f=$(download "$source/$file" "$sha") ;;
+      http*) f=$(download "$source/$file" "$sha" "$1 (bundle)") ;;
       *) f=$source/$file; echo "$sha  $f" | sha256sum -c --quiet - >&2 || { echo "hIDEx: $file does not match" >&2; exit 1; } ;;
     esac
     mkdir -p "$dest.part"

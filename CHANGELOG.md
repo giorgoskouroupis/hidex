@@ -5,6 +5,28 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.2.1] - 2026-11-12
+
+### Added
+- Tabs: the terminals and the side terminals show their titles in a row, one open below (zellij 0.46's
+  horizontal stacks).
+
+### Fixed
+- After the window closed and a new one attached (or with two windows on one session), hIDEx's keys could act
+  for the window that had gone, or twice (Alt+h, Alt+t did nothing; Alt+n opened two terminals). zellij keeps a
+  copy of the bar for every window that ever attached: each copy now acts only for its own window, while it is
+  connected, and scripts' messages no longer start another bar. A test covers reattaching.
+- Reattaching to a running session that has a window theme no longer hangs (the theme's message went to the
+  bar at the wrong address); a message to the bar never waits more than 5 s.
+
+### Changed
+- Unfocused pane frames are faint (the terminal's grey): only the focused one, in the accent colour, stands out.
+- Downloads show a progress line: spinner, bar, percent, size, speed, a check mark when done (in a terminal).
+- PATH as other installers do it: the line goes in your shell's file (`~/.bashrc`, `~/.zshrc` also under
+  `ZDOTDIR`, a file of its own for fish, else `~/.profile`), created when missing, never in one a system manages;
+  `HIDEX_NO_MODIFY_PATH=1` to leave PATH alone. `hidex --uninstall` takes it out again.
+- The release workflow uses checkout v7 and cache v6 (GitHub retires the Node 20 ones).
+
 ## [v0.2.0] - 2026-11-12
 
 ### Changed

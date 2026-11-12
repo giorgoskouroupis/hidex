@@ -18,7 +18,8 @@ tool once (`tools/`, shared by the versions), with `~/.local/bin/hidex` pointing
 downloads it all (about 280 MB, every tool from its official release, checked against `tools.lock`); an update
 downloads hIDEx's own files and only the tools that changed. Versions and tools no session uses are removed. Node
 and Python come with it, for the language servers and the debugger. `~/.local/bin` is added to PATH in your
-`~/.bashrc` or `~/.zshrc` when needed and that file is yours to change.
+shell's file (`~/.bashrc`, `~/.zshrc`, fish's, else `~/.profile`) when needed, unless a system manages that file
+(as on NixOS) or `HIDEX_NO_MODIFY_PATH=1` is set.
 
 `hidex --uninstall` removes hIDEx and everything it brought (it says what, and asks first); `hidex --version`.
 

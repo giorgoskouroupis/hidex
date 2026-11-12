@@ -12,6 +12,8 @@ pub struct Panes {
     last: BTreeMap<&'static str, u32>,
     /// the tiled pane focused last; while a pop-up (the palette) has the focus, the one it was opened from
     focused_tiled: Option<u32>,
+    /// the tiled panes flagged focused at the last update
+    flagged: Vec<u32>,
 }
 
 pub fn role(p: &PaneInfo) -> Option<&'static str> {
@@ -41,10 +43,18 @@ impl Panes {
         self.manifest = manifest;
         let focused: Vec<(&'static str, u32)> =
             self.all().iter().filter(|p| p.is_focused).filter_map(|p| role(p).map(|r| (r, p.id))).collect();
-        if let Some(&(_, id)) = focused.first() {
+        // zellij flags a pane focused for any window, also one that has gone (its flag then never moves): the
+        // newly flagged pane is this window's focus; else the one known stays, if still flagged; else the first
+        let ids: Vec<u32> = focused.iter().map(|(_, id)| *id).collect();
+        let newly = ids.iter().find(|id| !self.flagged.contains(id)).copied();
+        let kept = self.focused_tiled.filter(|id| ids.contains(id));
+        if let Some(id) = newly.or(kept).or(ids.first().copied()) {
             self.focused_tiled = Some(id);
+            if let Some(r) = self.get(id).and_then(role) {
+                self.last.insert(r, id);
+            }
         }
-        self.last.extend(focused);
+        self.flagged = ids;
         match was {
             Some((id, Some(kind @ ("terminals" | "side")), n)) if self.get(id).is_none() => self.nearest(kind, n),
             _ => None,
@@ -84,6 +94,15 @@ impl Panes {
     /// the tiled pane focused last (a pop-up having the focus does not count)
     pub fn tiled(&self) -> Option<u32> {
         self.focused_tiled
+    }
+
+    /// the pane this window has focused, as zellij's list of windows says (clients): it wins over the panes'
+    /// "focused" flags, which also count windows that have gone
+    pub fn set_focused(&mut self, id: u32) {
+        if let Some(r) = self.get(id).and_then(role) {
+            self.focused_tiled = Some(id);
+            self.last.insert(r, id);
+        }
     }
 
     /// the terminal (or side terminal) last used: the one focused, else the terminals' last one
@@ -213,6 +232,22 @@ pub mod tests {
         // the last one: the one before
         let mut p = panes(vec![pane(1, "Helix", false), pane(2, "term 1", false), pane(3, "term 2", true)]);
         let next = p.update(PaneManifest { panes: [(0, vec![pane(1, "Helix", true), pane(2, "term 1", false)])].into() });
+        assert_eq!(title(&p, next), "term 1");
+    }
+
+    #[test]
+    fn a_gone_windows_focus_flag_is_not_taken_for_this_windows() {
+        let m = |list: Vec<PaneInfo>| PaneManifest { panes: [(0, list)].into() };
+        // a window that has gone left Helix flagged; this window is on term 1, then moves to term 2
+        let mut p = panes(vec![pane(1, "Helix", true), pane(2, "term 1", true), pane(3, "term 2", false)]);
+        p.set_focused(2);
+        p.update(m(vec![pane(1, "Helix", true), pane(2, "term 1", false), pane(3, "term 2", true)]));
+        assert_eq!(title(&p, p.tiled()), "term 2");
+        // nothing new flagged: the focus known stays
+        p.update(m(vec![pane(1, "Helix", true), pane(2, "term 1", false), pane(3, "term 2", true)]));
+        assert_eq!(title(&p, p.tiled()), "term 2");
+        // term 2 closes: still handed to its neighbour, not left on the gone window's Helix
+        let next = p.update(m(vec![pane(1, "Helix", true), pane(2, "term 1", false)]));
         assert_eq!(title(&p, next), "term 1");
     }
 

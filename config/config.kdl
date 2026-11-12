@@ -9,6 +9,8 @@ show_startup_tips false
 show_release_notes false
 // plain segments in zellij's own UI (pop-up titles, prompts) instead of arrow-shaped ones
 simplified_ui true
+// stacks (the terminals, the side terminals) show their titles in a row, like tabs
+stacked_pane_list_orientation "horizontal"
 // panes stack as one title line each when a split has no room
 stacked_pane_list false
 // no browser access to sessions
@@ -76,7 +78,7 @@ keybinds {
 }
 
 // Terminal colours by ANSI index (0 black .. 8 grey), so hIDEx follows the terminal's palette and its
-// dark/light switch: frames in its white, the focused one in its blue.
+// dark/light switch: frames faint, in its grey, so only the focused one, in the accent colour, stands out.
 themes {
     hidex {
         text_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
@@ -89,7 +91,7 @@ themes {
         list_selected { base 7; background 8; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         list_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         frame_selected { base 3; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
-        frame_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        frame_unselected { base 8; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         frame_highlight { base 3; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         exit_code_success { base 2; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         exit_code_error { base 1; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }

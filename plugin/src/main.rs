@@ -6,8 +6,10 @@
 //!   collapse  folding a tiled pane to a strip and back
 //!   status    branch, Python and theme for the bar; bar  the bar itself
 //!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
+//!   clients   the windows attached: only the bar of a connected window acts on a message
 mod actions;
 mod bar;
+mod clients;
 mod collapse;
 mod panes;
 mod popups;
@@ -37,6 +39,8 @@ struct State {
     ending: bool,
     /// the project's Helix theme has been asked for (once both the session and Helix are known)
     restored: bool,
+    /// messages wait here until zellij says whether this copy of the bar is the one to act (clients)
+    gate: clients::Gate,
 }
 
 register_plugin!(State);
@@ -174,10 +178,13 @@ impl ZellijPlugin for State {
             EventType::Timer,
             EventType::RunCommandResult,
             EventType::Mouse,
+            EventType::ListClients,
         ]);
         // the bar is not a pane to move to
         set_selectable(false);
-        self.cwd = get_plugin_ids().initial_cwd;
+        let ids = get_plugin_ids();
+        self.cwd = ids.initial_cwd;
+        self.gate.set_own(ids.client_id);
         self.status.set_project(&self.cwd);
         Tick::Refresh.start();
     }
@@ -199,6 +206,15 @@ impl ZellijPlugin for State {
                 Some(scripts::STOPPED) => quit_zellij(),
                 _ => {}
             },
+            Event::ListClients(clients) => {
+                let (actions, own) = self.gate.release(&clients);
+                if let Some(id) = own {
+                    self.panes.set_focused(id);
+                }
+                for action in actions {
+                    self.run(action);
+                }
+            }
             Event::Mouse(Mouse::LeftClick(_, col)) => {
                 if let Some(action) = self.bar.click(col) {
                     self.run(action);
@@ -219,8 +235,10 @@ impl ZellijPlugin for State {
             }
         }
         let payload = message.payload.as_deref().unwrap_or("");
-        if let Some(action) = Action::from_message(&message.name, payload) {
-            self.run(action);
+        // scripts name their messages "hidex:NAME" (hidex-msg), keys plain NAME
+        let name = message.name.strip_prefix("hidex:").unwrap_or(&message.name);
+        if let Some(action) = Action::from_message(name, payload) {
+            self.gate.hold(action);
         }
         false
     }
