@@ -9,6 +9,19 @@ cursorline = true
 # diagnostics stay squiggles; their text shows only on the cursor line (all of them: space d)
 end-of-line-diagnostics = "disable"
 
+# borders around menus and documentation pop-ups
+popup-border = "all"
+
+# the branch next to the file name, and the file's encoding and line endings on the right
+[editor.statusline]
+left = ["mode", "spinner", "version-control", "file-name", "read-only-indicator", "file-modification-indicator"]
+right = ["diagnostics", "workspace-diagnostics", "selections", "position", "file-encoding", "file-line-ending", "file-type"]
+separator = "│"
+
+# tabs shown (they matter in Python), other whitespace not
+[editor.whitespace.render]
+tab = "all"
+
 [editor.auto-save]
 focus-lost = true
 

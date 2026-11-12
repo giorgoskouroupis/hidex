@@ -1,0 +1,13 @@
+#!/bin/sh
+# hidex-env COMMAND...: run COMMAND in the project's Python env (hidex-python), activated as micromamba/conda
+# would (activation scripts too, e.g. GDAL_DATA), or as a virtualenv; as is when none is chosen.
+p=$(cat "$(hidex-state 2>/dev/null)/python" 2>/dev/null)
+if [ -d "$p/conda-meta" ]; then
+  if command -v micromamba >/dev/null; then eval "$(micromamba shell activate -s posix -p "$p")"
+  elif command -v conda >/dev/null; then eval "$(conda shell.posix activate "$p")"
+  else PATH=$p/bin:$PATH CONDA_PREFIX=$p; export PATH CONDA_PREFIX
+  fi
+elif [ -x "$p/bin/python" ]; then
+  VIRTUAL_ENV=$p PATH=$p/bin:$PATH; export VIRTUAL_ENV PATH
+fi
+exec "$@"

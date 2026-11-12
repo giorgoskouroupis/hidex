@@ -1,0 +1,6 @@
+#!/bin/sh
+# basedpyright for Helix (languages.toml), on the project's Python (hidex-python): that env's bin goes first
+# on the PATH, which is where basedpyright finds the interpreter and so the packages. Restarted by
+# hidex-python when the choice changes.
+p=$(cat "$(hidex-state 2>/dev/null)/python" 2>/dev/null) && PATH=$p/bin:$PATH
+exec basedpyright-langserver "$@"
