@@ -44,6 +44,7 @@ cmd_quit() { hidex-msg quit ask; }
 case $1 in
   --list) printf '%s\n' "$COMMANDS" ;;
   '')
+    hidex-popup-colors
     pick=$(printf '%s\n' "$COMMANDS" | fzf --prompt '/' --delimiter '\t' --tabstop 12 --height 100% --reverse \
            --no-info) || exit 0
     exec "$0" "$(printf '%s' "$pick" | cut -f1)" ;;

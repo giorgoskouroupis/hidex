@@ -2,6 +2,7 @@
 # The yazi pop-up, in a bubblewrap sandbox like the trees': it sees the project (writable, yazi is a file
 # manager) but nothing else of the machine, so it cannot wander into other folders. Files open through
 # hidex-open, which reaches Helix and lnav through zellij's socket.
+hidex-popup-colors
 dir=$PWD
 hidex-guard "$dir" || { sleep 5; exit 1; }
 run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}

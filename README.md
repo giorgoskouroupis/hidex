@@ -20,10 +20,12 @@ Logs and files over 10 MB open in lnav, the rest in Helix.
 
 Each project is a zellij session named after its (first) folder and that folder's parent, e.g. `code-myproject`.
 Running `hidex` there again reattaches to it, also after the window was closed or the ssh connection
-dropped. `Alt+q` ends it. If commands still run in the terminals, it asks first (`q` stops them and quits, `s` also saves
-Helix's files, any other key cancels and they keep running). Quitting stops them: `Ctrl+c` first, then harder, so nothing is left
+dropped. `Alt+q` ends it after asking (`q` quits, `s` also saves Helix's files, any other key cancels), and lists
+the commands still running in the terminals. Quitting stops them: `Ctrl+c` first, then harder, so nothing is left
 running (on a server too; only what left the shell on its own, like daemons or docker containers, is not
-reached). Unsaved files are never dropped: Helix refuses and shows which. Closing the window (or a dropped ssh) is not quitting: the next `hidex` there reattaches.
+reached). Unsaved files are never dropped: Helix refuses and shows which. `Alt+Shift+q` quits at once: no question,
+unsaved changes dropped, running commands stopped. Closing the window (or a dropped ssh) is not quitting: the next
+`hidex` there reattaches.
 
 | Keys | |
 |---|---|
@@ -38,8 +40,9 @@ reached). Unsaved files are never dropped: Helix refuses and shows which. Closin
 | `Alt+p` | the `/` commands: theme, langs, reload, lsp, keys… (type to filter, `Enter` runs, `Esc` closes) |
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
 | `Alt+Shift+g` | lazygit that can stage, commit, push: it replaces the read-only one |
-| `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred) |
-| `Alt+q` | quit hIDEx (asks first if commands still run; Helix refuses while files are unsaved) |
+| `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred, 80% of the window; all share one solid colour set from the theme: lighter with white text on a dark one, darker on a light one) |
+| `Alt+q` | quit hIDEx, after asking (lists running commands; Helix refuses while files are unsaved) |
+| `Alt+Shift+q` | quit at once: unsaved changes dropped, running commands stopped |
 | `Enter` on a file in a tree or yazi | Helix; logs and files over 10 MB in lnav (`q` closes) |
 | `Enter` on a folder in a tree | into it; on the top line, up one level, never above the tree's own folder |
 
@@ -125,7 +128,9 @@ keeps them in their place, so no key pressed there can reach further.
   `status` and `bar`, `actions` (what keys, clicks and `hidex-msg` can ask), `timers`. Its `zellij-tile`
   version must match the zellij in `flake.lock`
 - `bin/hidex-side`, `bin/hidex-shell`: what runs in a side terminal or a shell pane
-- `bin/hidex-lazygit`, `bin/hidex-yazi`: the pop-ups (sandboxed); `bin/hidex-guard`: the off-limits folders
+- `bin/hidex-lazygit`, `bin/hidex-yazi`: the pop-ups (sandboxed); `bin/hidex-popup-colors` their colours, from
+  `bin/hidex-bg` (the window's background, dark or light), which also gives lazygit light diffs (`bin/hidex-delta`);
+  `bin/hidex-guard`: the off-limits folders
 - `bin/hidex-cmd`: the `/` commands; `bin/hidex-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-pyright` (basedpyright
   on the project's Python), `bin/hidex-status` (the bar's line), `bin/hidex-state` (per-session state),
   `bin/hidex-msg` (messages to the plugin)

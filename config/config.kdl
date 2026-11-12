@@ -63,8 +63,10 @@ keybinds {
         bind "Alt x" { MessagePlugin "file:@plugin@" { name "collapse"; }; }
         // the / commands: theme, python, reload…
         bind "Alt p" { MessagePlugin "file:@plugin@" { name "popup"; payload "commands"; }; }
-        // quit hIDEx: Helix quits first, and refuses (showing which) while files are unsaved
+        // quit hIDEx, asking first (hidex-quit-ask): Helix quits first, and refuses while files are unsaved
         bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "ask"; }; }
+        // quit on the spot: unsaved changes dropped, running commands stopped
+        bind "Alt Q" { MessagePlugin "file:@plugin@" { name "quit"; payload "now"; }; }
         // pop-ups: the same key opens, hides and shows it again. Alt+g: lazygit read-only; Alt+Shift+g: the
         // lazygit that can stage and commit (it replaces the read-only one)
         bind "Alt g" { MessagePlugin "file:@plugin@" { name "popup"; payload "lazygit (read-only)"; }; }

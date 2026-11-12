@@ -67,9 +67,10 @@ impl State {
             Action::Quit(how) => match how.as_str() {
                 "force" => self.quit_now("quit-all"),
                 "save" => self.quit_now("write-quit-all"),
-                _ if self.status.session.is_empty() => self.quit_now("quit-all"),
-                // first ask what still runs in the shells: nothing, quit; else the "quit?" pop-up asks
-                _ => self.status.check_running(),
+                // Alt+Shift+q: unsaved changes dropped, running commands stopped, no question
+                "now" => self.quit_now("quit-all!"),
+                // Alt+q: the "quit?" pop-up asks first (and says what still runs)
+                _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
         }
@@ -188,14 +189,6 @@ impl ZellijPlugin for State {
             Event::CommandPaneOpened(id, context) => panes::on_opened(id, &context),
             Event::RunCommandResult(_, stdout, _, context) if context.contains_key("status") => {
                 return self.status.read(&stdout);
-            }
-            // what still runs in the shells: nothing, quit; else ask
-            Event::RunCommandResult(_, stdout, _, context) if context.contains_key("running") => {
-                if String::from_utf8_lossy(&stdout).trim().is_empty() {
-                    self.quit_now("quit-all");
-                } else {
-                    popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd);
-                }
             }
             Event::RunCommandResult(_, _, _, context) if context.contains_key("stopped") => quit_zellij(),
             Event::Mouse(Mouse::LeftClick(_, col)) => {

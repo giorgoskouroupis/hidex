@@ -1,0 +1,5 @@
+# yazi's default swaps the hovered row's colours: a plain file (light text) gets a light bar that reads poorly.
+# One bar for every row instead, as lazygit does, in the terminal's palette so it follows the theme.
+[mgr]
+hovered = { fg = "black", bg = "blue" }
+preview_hovered = { underline = true }

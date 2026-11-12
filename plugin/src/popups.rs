@@ -71,7 +71,7 @@ pub fn close_ended(panes: &Panes) {
 }
 
 impl Popups {
-    /// one pop-up centred at 65%; more side by side in equal columns, oldest on the left
+    /// one pop-up centred at 80%; more side by side in equal columns, oldest on the left, 80% high
     pub fn arrange(&mut self, panes: &Panes) {
         let mut ids: Vec<u32> = panes
             .all()
@@ -85,11 +85,11 @@ impl Popups {
         }
         self.arranged = ids.clone();
         let n = ids.len().max(1);
-        let (left, total, gap) = if n == 1 { (17, 65, 0) } else { (5, 90, 1) };
+        let (left, total, gap) = if n == 1 { (10, 80, 0) } else { (5, 90, 1) };
         let width = (total - gap * (n - 1)) / n;
         let at = |x: usize| {
             let pc = |v: usize| Some(format!("{v}%"));
-            FloatingPaneCoordinates::new(pc(x), pc(17), pc(width), pc(65), None, None)
+            FloatingPaneCoordinates::new(pc(x), pc(10), pc(width), pc(80), None, None)
         };
         let moves = ids
             .iter()

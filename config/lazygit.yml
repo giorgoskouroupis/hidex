@@ -1,5 +1,8 @@
 # hIDEx's own lazygit config (LG_CONFIG_FILE), the same on every machine. Kept in lazygit's current format:
 # it lives in the read-only store, so lazygit cannot migrate it and would exit at start.
+# no welcome or release-notes pop-up: the read-only lazygit starts with an empty home every time, so it
+# never remembers having shown them
+disableStartupPopups: true
 gui:
   theme:
     authorColors:
@@ -8,6 +11,6 @@ git:
   # | switches between the two diff views
   diffRenderers:
     - colorArg: always
-      command: delta --paging=never
+      command: hidex-delta --paging=never
     - colorArg: always
-      command: delta --paging=never --side-by-side
+      command: hidex-delta --paging=never --side-by-side

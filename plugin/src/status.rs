@@ -37,13 +37,6 @@ impl Status {
         changed
     }
 
-    /// ask hidex-running what still runs in the shells, before quitting (answer: context "running")
-    pub fn check_running(&self) {
-        let mut context = BTreeMap::new();
-        context.insert("running".to_string(), String::new());
-        run_command(&["hidex-running", &self.session], context);
-    }
-
     /// stop what still runs in the shells (hidex-stop), the last step of quitting (answer: context "stopped")
     pub fn stop_all(&self) {
         let mut context = BTreeMap::new();
