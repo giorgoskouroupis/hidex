@@ -1,36 +1,47 @@
 #!/bin/sh
-# hidex [host:]path [more paths]: hIDEx in path, as a zellij session named after it. Every path gets
-# its own tree (stacked), locked to it; Helix, the shell and Claude work in the first one.
+# hidex [--side claude|shell|none] [host:]path [more paths]: hIDEx in path, as a zellij session named after
+# it. Every path gets its own tree (stacked), locked to it; Helix, the shell and the side terminal work in
+# the first one. --side: what the side terminal starts with (default: Claude if installed), or no side pane.
 # A live session (window closed, ssh dropped) is reattached; a dead one is replaced, not revived.
 # host:path runs it on that server, through nix run (the other paths are then on the server too).
+side=claude
+[ "$1" = --side ] && { side=$2; shift 2; }
 case ${1:-.} in
   *:*) h=${1%%:*} d=${1#*:}; shift
-       exec ssh -t "$h" "cd $d && exec nix run ${HIDEX_FLAKE:-github:giorgoskouroupis/hidex} -- . $*" ;;
+       exec ssh -t "$h" "cd $d && exec nix run ${HIDEX_FLAKE:-github:giorgoskouroupis/hidex} -- --side $side . $*" ;;
 esac
+hidex-guard "${1:-.}" "$@" || exit 1
 cd "${1:-.}" || exit 1
 [ $# -gt 0 ] && shift
-# the plugin runs in the background, where zellij cannot ask for its permissions: approve them, replacing
-# the entries of earlier hIDEx builds
+# the plugin runs in the bar, where zellij cannot ask for its permissions: approve them, replacing the entries
+# of earlier hIDEx builds
 p=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
 mkdir -p "${p%/*}"; touch "$p"
 if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
   awk '/^"[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next } skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
-  printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
+  printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n    ReadCliPipes\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
   mv "$p.new" "$p"
 fi
 # named after the folder and its parent (e.g. code-myproject): two folders with the same name do not collide
 n=$(basename "$(dirname "$PWD")")-$(basename "$PWD")
+export HIDEX_SIDE=$side
+s=$(hidex-state "$n")
+# the window's terminal, for live colour themes (hidex-theme); reset to its own colours when hIDEx ends
+tty > "$s/tty" 2>/dev/null || rm -f "$s/tty"
+end() { [ -f "$s/theme" ] && printf '\033]104\033\\\033]110\033\\\033]111\033\\\033]112\033\\'; }
 case $(zellij ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) zellij delete-session "$n" >/dev/null 2>&1 ;;
-  ?*) exec zellij attach "$n" ;;
+  ?*) hidex-theme apply "$n"; zellij attach "$n"; end; exit ;;
 esac
-# the layout with one tree per folder, written per session
+# a new session: a fresh theme, and the project Python found now (hidex-python detect)
+rm -f "$s/theme"
+ZELLIJ_SESSION_NAME=$n hidex-python detect
 # the layout with one tree per folder, stacked; the first (code) tree is the open one
 trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
   printf 'pane name="tree: %s" command="hidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1
-layout=${XDG_RUNTIME_DIR:-/tmp}/hidex-$n.kdl
-# no claude on this machine: no Claude pane, and the rest takes the whole width
-claude=1; command -v claude >/dev/null || claude=0
-awk -v t="$trees" -v claude="$claude" '/@TREES@/ && !/\/\// { print t; next } 
-  !claude && /name="Claude"/ { next } !claude { sub(/ size="60%"/, "") } { print }' "$ZELLIJ_CONFIG_DIR/layouts/hidex.kdl" > "$layout"
-exec zellij -s "$n" -n "$layout"
+layout=$s/layout.kdl
+awk -v t="$trees" -v side="$side" '/@TREES@/ && !/\/\// { print t; next }
+  side == "none" && /name="side 1"/ { next } side == "none" { sub(/ size="60%"/, "") } { print }' \
+  "$ZELLIJ_CONFIG_DIR/layouts/hidex.kdl" > "$layout"
+zellij -s "$n" -n "$layout"
+end
