@@ -139,6 +139,7 @@ impl State {
         if let Some(id) = self.panes.update(manifest) {
             panes::focus(id);
         }
+        names::name_new(&self.panes);
         if !self.cwd_known {
             if let Some(Ok(cwd)) = self.panes.for_role("helix").map(|h| get_pane_cwd(PaneId::Terminal(h))) {
                 self.status.set_project(&cwd);

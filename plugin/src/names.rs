@@ -48,6 +48,16 @@ pub fn on_command(panes: &Panes, id: u32) {
     }
 }
 
+/// terminals still named as they started ("term 1", "side 2", "shell 3"): named after what runs in them. zellij's
+/// first CommandChanged can come before the bar knows the pane, and the command does not change again.
+pub fn name_new(panes: &Panes) {
+    let started = |t: &str| ["term ", "side ", "shell "].iter().any(|s| plain(t).starts_with(s));
+    let ids: Vec<u32> = panes.terminals().filter(|p| started(&p.title)).map(|p| p.id).collect();
+    for id in ids {
+        on_command(panes, id);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

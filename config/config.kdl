@@ -55,12 +55,17 @@ keybinds {
         // a new pane of the kind you are on, stacked with it: a terminal, or a side terminal (from Helix or a tree: a
         // terminal)
         bind "Alt n" { MessagePlugin "file:@plugin@" { name "new"; payload "here"; }; }
+        // max: the focused pane fills the panes' area, the bar stays; again to come back
         bind "Alt f" "Shift Esc" { ToggleFocusFullscreen; }
         // zen: the focused pane covers the whole window, the bar too; the same key brings everything back
         bind "Alt z" { ToggleFocusNoUiFullscreen; }
         // an earlier command with its output, from the keyboard: zellij's scroll mode at the last command whose
         // prompt is off screen; [ and ] step through commands, m copies the one at the top with its command line
         bind "Alt v" { SwitchToMode "Scroll"; ScrollToPreviousPrompt; }
+        // what needs you (Claude waiting, a command failed or finished; zellij's attention): Alt+j jumps to the next
+        // one, Alt+Space shows them all (zellij's inbox)
+        bind "Alt j" { GoToNextAttention; }
+        bind "Alt Space" { ToggleSessionCard; }
         // back to the pane you were in before
         bind "Alt \\" { FocusLastPane; }
         bind "Alt =" "Alt +" { Resize "Increase"; }

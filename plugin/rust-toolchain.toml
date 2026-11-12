@@ -1,0 +1,6 @@
+# the compiler for the bar plugin, the same everywhere: the release build (rustup reads this file) and nix develop
+# (flake.nix reads it too)
+[toolchain]
+channel = "1.99.1"
+targets = ["wasm32-wasip1"]
+profile = "minimal"
