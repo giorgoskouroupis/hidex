@@ -1,12 +1,13 @@
-# hIDEx's own lazygit config (LG_CONFIG_FILE), the same on every machine
+# hIDEx's own lazygit config (LG_CONFIG_FILE), the same on every machine. Kept in lazygit's current format:
+# it lives in the read-only store, so lazygit cannot migrate it and would exit at start.
 gui:
   theme:
     authorColors:
       "*": blue
 git:
   # | switches between the two diff views
-  pagers:
+  diffRenderers:
     - colorArg: always
-      pager: delta --paging=never
+      command: delta --paging=never
     - colorArg: always
-      pager: delta --paging=never --side-by-side
+      command: delta --paging=never --side-by-side

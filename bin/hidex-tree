@@ -3,6 +3,7 @@
 # the Nix store and zellij's socket, so going "up" finds nothing else and the tree cannot change a file.
 # Files still open through hidex-open, which reaches Helix and lnav through zellij, outside the sandbox.
 dir=$(cd "$1" && pwd) || exit 1
+hidex-guard "$dir" || { sleep 5; exit 1; }
 run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 exec bwrap --die-with-parent --unshare-all \
   --ro-bind /nix /nix --ro-bind /etc /etc \

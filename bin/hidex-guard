@@ -1,0 +1,21 @@
+#!/bin/sh
+# hidex-guard PATH...: fails (with a message) if a path is one hIDEx must never open or browse: system
+# folders, the home folder itself, its hidden folders (~/.ssh, ~/.gnupg, ~/.config…), and anything named
+# .ssh or .gnupg. Used by hidex, the trees, yazi and hidex-open, so no route reaches them.
+for p; do
+  r=$(realpath -m -- "$p") || exit 1
+  case $r in
+    # system folders and everything in them
+    /bin|/bin/*|/boot|/boot/*|/dev|/dev/*|/etc|/etc/*|/lib|/lib/*|/lib64|/lib64/*|/nix|/nix/*|/proc|/proc/*|\
+    /root|/root/*|/run|/run/*|/sbin|/sbin/*|/sys|/sys/*|/usr|/usr/*|/var|/var/*) bad=1 ;;
+    # folders that hold other people's or the whole system's files: only their subfolders
+    /|/home|/tmp|/mnt|/media|/opt|/srv|/data) bad=1 ;;
+    "$HOME"|"$HOME"/.*) bad=1 ;;
+    */.ssh|*/.ssh/*|*/.gnupg|*/.gnupg/*) bad=1 ;;
+    *) bad= ;;
+  esac
+  if [ -n "$bad" ]; then
+    echo "hIDEx: $r is off limits (system, home or secrets folder)" >&2
+    exit 1
+  fi
+done

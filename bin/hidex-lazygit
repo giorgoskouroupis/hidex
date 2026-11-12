@@ -1,0 +1,11 @@
+#!/bin/sh
+# hidex-lazygit [--write]: lazygit on the project's repo. By default read-only: it runs in a bubblewrap
+# sandbox where the repo is mounted read-only and there is no network, so browsing (log, diffs, branches)
+# works and any change (stage, commit, checkout, push) fails. --write: the plain lazygit.
+[ "$1" = --write ] && exec lazygit
+top=$(git rev-parse --show-toplevel 2>/dev/null) || top=$PWD
+exec bwrap --die-with-parent --unshare-all \
+  --ro-bind /nix /nix --ro-bind /etc /etc \
+  --proc /proc --dev /dev --tmpfs /tmp --tmpfs "$HOME" \
+  --ro-bind "$top" "$top" --chdir "$PWD" \
+  lazygit
