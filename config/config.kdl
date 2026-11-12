@@ -11,8 +11,8 @@ show_release_notes false
 simplified_ui true
 // stacks (the terminals, the side terminals) show their titles in a row, like tabs
 stacked_pane_list_orientation "horizontal"
-// panes stack as one title line each when a split has no room
-stacked_pane_list false
+// stacks as a list (needed for the row of titles above)
+stacked_pane_list true
 // no browser access to sessions
 web_server false
 // no frame highlight on mouse hover, so a coloured frame always means focus
@@ -78,7 +78,8 @@ keybinds {
 }
 
 // Terminal colours by ANSI index (0 black .. 8 grey), so hIDEx follows the terminal's palette and its
-// dark/light switch: frames faint, in its grey, so only the focused one, in the accent colour, stands out.
+// dark/light switch. Unfocused frames: a colour just off the background (filled in by hidex-config), so only the
+// focused one stands out.
 themes {
     hidex {
         text_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }

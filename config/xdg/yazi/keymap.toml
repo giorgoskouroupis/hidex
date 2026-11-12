@@ -1,0 +1,10 @@
+# hIDEx: going up stops at the project folder (yazi runs in a sandbox that sees only the project: hidex-yazi)
+[[mgr.prepend_keymap]]
+on = "h"
+run = "plugin hidex-stay"
+desc = "Go to the parent folder, not above the project"
+
+[[mgr.prepend_keymap]]
+on = "<Left>"
+run = "plugin hidex-stay"
+desc = "Go to the parent folder, not above the project"

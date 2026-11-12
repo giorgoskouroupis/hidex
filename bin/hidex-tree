@@ -3,5 +3,8 @@
 # cannot change a file. Files still open through hidex-open, which reaches Helix and lnav through zellij.
 dir=$(cd "$1" && pwd) || exit 1
 hidex-guard "$dir" || { sleep 5; exit 1; }
-export BR_INSTALL=no HIDEX_TREE_TOP="$dir" HIDEX_TREE_SOCK=hidex-tree
-exec hidex-sandbox read "$dir" -- broot --conf "$HIDEX_SHARE/broot.hjson" --listen hidex-tree "$dir"
+# broot's socket (for hidex-tree-enter) is always /tmp/broot-server-NAME.sock: a name of its own per session and
+# folder, and the sandbox lets the tree write in /tmp (HIDEX_SANDBOX_TMP)
+sock=hidex-${ZELLIJ_SESSION_NAME:-tree}-$(printf %s "$dir" | md5sum | cut -c1-8)
+export BR_INSTALL=no HIDEX_TREE_TOP="$dir" HIDEX_TREE_SOCK=$sock HIDEX_SANDBOX_TMP=1
+exec hidex-sandbox read "$dir" -- broot --conf "$HIDEX_SHARE/broot.hjson" --listen "$sock" "$dir"

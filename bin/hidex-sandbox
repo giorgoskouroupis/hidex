@@ -7,8 +7,9 @@
 # read and write also reach zellij's socket and the session's state (its "current" link to hIDEx), so files
 # picked there still open in Helix. With Landlock (the kernel's, through landrun), else bubblewrap if the
 # machine has it; with neither, machine runs COMMAND as it is (an editor matters more), read and write fail.
+# hidex-sandbox --which: the sandbox this machine allows: landlock, bubblewrap or none (/about).
 mode=$1; shift
-[ "$mode" != machine ] && { dir=$1; shift; }
+case $mode in machine|--which) ;; *) dir=$1; shift ;; esac
 [ "$1" = -- ] && shift
 run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 secret_dirs=(.ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker)
@@ -53,6 +54,8 @@ landlock() {
       mode_args=(--rox "$(IFS=,; echo "${system[*]}")" --ro /proc --rw /dev,"$home","$tmp" --rwx "$run/zellij"
         --ro "$run/hidex" --unix "$run/zellij")
       [ "$mode" = write ] && mode_args+=(--rw "$dir") || mode_args+=(--ro "$dir")
+      # /tmp, when the program must make a file there (broot's socket: hidex-tree)
+      [ -n "${HIDEX_SANDBOX_TMP:-}" ] && mode_args+=(--rw /tmp)
       cd "$start" || exit 1
       # the XDG folders follow HOME (set ones would lead back to the real home)
       mapfile -t args < <(env_args "HOME=$home" "TMPDIR=$tmp" "XDG_CONFIG_HOME=$home/.config" \
@@ -85,9 +88,23 @@ bubblewrap() {
   esac
 }
 
-case $mode in read|write|machine) ;; *) echo "hidex-sandbox: read DIR, write DIR or machine" >&2; exit 2 ;; esac
-grep -qw landlock /sys/kernel/security/lsm 2>/dev/null && command -v landrun >/dev/null && landlock "$@"
-command -v bwrap >/dev/null && bwrap --dev-bind / / true 2>/dev/null && bubblewrap "$@"
+# the sandbox this machine allows: Landlock when the kernel has it, else bubblewrap when it may run here
+which_sandbox() {
+  if grep -qw landlock /sys/kernel/security/lsm 2>/dev/null && command -v landrun >/dev/null; then echo landlock
+  elif command -v bwrap >/dev/null && bwrap --dev-bind / / true 2>/dev/null; then echo bubblewrap
+  else echo none
+  fi
+}
+
+case $mode in
+  --which) which_sandbox; exit 0 ;;
+  read|write|machine) ;;
+  *) echo "hidex-sandbox: read DIR, write DIR, machine or --which" >&2; exit 2 ;;
+esac
+case $(which_sandbox) in
+  landlock) landlock "$@" ;;
+  bubblewrap) bubblewrap "$@" ;;
+esac
 [ "$mode" = machine ] && exec "$@"
 echo "hIDEx: this machine allows no sandbox (no Landlock, no bubblewrap): not starting $1" >&2
 exit 1
