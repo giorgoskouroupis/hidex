@@ -46,9 +46,14 @@ keybinds {
         bind "Alt 7" { MessagePlugin "file:@plugin@" { name "jump"; payload "7"; }; }
         bind "Alt 8" { MessagePlugin "file:@plugin@" { name "jump"; payload "8"; }; }
         bind "Alt 9" { MessagePlugin "file:@plugin@" { name "jump"; payload "9"; }; }
-        // a new pane of the kind you are on, stacked with it: term N, or side N (from Helix or a tree: term N)
+        // a new pane of the kind you are on, stacked with it: a terminal, or a side terminal (from Helix or a tree: a
+        // terminal)
         bind "Alt n" { MessagePlugin "file:@plugin@" { name "new"; payload "here"; }; }
         bind "Alt f" "Shift Esc" { ToggleFocusFullscreen; }
+        // zen: the focused pane covers the whole window, the bar too; the same key brings everything back
+        bind "Alt z" { ToggleFocusNoUiFullscreen; }
+        // back to the pane you were in before
+        bind "Alt \\" { FocusLastPane; }
         bind "Alt =" "Alt +" { Resize "Increase"; }
         bind "Alt -" { Resize "Decrease"; }
         // move one border: Alt+Shift+arrow grows the pane on that side, Alt+Ctrl+arrow shrinks it from that side

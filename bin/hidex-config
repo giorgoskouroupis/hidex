@@ -1,8 +1,10 @@
 #!/bin/sh
-# hidex-config STATE: writes the session's zellij config (STATE/config/config.kdl) from hIDEx's, filled in: the
-# plugin's path through the session's "current" link (so keys keep reaching the bar after /update), and the
-# unfocused frames' colour, just off the window's background (hidex-bg; the terminal's grey when unknown). zellij
-# re-reads the file when it changes: hidex-theme writes it again for a new background.
+# hidex-config [STATE]: writes the session's zellij config (STATE/config/config.kdl; default: this session's) from
+# hIDEx's, filled in: the plugin's path through the session's "current" link (so keys keep reaching the bar after
+# /update), and the unfocused frames' colour, just off the window's background (hidex-bg); when that is unknown
+# (the bar, after the terminal switched dark/light), the terminal's own grey, which follows the switch by itself.
+# zellij re-reads the file when it changes: /theme and a dark/light switch write it again.
+[ -n "${1:-}" ] || set -- "$(hidex-state)"
 share=$1/current/share/hidex
 # no session (a script run on its own): nothing to write
 [ -f "$share/config.kdl" ] || exit 0

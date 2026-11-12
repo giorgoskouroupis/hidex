@@ -1,7 +1,7 @@
 //! The terminals' and side terminals' names: what runs in each, with the pane's number ("zsh 1", "claude 2"),
-//! kept up to date on the bar's refresh tick. The number stays with the pane (Alt+N). A side terminal's name ends
-//! with an invisible mark (SIDE), so the two columns are told apart by the name alone, also after /update
-//! reloads the bar.
+//! renamed when zellij says the command running in a pane changed (CommandChanged). The number stays with the
+//! pane (Alt+N). A side terminal's name ends with an invisible mark (SIDE), so the two columns are told apart by
+//! the name alone, also after /update reloads the bar.
 use crate::panes::{self, role, Panes};
 use zellij_tile::prelude::*;
 
@@ -36,15 +36,15 @@ pub fn program(args: &[String]) -> Option<String> {
     Some(first)
 }
 
-/// every terminal and side terminal renamed after what runs in it, when that changed
-pub fn refresh(panes: &Panes) {
-    for p in panes.terminals() {
-        let Ok(args) = get_pane_running_command(PaneId::Terminal(p.id)) else { continue };
-        let Some(program) = program(&args) else { continue };
-        let wanted = name(&program, panes::number(&p.title), role(p) == Some("side"));
-        if wanted != p.title {
-            rename_terminal_pane(p.id, &wanted);
-        }
+/// zellij says the command in a pane changed (CommandChanged): a terminal or side terminal is renamed after what
+/// runs in it now, as zellij reports it (the event alone carries nothing when a command ends and the shell is back)
+pub fn on_command(panes: &Panes, id: u32) {
+    let Some(p) = panes.terminals().find(|p| p.id == id) else { return };
+    let Ok(args) = get_pane_running_command(PaneId::Terminal(id)) else { return };
+    let Some(program) = program(&args) else { return };
+    let wanted = name(&program, panes::number(&p.title), role(p) == Some("side"));
+    if wanted != p.title {
+        rename_terminal_pane(id, &wanted);
     }
 }
 

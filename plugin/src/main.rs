@@ -157,7 +157,6 @@ impl State {
             Tick::QuitWait => self.typist.on_quit_wait(),
             Tick::Refresh => {
                 self.status.refresh(&self.cwd);
-                names::refresh(&self.panes);
                 Tick::Refresh.start();
             }
         }
@@ -182,6 +181,8 @@ impl ZellijPlugin for State {
             EventType::RunCommandResult,
             EventType::Mouse,
             EventType::ListClients,
+            EventType::CommandChanged,
+            EventType::HostTerminalThemeChanged,
         ]);
         // the bar is not a pane to move to
         set_selectable(false);
@@ -209,6 +210,9 @@ impl ZellijPlugin for State {
                 Some(scripts::STOPPED) => quit_zellij(),
                 _ => {}
             },
+            Event::CommandChanged(PaneId::Terminal(id), ..) => names::on_command(&self.panes, id),
+            // the terminal switched dark/light: the frames' colour follows (hidex-config)
+            Event::HostTerminalThemeChanged(_) => scripts::run(&["hidex-config"], None),
             Event::ListClients(clients) => {
                 let (actions, own) = self.gate.release(&clients);
                 if let Some(id) = own {
