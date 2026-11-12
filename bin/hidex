@@ -26,6 +26,9 @@ case ${1:-} in
   --version) cat "$h/VERSION"; exit ;;
   --uninstall) shift; exec hidex-uninstall "$@" ;;
 esac
+# a newer release: offered (hidex-check-update); installed, the new one starts instead
+hidex-check-update
+if [ $? = 10 ]; then exec "${HIDEX_PREFIX:-$HOME/.local}/bin/hidex" "$@"; fi
 hidex-guard "${1:-.}" "$@" || exit 1
 cd "${1:-.}" || exit 1
 [ $# -gt 0 ] && shift

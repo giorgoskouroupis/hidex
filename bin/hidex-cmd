@@ -16,8 +16,9 @@ yazi	yazi, the file manager
 terminal	a new terminal, stacked with the others
 side	a new side terminal (Claude, or a shell for any AI tool)
 collapse	fold the last used pane to a strip, or unfold it
-copy	copy the last command of the terminal last used ("copy term 2", "copy side 1": of that one), with its output below it, to the clipboard
+copy	copy the last command of the terminal last used ("copy zsh 2", "copy claude 1": of that one), with its output below it, to the clipboard
 keys	every hIDEx key
+about	this hIDEx: its version, where it is installed, its tools, the sandbox on this machine, links
 update	move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers
 quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
@@ -36,8 +37,21 @@ cmd_terminal() { hidex-msg new terminal; }
 cmd_side() { hidex-msg new side; }
 cmd_collapse() { hidex-msg collapse; }
 cmd_copy() { hidex-msg copy "${*:--}"; }
-# the terminals open now (zellij's pane list)
-args_copy() { zellij action list-panes | grep -o '\(term\|side\) [0-9]*' | sort -u; }
+# the terminals open now
+args_copy() { hidex-panes | cut -f2 | sort -u; }
+# hIDEx's own folder (through the session's link), its version and tools
+cmd_about() {
+  h=${HIDEX_SHARE%/share/hidex}
+  {
+    printf 'hIDEx %s, a terminal IDE around Helix, in zellij (MIT)\n' "$(cat "$h/VERSION" 2>/dev/null || echo development)"
+    printf '  https://github.com/giorgoskouroupis/hidex\n'
+    printf '  changes: https://github.com/giorgoskouroupis/hidex/blob/main/CHANGELOG.md\n\n'
+    printf 'installed in  %s\n' "$(readlink -f "$h")"
+    printf 'sandbox here  %s\n\n' "$(hidex-sandbox --which)"
+    echo 'tools'
+    grep -v '^#' "$h/tools.lock" 2>/dev/null | awk -F'\t' 'NF { printf "  %-16s %s\n", $1, $2 }'
+  } | less
+}
 # the keys table of the README, as two columns
 cmd_keys() {
   awk -F' [|] ' '/^[|] Keys/ { on = 1; next } on && !/^[|]/ { exit } on && !/^[|]---/ {
