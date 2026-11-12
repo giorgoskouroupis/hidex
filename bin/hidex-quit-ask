@@ -1,0 +1,12 @@
+#!/bin/sh
+# hidex-quit-ask: the "quit hIDEx?" pop-up of Alt+q when commands still run in the shells: q stops them and
+# quits, s saves Helix's files too, anything else cancels. Unsaved files are never dropped: Helix refuses.
+printf '\n  \033[1mquit hIDEx?\033[0m  These still run, and are stopped by both q and s (Ctrl+c, then harder):\n\n'
+hidex-running "$ZELLIJ_SESSION_NAME" | sed 's/^/    /'
+printf '\n  \033[33mq\033[0m stop them, quit   \033[33ms\033[0m stop them, save Helix'"'"'s files, quit   \033[33many other key\033[0m cancel: they keep running\n'
+stty -icanon -echo 2>/dev/null
+k=$(dd bs=1 count=1 2>/dev/null)
+case $k in
+  q) hidex-msg quit force ;;
+  s) hidex-msg quit save ;;
+esac

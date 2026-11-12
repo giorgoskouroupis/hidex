@@ -1,0 +1,12 @@
+#!/bin/sh
+# The side terminal: Claude first when HIDEX_SIDE is "claude" and it is installed (with the arguments given,
+# e.g. --resume for the first one), then a shell, where any other AI tool on the PATH can be started (each
+# keeps its own login). Exiting the shell starts a new one if this is the last side pane, else the pane closes.
+if [ "${HIDEX_SIDE:-claude}" = claude ] && command -v claude >/dev/null; then hidex-env claude "$@"; fi
+# noted for hidex-running (Alt+q refuses while a command runs here)
+mkdir -p "$(hidex-state)/panes" && echo "$$" > "$(hidex-state)/panes/$ZELLIJ_PANE_ID"
+while :; do
+  hidex-env "${SHELL:-sh}" -l
+  [ "$(zellij action list-panes | grep -cE '[[:space:]]side [0-9]+$')" -gt 1 ] &&
+    exec zellij action close-pane -p "terminal_$ZELLIJ_PANE_ID"
+done

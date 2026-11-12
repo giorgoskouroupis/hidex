@@ -1,0 +1,10 @@
+#!/bin/sh
+# hidex-stop SESSION: stops what still runs in the session's shells before hIDEx ends, so nothing is left
+# behind (on a server too): Ctrl+c first (SIGINT, programs clean up), then SIGTERM, then SIGKILL, a few seconds
+# apart. What left the shells on its own (setsid, daemons, docker containers) is not reached.
+pids() { hidex-running "$1" --pids | while read -r p; do kill -0 "$p" 2>/dev/null && echo "$p"; done; }
+for sig in INT TERM KILL; do
+  p=$(pids "$1"); [ -z "$p" ] && exit 0
+  kill -s $sig $p 2>/dev/null
+  for _ in 1 2 3 4 5 6; do [ -z "$(pids "$1")" ] && exit 0; sleep 0.5; done
+done

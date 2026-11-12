@@ -1,7 +1,10 @@
 #!/bin/sh
-# A shell pane: a login shell, a new one when it exits if this is the only shell pane left, else the pane closes.
+# A shell pane: a login shell in the project Python (hidex-env); a new one when it exits if this is the only
+# shell pane left, else the pane closes.
+# noted for hidex-running (Alt+q refuses while a command runs here)
+mkdir -p "$(hidex-state)/panes" && echo "$$" > "$(hidex-state)/panes/$ZELLIJ_PANE_ID"
 while :; do
-  "${SHELL:-sh}" -l
-  [ "$(zellij action list-panes | grep -cE '[[:space:]]shell$')" -gt 1 ] &&
+  hidex-env "${SHELL:-sh}" -l
+  [ "$(zellij action list-panes | grep -cE '[[:space:]]term [0-9]+$')" -gt 1 ] &&
     exec zellij action close-pane -p "terminal_$ZELLIJ_PANE_ID"
 done
