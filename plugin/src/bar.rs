@@ -54,43 +54,105 @@ fn button(label: &str) -> Piece {
     (fg(ACCENT, label), label.chars().count())
 }
 
+/// the space between two buttons
+const GAP: usize = 3;
+/// the command line's narrowest field: below it the buttons give way, then the status
+const FIELD_MIN: usize = 30;
+
+/// the width of the last n buttons, from the first one's first column to the bar's end (0 for none)
+fn buttons_width(n: usize) -> usize {
+    let all = buttons();
+    let shown = &all[all.len() - n.min(all.len())..];
+    shown.iter().map(|(l, _)| l.chars().count() + GAP).sum::<usize>().saturating_sub(GAP - 1)
+}
+
+/// how many buttons fit in this many columns: the last ones, the row losing its first ones first
+fn buttons_fitting(room: usize) -> usize {
+    (0..=buttons().len()).rev().find(|n| buttons_width(*n) <= room).unwrap_or(0)
+}
+
+/// how the bar is shared: the status on the left (its width; 0 when left out), the command line's field while
+/// typing (first column and width) between it and the buttons, and how many buttons fit (the last ones)
+pub struct Layout {
+    pub left: usize,
+    pub field: Option<(usize, usize)>,
+    pub buttons: usize,
+}
+
+pub fn layout(cols: usize, status: &Status, typing: bool) -> Layout {
+    let left: usize = left(status).iter().map(|(_, w)| w).sum();
+    if !typing {
+        return Layout { left, field: None, buttons: buttons_fitting(cols.saturating_sub(left + 1)) };
+    }
+    // between the status and the buttons that still fit; else the status and the field; else the whole bar
+    if left + 2 + FIELD_MIN <= cols {
+        let buttons = buttons_fitting(cols - left - 2 - FIELD_MIN - 1);
+        let width = cols - left - 2 - if buttons > 0 { buttons_width(buttons) + 1 } else { 0 };
+        return Layout { left, field: Some((left + 2, width)), buttons };
+    }
+    Layout { left: 0, field: Some((0, cols)), buttons: 0 }
+}
+
+/// the command line's field: "/" and what is typed (its end, when longer) in the accent colour, then what fits,
+/// dim, the one chosen with Tab or the arrows reversed, and, for a single or chosen command, its description
+fn field(prompt: &Prompt, width: usize) -> String {
+    let typed: Vec<char> = format!("/{}█", prompt.text).chars().collect();
+    let shown: String = typed[typed.len().saturating_sub(width.saturating_sub(1))..].iter().collect();
+    let mut room = width.saturating_sub(shown.chars().count() + 1);
+    let mut out = format!(" \u{1b}[1;38;5;{ACCENT}m{shown}{RESET}");
+    let items = prompt.items();
+    let note = match (items.len(), prompt.selected()) {
+        (_, Some(i)) => items.get(i).map(|item| item.note.clone()),
+        (1, None) => Some(items[0].note.clone()),
+        _ => None,
+    };
+    for (i, item) in items.iter().enumerate() {
+        let w = item.label.chars().count() + 2;
+        if w > room {
+            break;
+        }
+        let style = if prompt.selected() == Some(i) { "\u{1b}[7m" } else { DIM };
+        out.push_str(&format!("  {style}{}{RESET}", item.label));
+        room -= w;
+    }
+    if let Some(note) = note.filter(|n| !n.is_empty()) {
+        let note: String = format!("   {note}").chars().take(room).collect();
+        room -= note.chars().count();
+        out.push_str(&format!("{DIM}{note}{RESET}"));
+    }
+    out + &" ".repeat(room)
+}
+
 impl Bar {
-    pub fn render(&mut self, cols: usize, status: &Status) {
-        let left = left(status);
-        let used: usize = left.iter().map(|(_, w)| w).sum();
-        let mut line: String = left.into_iter().map(|(s, _)| s).collect();
-        let pieces: Vec<(Piece, Action)> = buttons().into_iter().map(|(l, a)| (button(l), a)).collect();
-        const GAP: usize = 3;
-        let width: usize = pieces.iter().map(|((_, w), _)| w + GAP).sum::<usize>() - GAP + 1;
+    /// the bar; with a prompt, its command line too (layout)
+    pub fn render(&mut self, cols: usize, status: &Status, prompt: Option<&Prompt>) {
+        let l = layout(cols, status, prompt.is_some());
+        let mut line = String::new();
+        let mut col = 0;
+        if l.left > 0 {
+            line.extend(left(status).into_iter().map(|(s, _)| s));
+            col = l.left;
+        }
+        if let (Some((from, width)), Some(prompt)) = (l.field, prompt) {
+            line.push_str(&" ".repeat(from - col));
+            line.push_str(&field(prompt, width));
+            col = from + width;
+        }
         self.hits.clear();
-        // the buttons go right, if there is room for them
-        if used + width <= cols {
-            let mut col = cols - width;
-            line.push_str(&" ".repeat(col - used));
-            for ((text, w), action) in pieces {
+        if l.buttons > 0 {
+            let mut at = cols - buttons_width(l.buttons);
+            line.push_str(&" ".repeat(at.saturating_sub(col)));
+            let all = buttons();
+            let skip = all.len() - l.buttons;
+            for (label, action) in all.into_iter().skip(skip) {
+                let (text, w) = button(label);
                 line.push_str(&text);
-                line.push_str(&" ".repeat(GAP.min(cols - col - w)));
-                self.hits.push((col, col + w - 1, action));
-                col += w + GAP;
+                line.push_str(&" ".repeat(GAP.min(cols - at - w)));
+                self.hits.push((at, at + w - 1, action));
+                at += w + GAP;
             }
         }
         print!("{line}");
-    }
-
-    /// the bar as a command line: "/" and what is typed, then the matching commands, the first one's
-    /// description after it; cut to the bar's width
-    pub fn render_prompt(&mut self, cols: usize, prompt: &Prompt) {
-        self.hits.clear();
-        let matches = prompt.matches();
-        let names: Vec<&str> = matches.iter().map(|c| c.name.as_str()).collect();
-        let mut plain = format!(" /{}█   {}", prompt.text, names.join("  "));
-        let described = matches.first().map(|c| format!("   {}", c.description)).unwrap_or_default();
-        plain.push_str(&described);
-        let shown: String = plain.chars().take(cols).collect();
-        // the typed part bold in the accent colour, the rest dim
-        let typed = 3 + prompt.text.chars().count();
-        let (head, tail): (String, String) = (shown.chars().take(typed).collect(), shown.chars().skip(typed).collect());
-        print!("\u{1b}[1;38;5;{ACCENT}m{head}{RESET}{DIM}{tail}{RESET}");
     }
 
     /// the action of the button at that column, if any
@@ -106,7 +168,7 @@ mod tests {
     #[test]
     fn clicks_hit_the_buttons_drawn() {
         let mut bar = Bar::default();
-        bar.render(160, &Status { project: "proj".into(), ..Default::default() });
+        bar.render(160, &Status { project: "proj".into(), ..Default::default() }, None);
         let actions: Vec<Action> = buttons().into_iter().map(|(_, a)| a).collect();
         assert_eq!(bar.hits.iter().map(|(_, _, a)| a.clone()).collect::<Vec<_>>(), actions);
         // each button's first and last column, inside the bar, one after the other
@@ -123,7 +185,38 @@ mod tests {
     #[test]
     fn a_narrow_bar_has_no_buttons() {
         let mut bar = Bar::default();
-        bar.render(20, &Status { project: "proj".into(), ..Default::default() });
+        bar.render(12, &Status { project: "proj".into(), ..Default::default() }, None);
         assert!(bar.hits.is_empty());
+    }
+
+    #[test]
+    fn the_command_line_takes_the_space_between_then_more() {
+        let status = Status { project: "proj".into(), ..Default::default() };
+        let left: usize = left(&status).iter().map(|(_, w)| w).sum();
+        // wide: between the status and the buttons
+        let all = buttons().len();
+        let l = layout(160, &status, true);
+        assert!(l.buttons == all && l.left == left);
+        let (from, width) = l.field.unwrap();
+        assert!(from > left && from + width < 160 - buttons_width(all) && width >= FIELD_MIN);
+        // narrower: the buttons give way, the first ones first
+        let l = layout(left + 2 + FIELD_MIN + 12, &status, true);
+        assert!(l.buttons > 0 && l.buttons < all && l.left == left);
+        let l = layout(left + 2 + FIELD_MIN + 1, &status, true);
+        assert_eq!(l.buttons, 0);
+        // narrow: the whole bar
+        let l = layout(20, &status, true);
+        assert_eq!((l.left, l.field, l.buttons), (0, Some((0, 20)), 0));
+    }
+
+    #[test]
+    fn a_half_window_keeps_the_last_buttons() {
+        let status = Status { project: "proj".into(), ..Default::default() };
+        let mut bar = Bar::default();
+        bar.render(60, &status, None);
+        let shown: Vec<Action> = bar.hits.iter().map(|(_, _, a)| a.clone()).collect();
+        let all: Vec<Action> = buttons().into_iter().map(|(_, a)| a).collect();
+        assert!(!shown.is_empty() && shown.len() < all.len());
+        assert_eq!(shown[..], all[all.len() - shown.len()..]);
     }
 }

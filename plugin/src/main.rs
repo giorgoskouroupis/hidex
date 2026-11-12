@@ -5,7 +5,8 @@
 //!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
 //!   status    branch, Python and theme for the bar; bar  the bar itself
-//!   timers    telling zellij's timers apart
+//!   prompt    the bar as a command line (Alt+p), with what fits shown as you type
+//!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
 mod actions;
 mod bar;
 mod collapse;
@@ -104,7 +105,11 @@ impl State {
 
     /// a key typed in the bar's command line; when the line is done, the focus goes back and it runs
     fn on_prompt_key(&mut self, key: &KeyWithModifier) {
-        let Some(run) = self.prompt.key(key) else { return };
+        let run = self.prompt.key(key);
+        if let Some(name) = self.prompt.args_wanted() {
+            scripts::run(&[popups::COMMANDS, "--complete", &name], Some(scripts::ARG_LIST));
+        }
+        let Some(run) = run else { return };
         set_selectable(false);
         if let Some(id) = self.prompt.back {
             panes::focus(id);
@@ -184,6 +189,7 @@ impl State {
 }
 
 impl ZellijPlugin for State {
+    // the permissions: the same list as bin/hidex approves ahead
     fn load(&mut self, _configuration: BTreeMap<String, String>) {
         request_permission(&[
             PermissionType::ReadApplicationState,
@@ -225,6 +231,10 @@ impl ZellijPlugin for State {
                 Some(scripts::STATUS_LINE) => return self.status.read(&stdout),
                 Some(scripts::STOPPED) => quit_zellij(),
                 Some(scripts::COMMAND_LIST) => self.prompt.read_commands(&stdout),
+                Some(scripts::ARG_LIST) => {
+                    self.prompt.read_args(&stdout);
+                    return true;
+                }
                 _ => {}
             },
             // the / commands, for the command line: asked once the plugin may run commands (asked in load,
@@ -264,10 +274,7 @@ impl ZellijPlugin for State {
     }
 
     fn render(&mut self, _rows: usize, cols: usize) {
-        if self.prompt.active {
-            self.bar.render_prompt(cols, &self.prompt);
-        } else {
-            self.bar.render(cols, &self.status);
-        }
+        let prompt = self.prompt.active.then_some(&self.prompt);
+        self.bar.render(cols, &self.status, prompt);
     }
 }

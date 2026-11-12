@@ -32,8 +32,24 @@ end() { hidex-theme off; }
 outside() { env -u ZELLIJ_SESSION_NAME zellij "$@"; }
 case $(outside ls -n 2>/dev/null | grep "^$n ") in
   *EXITED*) outside delete-session --force "$n" >/dev/null 2>&1 ;;
-  ?*) hidex-theme apply; outside attach "$n"; end; exit ;;
+  ?*) running=1 ;;
 esac
+# a running session: one from an older hIDEx first moves to this one, as /update does (so nothing in it keeps
+# needing the old one); one that cannot move (another zellij, or from before /update) is offered for removal,
+# else attached as it is
+# with the session's own zellij: a newer one may refuse to talk to its older server
+attach() {
+  z=$s/current/tools/bin/zellij; [ -x "$z" ] || z=zellij
+  hidex-theme apply; env -u ZELLIJ_SESSION_NAME "$z" attach "$n"; end; exit
+}
+if [ -n "$running" ]; then
+  [ "$(readlink -f "$s/current")" = "$HIDEX_HOME" ] && attach
+  hidex-update "$HIDEX_HOME" >/dev/null 2>&1 && attach
+  printf 'The session "%s" runs an older hIDEx that cannot be updated in place (its zellij differs, or it is from\nbefore /update).\n  y  remove it and start fresh (its running commands stop, unsaved Helix files are lost)\n  N  open it as it is (the default): finish your work, then quit and start hIDEx again\n> ' "$n"
+  read -r answer
+  [ "$answer" = y ] || attach
+  outside kill-session "$n" >/dev/null 2>&1; outside delete-session --force "$n" >/dev/null 2>&1
+fi
 
 # a new session reaches its hIDEx through $s/current, which /update (hidex-update) moves to a newer one without
 # a restart: every path to this hIDEx below goes through that link instead
@@ -46,15 +62,20 @@ ZELLIJ_CONFIG_DIR=$s/config
 export PATH PYTHONPATH LG_CONFIG_FILE YAZI_CONFIG_HOME HIDEX_SHARE HIDEX_PLUGIN ZELLIJ_CONFIG_DIR
 hidex-config "$s"
 
-# the plugin runs in the bar, where zellij cannot ask for its permissions: approve them (for this session's
-# path, which stays the same across /update), dropping entries of hIDEx builds from before the link
+# the plugin runs in the bar, where zellij cannot ask for its permissions: approve them for this session's
+# path (the same across /update), the same list as the plugin asks for (plugin/src/main.rs). The entry is
+# written anew each start, so a permission added later is approved too; entries of hIDEx builds from before the
+# session link go.
 p=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
 mkdir -p "${p%/*}"; touch "$p"
-if ! grep -qF "\"$HIDEX_PLUGIN\"" "$p"; then
-  awk '/^"\/nix\/store\/[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next } skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
-  printf '"%s" {\n    ReadApplicationState\n    ChangeApplicationState\n    RunCommands\n    WriteToStdin\n    ReadCliPipes\n}\n' "$HIDEX_PLUGIN" >> "$p.new"
-  mv "$p.new" "$p"
-fi
+awk -v this="\"$HIDEX_PLUGIN\" {" '$0 == this || /^"\/nix\/store\/[^"]*-hidex-panes-[^"]*" \{/ { skip = 1; next }
+  skip && /^\}/ { skip = 0; next } !skip' "$p" > "$p.new"
+printf '"%s" {\n' "$HIDEX_PLUGIN" >> "$p.new"
+for permission in ReadApplicationState ChangeApplicationState RunCommands WriteToStdin ReadCliPipes; do
+  printf '    %s\n' "$permission"
+done >> "$p.new"
+echo "}" >> "$p.new"
+mv "$p.new" "$p"
 
 # the project's window theme, else the terminal's own; the Python (hidex-python detect)
 if [ -f "$HIDEX_PROJECT/theme" ]; then cp "$HIDEX_PROJECT/theme" "$s/theme"; hidex-theme apply; else rm -f "$s/theme"; fi

@@ -76,6 +76,11 @@ impl Panes {
         members.iter().find(|p| Some(p.id) == last).or(members.first()).map(|p| p.id)
     }
 
+    /// the screen's size, columns and rows: as far as the panes reach
+    pub fn screen(&self) -> (usize, usize) {
+        self.all().iter().fold((1, 1), |(c, r), p| (c.max(p.pane_x + p.pane_columns), r.max(p.pane_y + p.pane_rows)))
+    }
+
     /// the tiled pane focused last (a pop-up having the focus does not count)
     pub fn tiled(&self) -> Option<u32> {
         self.focused_tiled

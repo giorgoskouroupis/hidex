@@ -9,6 +9,8 @@ pub const STATUS_LINE: &str = "status";
 pub const STOPPED: &str = "stopped";
 /// hidex-cmd --list, for the command line
 pub const COMMAND_LIST: &str = "commands";
+/// hidex-cmd --complete NAME, a command's arguments for the command line
+pub const ARG_LIST: &str = "args";
 
 /// run a script; with a tag, its answer comes back carrying it
 pub fn run(command: &[&str], tag: Option<&str>) {

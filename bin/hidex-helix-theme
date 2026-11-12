@@ -1,5 +1,5 @@
 #!/bin/sh
-# hidex-helix-theme [pick | NAME | restore]: a theme of Helix's own, for Helix only, remembered for the
+# hidex-helix-theme [pick | NAME | restore | list]: a theme of Helix's own, for Helix only, remembered for the
 # project (HIDEX_PROJECT). "hidex" (or "terminal") is hIDEx's own, in the window's colours. pick: Helix's
 # themes, previewed in Helix as you move; Enter keeps, Esc goes back. restore: the project's, once Helix runs
 # (the bar asks for it at start).
@@ -17,6 +17,7 @@ themes() {
     while read -r d; do ls "$d/themes" 2>/dev/null; done | sed -n 's/\.toml$//p' | sort -u
 }
 case ${1:-pick} in
+  list) themes ;;
   restore)
     t=$(current)
     # Helix has only just started: give it a moment before typing into it

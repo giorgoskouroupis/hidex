@@ -16,6 +16,8 @@ if [ "$("$old/tools/bin/zellij" --version)" != "$("$new/tools/bin/zellij" --vers
 fi
 ln -sfn "$new" "$s/current"
 hidex-config "$s"
+# the bar, and the messages to it, at the session's own address (also when run from outside the session: bin/hidex)
+export HIDEX_PLUGIN=$s/current/share/hidex/hidex-panes.wasm
 zellij action start-or-reload-plugin "file:$HIDEX_PLUGIN"
 # the bar needs a moment to start again before it can pass a command to Helix
 sleep 1

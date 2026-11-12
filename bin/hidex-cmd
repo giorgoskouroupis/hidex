@@ -4,7 +4,8 @@
 # (Alt+p) reads the table (--list) and runs the commands; with no name, a list to pick from ("cmds" on the
 # bar). --popup: started as a pop-up, so it takes the pop-ups' colours.
 # Screen: "screen", always (a list or a result to read); "pick", when given no argument (a list to pick from);
-# "-", never: run in the background.
+# "-", never: run in the background. A command taking arguments also has an args_ function listing them
+# (--complete NAME, for the command line's menu).
 
 COMMANDS='theme	pick	colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
 helix-theme	pick	a theme of Helix'"'"'s own, for Helix only, previewed as you move, kept for the project; "terminal" to follow /theme again
@@ -23,8 +24,11 @@ update	screen	move this session to the hIDEx installed in your profile (after ni
 quit	-	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
 cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; }
+args_theme() { echo reset; hidex-theme list; }
 cmd_helix_theme() { hidex-helix-theme "${1:-pick}"; }
+args_helix_theme() { hidex-helix-theme list; }
 cmd_langs() { hidex-langs "$@"; }
+args_langs() { echo python; }
 cmd_reload() { hidex-msg helix reload-all; }
 cmd_lsp() { hidex-msg helix lsp-restart; }
 cmd_git() { hidex-msg popup "lazygit (read-only)"; }
@@ -46,6 +50,7 @@ cmd_quit() { hidex-msg quit ask; }
 [ "$1" = --popup ] && { shift; hidex-popup-colors; }
 case $1 in
   --list) printf '%s\n' "$COMMANDS" ;;
+  --complete) f=args_$(printf '%s' "$2" | tr - _); if command -v "$f" >/dev/null; then "$f"; fi ;;
   '')
     pick=$(printf '%s\n' "$COMMANDS" | fzf --prompt '/' --delimiter '\t' --with-nth 1,3 --tabstop 12 \
            --height 100% --reverse --no-info) || exit 0

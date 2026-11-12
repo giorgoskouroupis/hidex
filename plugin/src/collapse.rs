@@ -40,9 +40,7 @@ fn size(id: u32) -> Option<(usize, usize)> {
 /// fold across the pane's narrower side, relative to the screen: a wide pane (the shell under the editor)
 /// folds to a line, a tall one (Helix, the side terminal) to a column; the other way only if that fails
 fn sides_for(id: u32, panes: &Panes) -> [Direction; 4] {
-    let (screen_cols, screen_rows) = panes.all().iter().fold((1, 1), |(c, r), p| {
-        (c.max(p.pane_x + p.pane_columns), r.max(p.pane_y + p.pane_rows))
-    });
+    let (screen_cols, screen_rows) = panes.screen();
     let Some(p) = panes.get(id) else { return [Left, Right, Up, Down] };
     let wide = p.pane_columns as f64 / screen_cols as f64 > p.pane_rows as f64 / screen_rows as f64;
     if wide { [Up, Down, Left, Right] } else { [Left, Right, Up, Down] }

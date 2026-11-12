@@ -32,7 +32,8 @@ has() { titles | grep -q "$1;"; }
 count() { titles | tr ';' '\n' | grep -c "^$1"; }
 rows() { panes | awk -F'|' -v t="$1" '$1 == t { print $4 }'; }
 key() { printf '%b' "$1" >&3; pause "${2:-1.5}"; }
-msg() { "$Z" -s "$S" pipe --plugin "file:$XDG_RUNTIME_DIR/hidex/$S/current/share/hidex/hidex-panes.wasm" --name "$1" -- "${2:--}"; pause 2; }
+# (a message the bar never answers fails its check rather than stalling the run)
+msg() { timeout 10 "$Z" -s "$S" pipe --plugin "file:$XDG_RUNTIME_DIR/hidex/$S/current/share/hidex/hidex-panes.wasm" --name "$1" -- "${2:--}"; pause 2; }
 in_session() { "$Z" -s "$S" run --close-on-exit --floating --name test -- "$@"; pause 2; }
 wait_for() { local i; for i in $(seq 40); do eval "$1" && return 0; pause 0.25; done; return 1; }
 # what a pane shows (its screen), by title
@@ -121,6 +122,8 @@ check "Helix keeps its unsaved text" 'screen Helix | grep -q "hello unsaved"'
 n=$(count "term ")
 msg new terminal
 check "the reloaded bar still answers" '[ "$(count "term ")" = $((n + 1)) ]'
+(cd "$T/proj" && timeout 5 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null </dev/null >/dev/null 2>&1)
+check "attaching from another hIDEx moves the session to it" '[ "$(readlink -f "$XDG_RUNTIME_DIR/hidex/$S/current")" = "$(readlink -f "$out")" ] && has Helix'
 
 echo "quit"
 key '\x1bq' 4
