@@ -1,0 +1,14 @@
+#!/bin/sh
+# hidex-status SESSION DIR: one line for the bar, tab-separated: git branch, project Python (only in a Python
+# project: an env chosen, or Python files), colour theme.
+cd "$2" 2>/dev/null || exit 0
+s=$(hidex-state "$1")
+b=$(git branch --show-current 2>/dev/null) || b=
+[ -z "$b" ] && b=$(git rev-parse --short HEAD 2>/dev/null)
+python_project() {
+  [ -f "$s/python" ] || [ -f pyproject.toml ] || [ -f setup.py ] || [ -f requirements.txt ] ||
+    git ls-files '*.py' 2>/dev/null | grep -q . || find . -maxdepth 3 -name '*.py' -print 2>/dev/null | grep -q .
+}
+p=; python_project && p=$(ZELLIJ_SESSION_NAME=$1 hidex-python label)
+t=$(cat "$s/theme" 2>/dev/null)
+printf '%s\t%s\t%s\n' "$b" "$p" "$t"

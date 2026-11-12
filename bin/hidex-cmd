@@ -1,0 +1,54 @@
+#!/bin/sh
+# hidex-cmd [NAME [ARG]]: hIDEx's / commands. With no name, a list to pick from (Alt+p, or "cmds" on the
+# bar): type to filter, Enter runs. Each command is one function below and one line in the table.
+
+COMMANDS='theme	colour theme for the whole window, previewed as you move; "theme reset" for the terminal'"'"'s own
+helix-theme	a theme of Helix'"'"'s own, for Helix only (its prompt, previewed as you type); "terminal" to follow /theme again
+langs	the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
+reload	reload every file open in Helix from disk
+lsp	restart Helix'"'"'s language servers
+git	lazygit, read-only
+git-write	lazygit that can stage, commit, push
+yazi	yazi, the file manager
+terminal	a new terminal, stacked with the others
+side	a new side terminal (Claude, or a shell for any AI tool)
+collapse	fold the last used pane to a strip, or unfold it
+keys	every hIDEx key
+quit	quit hIDEx (Helix first; it refuses while files are unsaved)'
+
+cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; }
+# Helix's own :theme prompt; "terminal" is hIDEx's theme, the one in the terminal's colours
+cmd_helix_theme() {
+  case $1 in
+    '') hidex-msg helix "theme " ;;
+    terminal) hidex-msg helix "theme hidex" ;;
+    *) hidex-msg helix "theme $1" ;;
+  esac
+}
+cmd_langs() { hidex-langs "$@"; }
+cmd_reload() { hidex-msg helix reload-all; }
+cmd_lsp() { hidex-msg helix lsp-restart; }
+cmd_git() { hidex-msg popup "lazygit (read-only)"; }
+cmd_git_write() { hidex-msg popup lazygit; }
+cmd_yazi() { hidex-msg popup yazi; }
+cmd_terminal() { hidex-msg new terminal; }
+cmd_side() { hidex-msg new side; }
+cmd_collapse() { hidex-msg collapse; }
+# the keys table of the README, as two columns
+cmd_keys() {
+  awk -F' [|] ' '/^[|] Keys/ { on = 1; next } on && !/^[|]/ { exit } on && !/^[|]---/ {
+    sub(/^[|] /, "", $1); sub(/ [|]$/, "", $2); gsub(/`/, ""); printf "%-34s %s\n", $1, $2 }' "$HIDEX_SHARE/README.md" | less
+}
+cmd_quit() { hidex-msg quit ask; }
+
+case $1 in
+  --list) printf '%s\n' "$COMMANDS" ;;
+  '')
+    pick=$(printf '%s\n' "$COMMANDS" | fzf --prompt '/' --delimiter '\t' --tabstop 12 --height 100% --reverse \
+           --no-info) || exit 0
+    exec "$0" "$(printf '%s' "$pick" | cut -f1)" ;;
+  *)
+    f=cmd_$(printf '%s' "$1" | tr - _)
+    printf '%s\n' "$COMMANDS" | cut -f1 | grep -qx -- "$1" || { echo "hIDEx: no command /$1" >&2; exit 1; }
+    shift; "$f" "$@" ;;
+esac

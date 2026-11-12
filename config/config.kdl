@@ -22,24 +22,30 @@ ui {
     }
 }
 
-// the hIDEx plugin (plugin/): jumps to a pane by role, opens terminals and Claudes in their area
-load_plugins {
-    "file:@plugin@"
-}
-
 keybinds {
     locked {
         bind "Alt Left" { MoveFocusOrTab "Left"; }
         bind "Alt Right" { MoveFocusOrTab "Right"; }
         bind "Alt Down" { MoveFocus "Down"; }
         bind "Alt Up" { MoveFocus "Up"; }
-        // jump straight to a pane: the explorer, Helix, the terminals, Claude
+        // jump straight to a pane: the explorer, Helix, the terminals, the side terminal (Claude); the keys
+        // below go to the hIDEx plugin, which lives in the bar (layouts/hidex.kdl)
         bind "Alt e" { MessagePlugin "file:@plugin@" { name "focus"; payload "tree"; }; }
         bind "Alt h" { MessagePlugin "file:@plugin@" { name "focus"; payload "helix"; }; }
         bind "Alt t" { MessagePlugin "file:@plugin@" { name "focus"; payload "terminals"; }; }
-        bind "Alt c" { MessagePlugin "file:@plugin@" { name "focus"; payload "claude"; }; }
-        // Alt+n, then t or c: a new terminal or Claude, stacked in its area wherever the focus is
-        bind "Alt n" { SwitchToMode "tmux"; }
+        bind "Alt c" { MessagePlugin "file:@plugin@" { name "focus"; payload "side"; }; }
+        // Alt+1…9: term N, side N or the Nth tree, of the kind of pane you are on (from Helix: term N)
+        bind "Alt 1" { MessagePlugin "file:@plugin@" { name "jump"; payload "1"; }; }
+        bind "Alt 2" { MessagePlugin "file:@plugin@" { name "jump"; payload "2"; }; }
+        bind "Alt 3" { MessagePlugin "file:@plugin@" { name "jump"; payload "3"; }; }
+        bind "Alt 4" { MessagePlugin "file:@plugin@" { name "jump"; payload "4"; }; }
+        bind "Alt 5" { MessagePlugin "file:@plugin@" { name "jump"; payload "5"; }; }
+        bind "Alt 6" { MessagePlugin "file:@plugin@" { name "jump"; payload "6"; }; }
+        bind "Alt 7" { MessagePlugin "file:@plugin@" { name "jump"; payload "7"; }; }
+        bind "Alt 8" { MessagePlugin "file:@plugin@" { name "jump"; payload "8"; }; }
+        bind "Alt 9" { MessagePlugin "file:@plugin@" { name "jump"; payload "9"; }; }
+        // a new pane of the kind you are on, stacked with it: term N, or side N (from Helix or a tree: term N)
+        bind "Alt n" { MessagePlugin "file:@plugin@" { name "new"; payload "here"; }; }
         bind "Alt f" "Shift Esc" { ToggleFocusFullscreen; }
         bind "Alt =" "Alt +" { Resize "Increase"; }
         bind "Alt -" { Resize "Decrease"; }
@@ -52,19 +58,18 @@ keybinds {
         bind "Alt Ctrl Right" { Resize "Decrease Right"; }
         bind "Alt Ctrl Up" { Resize "Decrease Up"; }
         bind "Alt Ctrl Down" { Resize "Decrease Down"; }
-        // a new terminal split beside the focused pane
-        bind "Alt Shift n" { NewPane; }
         bind "Alt w" { ToggleFloatingPanes; }
+        // fold the focused pane to a strip (its neighbours cover it), or unfold it; jumping to it unfolds it too
+        bind "Alt x" { MessagePlugin "file:@plugin@" { name "collapse"; }; }
+        // the / commands: theme, python, reload…
+        bind "Alt p" { MessagePlugin "file:@plugin@" { name "popup"; payload "commands"; }; }
         // quit hIDEx: Helix quits first, and refuses (showing which) while files are unsaved
-        bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "all"; }; }
-        bind "Alt g" { Run "lazygit" { floating true; close_on_exit true; }; }
-        bind "Alt y" { Run "env" "EDITOR=hidex-open --popup" "yazi" { floating true; close_on_exit true; }; }
-    }
-    // the second key after Alt+n (zellij's tmux mode, repurposed); anything else cancels
-    tmux clear-defaults=true {
-        bind "t" { MessagePlugin "file:@plugin@" { name "new"; payload "terminal"; }; SwitchToMode "locked"; }
-        bind "c" { MessagePlugin "file:@plugin@" { name "new"; payload "claude"; }; SwitchToMode "locked"; }
-        bind "Esc" "Enter" "Ctrl c" "Alt n" { SwitchToMode "locked"; }
+        bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "ask"; }; }
+        // pop-ups: the same key opens, hides and shows it again. Alt+g: lazygit read-only; Alt+Shift+g: the
+        // lazygit that can stage and commit (it replaces the read-only one)
+        bind "Alt g" { MessagePlugin "file:@plugin@" { name "popup"; payload "lazygit (read-only)"; }; }
+        bind "Alt G" { MessagePlugin "file:@plugin@" { name "popup"; payload "lazygit"; }; }
+        bind "Alt y" { MessagePlugin "file:@plugin@" { name "popup"; payload "yazi"; }; }
     }
 }
 

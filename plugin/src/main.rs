@@ -1,49 +1,144 @@
-//! hIDEx's zellij plugin. It only uses zellij's basic calls (focus a pane, open one, stack two), no layout
-//! tricks. Keys send it messages (config.kdl, MessagePlugin):
-//!   focus <role>  jump to the pane of that role last used (or the first one)
-//!   new <kind>    open a terminal or a Claude, stacked in its area, wherever the focus is
-//!   quit          ask Helix to quit (it refuses, and says why, with unsaved files); once it has, end the session
-//! Roles come from the pane names in the layout: "tree: <folder>", "Helix", "Claude"; any other tiled
-//! terminal is part of the terminals area.
+//! hIDEx's zellij plugin. It lives in the bar at the bottom of the layout and does what keys (config.kdl),
+//! bar clicks and scripts (hidex-msg) ask, all as `Action`s. Each part is its own module:
+//!   panes     the panes and their roles (tree, Helix, terminals, side), jumping, new terminals
+//!   popups    lazygit, yazi, the command palette: toggled per key, tiled side by side
+//!   typist    commands typed into Helix safely (opening files, reloading, quitting)
+//!   collapse  folding a tiled pane to a strip and back
+//!   status    branch, Python and theme for the bar; bar  the bar itself
+//!   timers    telling zellij's timers apart
+mod actions;
+mod bar;
+mod collapse;
+mod panes;
+mod popups;
+mod status;
+mod timers;
+mod typist;
+
+use actions::Action;
 use std::collections::BTreeMap;
+use timers::Tick;
 use zellij_tile::prelude::*;
 
 #[derive(Default)]
 struct State {
-    panes: PaneManifest,
-    active_tab: usize,
-    last: BTreeMap<&'static str, u32>, // role -> last focused pane
+    /// the project folder: Helix's (in the bar, zellij gives the plugin a mangled starting folder)
     cwd: std::path::PathBuf,
-    quitting: bool, // Helix was asked to quit: end the session once it has (reset after a few seconds)
+    cwd_known: bool,
+    panes: panes::Panes,
+    popups: popups::Popups,
+    typist: typist::Typist,
+    collapse: collapse::Collapse,
+    status: status::Status,
+    bar: bar::Bar,
+    floating_visible: bool,
+    /// quitting: Helix has gone, the shells' commands are being stopped
+    ending: bool,
 }
 
 register_plugin!(State);
 
-fn role(p: &PaneInfo) -> Option<&'static str> {
-    if p.is_plugin || p.is_floating || p.exited {
-        return None;
-    }
-    Some(if p.title.starts_with("tree: ") {
-        "tree"
-    } else if p.title == "Helix" {
-        "helix"
-    } else if p.title == "Claude" {
-        "claude"
-    } else {
-        "terminals"
-    })
-}
-
 impl State {
-    fn tab_panes(&self) -> Vec<&PaneInfo> {
-        self.panes.panes.get(&self.active_tab).map(|ps| ps.iter().collect()).unwrap_or_default()
+    fn run(&mut self, action: Action) {
+        match action {
+            Action::Focus(role) => {
+                if let Some(id) = self.panes.for_role(&role) {
+                    self.go_to(id);
+                }
+            }
+            Action::Jump(n) => {
+                if let Some(id) = self.panes.numbered(n) {
+                    self.go_to(id);
+                }
+            }
+            Action::New(kind) => panes::open_new(&kind, &self.panes, &self.cwd),
+            Action::Popup(name) => popups::toggle(&name, &self.panes, self.floating_visible, &self.cwd),
+            Action::Collapse => {
+                if let Some(id) = self.panes.tiled() {
+                    self.collapse.toggle(id, &self.panes);
+                }
+            }
+            Action::Helix(command) => {
+                if let Some(pane) = self.panes.for_role("helix") {
+                    let focus = command.starts_with("open") || command.ends_with(' ');
+                    self.typist.request(typist::Job { pane, command, focus, quit: false });
+                }
+            }
+            Action::Quit(how) => match how.as_str() {
+                "force" => self.quit_now("quit-all"),
+                "save" => self.quit_now("write-quit-all"),
+                _ if self.status.session.is_empty() => self.quit_now("quit-all"),
+                // first ask what still runs in the shells: nothing, quit; else the "quit?" pop-up asks
+                _ => self.status.check_running(),
+            },
+            Action::Status => self.status.refresh(&self.cwd),
+        }
     }
 
-    /// the pane to use for a role: the last focused one if it is still there, else the first
-    fn pane_for(&self, wanted: &str) -> Option<u32> {
-        let members: Vec<&PaneInfo> = self.tab_panes().into_iter().filter(|p| role(p) == Some(wanted)).collect();
-        let last = self.last.get(wanted).copied();
-        members.iter().find(|p| Some(p.id) == last).or(members.first()).map(|p| p.id)
+    /// focus a pane; jumping to a folded pane unfolds it
+    fn go_to(&mut self, id: u32) {
+        if self.collapse.is_folded(id) {
+            self.collapse.unfold(id);
+        }
+        panes::focus(id);
+    }
+
+    /// Helix quits first with that command (it refuses while files are unsaved), then `end`
+    fn quit_now(&mut self, command: &str) {
+        match self.panes.for_role("helix") {
+            None => self.end(),
+            Some(pane) => {
+                let job = typist::Job { pane, command: command.into(), focus: true, quit: true };
+                self.typist.request(job);
+            }
+        }
+    }
+
+    /// the last step: stop what still runs in the shells (nothing left behind, on a server too), then the
+    /// session ends (when hidex-stop answers)
+    fn end(&mut self) {
+        if self.ending {
+            return;
+        }
+        self.ending = true;
+        if self.status.session.is_empty() {
+            quit_zellij();
+        } else {
+            self.status.stop_all();
+        }
+    }
+
+    fn on_panes(&mut self, manifest: PaneManifest) {
+        if let Some(id) = self.panes.update(manifest) {
+            panes::focus(id);
+        }
+        if !self.cwd_known {
+            if let Some(Ok(cwd)) = self.panes.for_role("helix").map(|h| get_pane_cwd(PaneId::Terminal(h))) {
+                self.status.set_project(&cwd);
+                self.cwd = cwd;
+                self.cwd_known = true;
+                self.status.refresh(&self.cwd);
+            }
+        }
+        // Helix has gone after a quit request: end the session
+        if self.typist.quitting() && self.panes.for_role("helix").is_none() {
+            self.end();
+        }
+        popups::close_ended(&self.panes);
+        self.popups.arrange(&self.panes);
+        self.collapse.forget_closed(&self.panes);
+    }
+
+    fn on_tick(&mut self, tick: Tick) {
+        match tick {
+            Tick::Fold => self.collapse.on_tick(),
+            Tick::Step => self.typist.on_step(),
+            Tick::QuitWait => self.typist.on_quit_wait(),
+            Tick::Refresh => {
+                self.status.refresh(&self.cwd);
+                Tick::Refresh.start();
+            }
+        }
     }
 }
 
@@ -53,43 +148,60 @@ impl ZellijPlugin for State {
             PermissionType::ReadApplicationState,
             PermissionType::ChangeApplicationState,
             PermissionType::RunCommands,
-            PermissionType::WriteToStdin, // to type :quit-all into Helix
+            PermissionType::WriteToStdin, // to type commands into Helix
+            PermissionType::ReadCliPipes, // to answer scripts' messages (hidex-msg), which zellij resends otherwise
         ]);
-        subscribe(&[EventType::PaneUpdate, EventType::TabUpdate, EventType::CommandPaneOpened, EventType::Timer]);
+        subscribe(&[
+            EventType::PaneUpdate,
+            EventType::TabUpdate,
+            EventType::ModeUpdate,
+            EventType::CommandPaneOpened,
+            EventType::Timer,
+            EventType::RunCommandResult,
+            EventType::Mouse,
+        ]);
+        // the bar is not a pane to move to
+        set_selectable(false);
         self.cwd = get_plugin_ids().initial_cwd;
+        self.status.set_project(&self.cwd);
+        Tick::Refresh.start();
     }
 
     fn update(&mut self, event: Event) -> bool {
         match event {
-            Event::PaneUpdate(manifest) => {
-                self.panes = manifest;
-                let focused: Vec<(&'static str, u32)> = self
-                    .tab_panes()
-                    .iter()
-                    .filter(|p| p.is_focused)
-                    .filter_map(|p| role(p).map(|r| (r, p.id)))
-                    .collect();
-                self.last.extend(focused);
-                if self.quitting && self.pane_for("helix").is_none() {
-                    quit_zellij();
-                }
-            }
+            Event::PaneUpdate(manifest) => self.on_panes(manifest),
             Event::TabUpdate(tabs) => {
                 if let Some(t) = tabs.iter().find(|t| t.active) {
-                    self.active_tab = t.position;
+                    self.panes.set_tab(t.position);
+                    self.floating_visible = t.are_floating_panes_visible;
                 }
             }
-            // Helix did not quit (unsaved files): forget the request, or a later :q would end the session
-            Event::Timer(_) => self.quitting = false,
-            // a pane opened by "new": name it, stack it onto its area, focus it
-            Event::CommandPaneOpened(id, context) => {
-                if let Some(name) = context.get("name") {
-                    rename_terminal_pane(id, name);
+            Event::ModeUpdate(mode) => {
+                if let Some(name) = mode.session_name {
+                    if self.status.session.is_empty() {
+                        self.status.session = name;
+                        self.status.refresh(&self.cwd);
+                    }
                 }
-                if let Some(target) = context.get("stack_with").and_then(|t| t.parse::<u32>().ok()) {
-                    stack_panes(vec![PaneId::Terminal(target), PaneId::Terminal(id)]);
+            }
+            Event::Timer(elapsed) => self.on_tick(Tick::from_elapsed(elapsed)),
+            Event::CommandPaneOpened(id, context) => panes::on_opened(id, &context),
+            Event::RunCommandResult(_, stdout, _, context) if context.contains_key("status") => {
+                return self.status.read(&stdout);
+            }
+            // what still runs in the shells: nothing, quit; else ask
+            Event::RunCommandResult(_, stdout, _, context) if context.contains_key("running") => {
+                if String::from_utf8_lossy(&stdout).trim().is_empty() {
+                    self.quit_now("quit-all");
+                } else {
+                    popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd);
                 }
-                focus_pane_with_id(PaneId::Terminal(id), false, false);
+            }
+            Event::RunCommandResult(_, _, _, context) if context.contains_key("stopped") => quit_zellij(),
+            Event::Mouse(Mouse::LeftClick(_, col)) => {
+                if let Some(action) = self.bar.click(col) {
+                    self.run(action);
+                }
             }
             _ => {}
         }
@@ -97,39 +209,22 @@ impl ZellijPlugin for State {
     }
 
     fn pipe(&mut self, message: PipeMessage) -> bool {
-        let Some(arg) = message.payload.as_deref() else { return false };
-        match message.name.as_str() {
-            "focus" => {
-                if let Some(id) = self.pane_for(arg) {
-                    focus_pane_with_id(PaneId::Terminal(id), false, false);
-                }
+        // a message from a script (hidex-msg): answer it, or zellij sends it again after a second
+        if let PipeSource::Cli(id) = &message.source {
+            unblock_cli_pipe_input(id);
+            // zellij follows each script message with an empty one, its end of input
+            if message.payload.is_none() {
+                return false;
             }
-            "quit" => match self.pane_for("helix") {
-                None => quit_zellij(),
-                Some(id) => {
-                    focus_pane_with_id(PaneId::Terminal(id), false, false);
-                    write_to_pane_id(vec![27], PaneId::Terminal(id));
-                    write_chars_to_pane_id(":quit-all\r", PaneId::Terminal(id));
-                    self.quitting = true;
-                    set_timeout(3.0);
-                }
-            },
-            "new" => {
-                // hidex-claude / hidex-shell: they close when exited, unless they are the last of their kind
-                let (area, name, program) = match arg {
-                    "claude" => ("claude", "Claude", "hidex-claude"),
-                    _ => ("terminals", "shell", "hidex-shell"),
-                };
-                let mut context = BTreeMap::new();
-                context.insert("name".to_string(), name.to_string());
-                if let Some(target) = self.pane_for(area) {
-                    context.insert("stack_with".to_string(), target.to_string());
-                }
-                let run = CommandToRun { path: program.into(), args: vec![], cwd: Some(self.cwd.clone()) };
-                open_command_pane(run, context);
-            }
-            _ => {}
+        }
+        let payload = message.payload.as_deref().unwrap_or("");
+        if let Some(action) = Action::from_message(&message.name, payload) {
+            self.run(action);
         }
         false
+    }
+
+    fn render(&mut self, _rows: usize, cols: usize) {
+        self.bar.render(cols, &self.status);
     }
 }

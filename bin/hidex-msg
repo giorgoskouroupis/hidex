@@ -1,0 +1,5 @@
+#!/bin/sh
+# hidex-msg NAME [PAYLOAD]: a message to the hIDEx plugin, the same ones the keys send (config.kdl):
+# focus <role>, new <kind>, popup <name>, collapse, quit, helix <command>, status.
+# never a blank payload: zellij would then wait for input on stdin
+exec zellij pipe --plugin "file:$HIDEX_PLUGIN" --name "$1" -- "${2:--}"
