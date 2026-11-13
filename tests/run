@@ -128,6 +128,10 @@ key '\x1bp' 3; key 'term' 2; key '\r' 3
 check "Alt+p, term, Enter: the suggested terminal opens" '[ "$(count "term ")" = $((n + 1)) ] && ! has commands'
 key '\x1bp' 3; key '\x1b' 2
 check "Esc closes the palette" '! has commands && [ "$(count "term ")" = $((n + 1)) ]'
+key '\x1bk' 3
+check "Alt+k: the keys, by group" 'has keys && screen keys | grep -q "attention"'
+key '\x1b' 2
+check "Esc closes them" '! has keys'
 
 echo "copy"
 key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-copy-marker
@@ -140,6 +144,21 @@ key '\x1bv' 1; key 'm' 2
 check "Alt+v, m: an earlier command copied with its command line" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | head -1 | grep -q "^seq [0-9]* 40"'
 key '\x1bh'
 check "and hIDEx's keys work again right after" '[ "$(focused)" = Helix ]'
+
+echo "attention"
+# a command failing out of sight (another tab, hIDEx's shell): the bar names it, Alt+j goes there
+at=$(stat -c %s "$T/screen.log")
+rc=$(list -a | grep -o "rcfile [^ ]*" | head -1 | cut -d" " -f2)
+"$Z" -s "$S" action new-tab; pause 2
+"$Z" -s "$S" action write-chars "exec bash --rcfile $rc -i
+"; pause 2
+"$Z" -s "$S" action write-chars 'sleep 2; false
+'; pause 0.5
+"$Z" -s "$S" action go-to-tab 1; key '\x1bh' 5
+check "a command failed in another tab: the bar says so" 'tail -c +"$at" "$T/screen.log" | grep -aq "failed"'
+key '\x1bj' 2
+check "Alt+j goes to it" 'f=$(focused); [ -n "$f" ] && [ "$f" != Helix ]'
+"$Z" -s "$S" action close-tab; pause 1; key '\x1bh'
 
 echo "memory"
 in_session "$out/bin/hidex-theme" Dracula
