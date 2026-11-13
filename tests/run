@@ -274,7 +274,7 @@ key 'c' 2
 in_session "$out/bin/tidex-editor" switch helix
 check "switching to Helix live: Neovim asks about the unsaved file first" 'wait_for "screen Neovim | grep -qi \"save changes\""'
 key 'n' 4
-check "n drops it: Helix opens in Neovim's place, the session goes on" 'wait_for "has Helix" && ! has Neovim && [ "$(list -g | awk -F"  +" '\''$3 == "Helix" { print $4 "," $5 " " $7 "x" $6 }'\'')" = "$nvim_at" ] && grep -qx helix "$XDG_RUNTIME_DIR/tidex/$S/editor"'
+check "n drops it: Helix opens in Neovim's place, the session goes on, and is kept for the next starts" 'wait_for "has Helix" && ! has Neovim && [ "$(list -g | awk -F"  +" '\''$3 == "Helix" { print $4 "," $5 " " $7 "x" $6 }'\'')" = "$nvim_at" ] && grep -qx helix "$XDG_RUNTIME_DIR/tidex/$S/editor" && grep -qx helix "$XDG_STATE_HOME/tidex/editor"'
 stop
 unset ED NVIM_NOTTYFAST
 export TIDEX_EDITOR=helix

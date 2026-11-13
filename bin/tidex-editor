@@ -14,30 +14,40 @@ e=${e:-nvim}
 adapter=$adapters/$e
 [ -x "$adapter" ] || { echo "tIDEx: no editor $e" >&2; exit 1; }
 
-# choose: the main editor, yours in every project from the next start; in a session, it offers to switch now
+# keep_choice NAME: the main editor for the next starts, yours in every project
+keep_choice() { mkdir -p "${chosen%/*}" && echo "$1" > "$chosen"; }
+
+# choose: the main editor. In a session, with someone to answer: now (a live switch, kept once done), at the next
+# start, or cancel (nothing changes); else (a script, outside a session) kept for the next start
 choose() {
   case ${1:-pick} in
     list) ls "$adapters" ;;
     pick)
       n=$(for a in $(ls "$adapters"); do printf '%s\t%s\n' "$a" "$("$adapters/$a" title)"; done |
         tidex-fzf --delimiter '\t' --with-nth 2 --prompt 'editor > ' \
-          --header "now: $("$adapter" title). Enter picks (and offers to switch now); Esc keeps it" | cut -f1) || exit 0
+          --header "now: $("$adapter" title). Enter picks (then: now, at the next start, or cancel); Esc keeps it" |
+        cut -f1) || exit 0
       choose "$n" ;;
     *)
       [ -x "$adapters/$1" ] || { echo "tIDEx: no editor $1 (there are: $(ls "$adapters" | tr '\n' ' '))" >&2; exit 1; }
-      mkdir -p "${chosen%/*}" && echo "$1" > "$chosen"
-      printf '%s: the editor from the next start on.\n' "$("$adapters/$1" title)"
-      [ -n "$live" ] && [ "$1" != "$e" ] && [ -t 0 ] || return 0
-      printf '\nSwitch now? y: %s quits first (it asks you about unsaved files), %s opens in its place.\n' \
-        "$("$adapter" title)" "$("$adapters/$1" title)"
+      new=$("$adapters/$1" title) old=$("$adapter" title)
+      if [ -z "$live" ] || [ "$1" = "$e" ] || [ ! -t 0 ]; then
+        keep_choice "$1"; printf '%s: the editor from the next start on.\n' "$new"; return 0
+      fi
+      printf '%s instead of %s:\n\n  n  now: %s quits first and asks about unsaved files (cancelling there changes nothing)\n  r  at the next start\n  anything else: cancel, nothing changes\n' \
+        "$new" "$old" "$old"
       stty -icanon -echo; answer=$(dd bs=1 count=1 2>/dev/null); stty icanon echo
-      # the switch goes on after this pop-up closes, so the editor's own questions can be answered there
-      [ "$answer" != y ] || setsid -f tidex-editor switch "$1" >/dev/null 2>&1 ;;
+      case $answer in
+        # the switch goes on after this pop-up closes, so the editor's own questions can be answered there
+        n) setsid -f tidex-editor switch "$1" >/dev/null 2>&1 ;;
+        r) keep_choice "$1" ;;
+      esac ;;
   esac
 }
 
 # switch NAME: the running editor quits by its own guard (so nothing unsaved is lost), and NAME starts in its pane;
-# if it does not quit within two minutes (a question left unanswered, a cancel), nothing changes
+# if it does not quit within two minutes (a question left unanswered, a cancel), nothing changes; done, it is
+# kept for the next starts too
 switch() {
   pane=$(zellij action list-panes -s 2>/dev/null |
     awk -F'  +' -v t="$("$adapter" title)" '$2 == "terminal" && $3 == t { print $1; exit }')
@@ -59,6 +69,7 @@ switch() {
   zellij action list-panes -s 2>/dev/null | awk -F'  +' -v p="$pane" '$1 == p && $6 == "true" { f = 1 } END { exit !f }' ||
     exit 0
   echo "$1" > "$live"
+  keep_choice "$1"
   zellij action new-pane --in-place --pane-id "$pane" --close-replaced-pane --name "$("$adapters/$1" title)" \
     -- env TIDEX_EDITOR="$1" tidex-editor run >/dev/null
 }
