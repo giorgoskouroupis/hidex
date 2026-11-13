@@ -1,26 +1,26 @@
 #!/bin/sh
-# hidex-cmd [--popup] [NAME [ARG]]: hIDEx's / commands, the one table of them: each command
-# is one line below (name, description) and one function. With no name, the
-# palette (Alt+p, "cmds" on the bar): a line to type in, what fits listed below as you type (--suggest).
-# --popup: started as a pop-up, so it takes the pop-ups' colours.
-# A command taking arguments also has an args_ function listing them, for the suggestions.
+# hidex-cmd [--popup] [NAME [ARG]]: hIDEx's / commands, the one table of them: each command is one line below
+# (name, group, its key if it has one, description) and one function. With no name, the palette (Alt+p, "cmds" on
+# the bar): the commands by group, then what fits as you type (--suggest). --popup: started as a pop-up, so it
+# takes the pop-ups' colours. A command taking arguments also has an args_ function listing them.
 
-COMMANDS='theme	colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
-helix-theme	a theme of Helix'"'"'s own, for Helix only, previewed as you move, kept for the project; "terminal" to follow /theme again
-langs	the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
-reload	reload every file open in Helix from disk
-lsp	restart Helix'"'"'s language servers
-git	lazygit, read-only
-git-write	lazygit that can stage, commit, push
-yazi	yazi, the file manager
-terminal	a new terminal, stacked with the others
-side	a new side terminal (Claude, or a shell for any AI tool)
-collapse	fold the last used pane to a strip, or unfold it
-copy	copy the output of the last command in the terminal last used ("copy zsh 2", "copy claude 1": in that one), zellij'"'"'s own copy
-keys	every hIDEx key, by group (Alt+k)
-about	this hIDEx: its version, where it is installed, its tools, the sandbox on this machine, links
-update	move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers
-quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
+COMMANDS='theme	look		colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
+helix-theme	look		a theme of Helix'"'"'s own, for Helix only, previewed as you move, kept for the project; "terminal" to follow /theme again
+frames	look		the frame colours, focused and the others, yours in every project, previewed as you move; "frames reset" for the defaults
+langs	project		the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
+reload	Helix		reload every file open in Helix from disk
+lsp	Helix		restart Helix'"'"'s language servers
+git	open	Alt+g	lazygit, read-only
+git-write	open	Alt+Shift+g	lazygit that can stage, commit, push
+yazi	open	Alt+y	yazi, the file manager
+terminal	open		a new terminal, stacked with the others
+side	open		a new side terminal (Claude, or a shell for any AI tool)
+collapse	panes	Alt+x	fold the last used pane to a strip, or unfold it
+copy	panes		copy the output of the last command in the terminal last used ("copy zsh 2", "copy claude 1": in that one), zellij'"'"'s own copy
+keys	hIDEx	Alt+k	every hIDEx key, by group
+about	hIDEx		this hIDEx: its version, where it is installed, its tools, the sandbox on this machine, links
+update	hIDEx		move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers
+quit	hIDEx	Alt+q	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
 # hIDEx's keys (Alt+k, and found by the palette as you type): group, keys, what they do
 KEYS='move	Alt+arrows	move between panes, and through a stack
@@ -42,7 +42,9 @@ pop-ups	Alt+k	these keys
 pop-ups	Alt+g / Alt+Shift+g	lazygit read-only / that can commit and push
 pop-ups	Alt+y	yazi
 pop-ups	Alt+w	show / hide the pop-ups
+Helix	auto-save	Helix saves by itself when you leave it (another pane, F2, a pop-up); u still undoes
 trees	Enter	a file: Helix (logs and big files: lnav); a folder: into it
+trees	F2	a file: open with Helix, micro or nano, in Helix'"'"'s place
 quit	Alt+q	quit, asking first
 quit	Alt+Shift+q	quit at once: unsaved changes dropped'
 
@@ -58,6 +60,8 @@ cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; 
 args_theme() { echo reset; hidex-theme list; }
 cmd_helix_theme() { hidex-helix-theme "${1:-pick}"; }
 args_helix_theme() { hidex-helix-theme list; }
+cmd_frames() { [ $# -gt 0 ] || set -- pick; hidex-frames "$@"; }
+args_frames() { printf "reset\nfocused\nunfocused\n"; }
 cmd_langs() { hidex-langs "$@"; }
 args_langs() { echo python; }
 cmd_reload() { hidex-msg helix reload-all; }
@@ -102,11 +106,15 @@ suggest() {
     *' '*)
       c=${1%% *} a=${1#* } f=args_$(printf '%s' "$c" | tr - _)
       command -v "$f" >/dev/null && "$f" | awk -v c="$c" -v a="$a" 'index($0, a) == 1 { print c " " $0 "\t" }' ;;
+    '')
+      # nothing typed: every command, a header line before each group (not runnable, as the keys)
+      printf '%s\n' "$COMMANDS" | awk -F'\t' '$2 != g { g = $2; print "\033[1m" g "\033[0m\t\tkey" }
+        { print $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }' ;;
     *)
-      printf '%s\n' "$COMMANDS" | awk -F'\t' -v q="$1" '{ l = $1 "\t\033[2m" $2 "\033[0m" }
+      printf '%s\n' "$COMMANDS" | awk -F'\t' -v q="$1" '{ l = $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }
         index($1, q) == 1 { print l; next } index($1, q) { rest[++n] = l } END { for (i = 1; i <= n; i++) print rest[i] }'
-      # then the keys whose group or words have it ("copy": Alt+v)
-      [ -n "$1" ] && keys_lines | awk -v q="$1" 'index(tolower($0), tolower(q))' ;;
+      # then the keys whose group or words have it, from 3 letters ("copy": Alt+v)
+      [ ${#1} -ge 3 ] && keys_lines | awk -v q="$1" 'index(tolower($0), tolower(q))' ;;
   esac
 }
 
