@@ -52,7 +52,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+f`, `Shift+Esc` | max: the focused pane fills the panes' area (the bar stays), and back |
 | `Alt+z` | zen: the focused pane covers the whole window, the bar too, and back |
 | `Alt+\` | back to the pane you were in before |
-| `Alt+j` | to the next pane that needs you: Claude waiting for an answer, a command that failed or a long one finished (zellij's attention) |
+| `Alt+j` | to the next pane that needs you: Claude waiting for an answer, a command that failed or a long one finished (zellij's attention; such a pane also gets a red frame, and the bar names it with how many more wait: `● claude 3 done +1`. zellij counts a pane on screen as seen, so failed and done show for panes out of sight: folded, in a stack, another tab) |
 | `Alt+Space` | everything that needs you, across panes and sessions, with previews (zellij's inbox) |
 | `Alt+v` | an earlier command with its output: zellij's scroll mode, `[` `]` step through commands, `m` copies the one at the top with its command line, `Esc` back (the newest ones, still on screen: triple-click their output) |
 | `Alt+=` / `Alt+-` | grow / shrink the focused pane |
@@ -60,7 +60,8 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+n` | a new pane of the kind you are on, stacked with it: a terminal or a side terminal (from Helix or a tree: a terminal; for a side terminal from elsewhere: `Alt+c`, then `Alt+n`) |
 | `Alt+1`…`Alt+9` | terminal N / side terminal N / the Nth tree, of the kind of pane you are on (from Helix: terminal N) |
 | `Alt+x` | fold the focused pane to a strip (its neighbour covers it), or unfold it to its exact size |
-| `Alt+p` | the / commands: type `copy`, `theme dracula`… with what fits listed below as you type (`Tab` completes, `Enter` runs the chosen line or the typed one, `Esc` closes) |
+| `Alt+p` | the / commands: type `copy`, `theme dracula`… with what fits listed below as you type (`Tab` completes, `Enter` runs the chosen line or the typed one, `Esc` closes); the keys that fit are listed too |
+| `Alt+k` | every hIDEx key, by group, filtered as you type |
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
 | `Alt+Shift+g` | lazygit that can stage, commit, push: it replaces the read-only one |
 | `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred, 80% of the window; all share one solid colour set from the theme: lighter with white text on a dark one, darker on a light one) |
