@@ -46,3 +46,37 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 vim.diagnostic.config({ virtual_text = { current_line = true }, severity_sort = true })
+
+-- mini.nvim (tools/nvim-pack, shipped with hIDEx, pinned): pickers, git markers, and the keys that follow Space
+-- or g shown as you type them. The keys are Helix's space menu, so both editors answer the same.
+vim.opt.packpath:prepend(vim.fs.normalize(here .. "/../../../tools/nvim-pack"))
+if pcall(vim.cmd.packadd, "mini.nvim") then
+  require("mini.pick").setup()
+  require("mini.extra").setup()
+  require("mini.diff").setup()
+  local clue = require("mini.clue")
+  clue.setup({
+    triggers = { { mode = "n", keys = "<Leader>" }, { mode = "x", keys = "<Leader>" }, { mode = "n", keys = "g" } },
+    clues = { clue.gen_clues.g() },
+    window = { delay = 300 },
+  })
+  local pick, extra, lsp = MiniPick.builtin, MiniExtra.pickers, vim.lsp.buf
+  local function key(keys, run, what) vim.keymap.set("n", keys, run, { desc = what }) end
+  key("<Leader>f", pick.files, "files")
+  key("<Leader>b", pick.buffers, "open files")
+  key("<Leader>/", pick.grep_live, "search the project")
+  key("<Leader>'", pick.resume, "the last list again")
+  key("<Leader>s", function() extra.lsp({ scope = "document_symbol" }) end, "symbols here")
+  key("<Leader>S", function() extra.lsp({ scope = "workspace_symbol" }) end, "symbols in the project")
+  key("<Leader>d", function() extra.diagnostic({ scope = "current" }) end, "diagnostics here")
+  key("<Leader>D", function() extra.diagnostic() end, "diagnostics in the project")
+  key("<Leader>g", function() extra.git_files({ scope = "modified" }) end, "changed files")
+  key("<Leader>k", lsp.hover, "documentation")
+  key("<Leader>r", lsp.rename, "rename")
+  key("<Leader>a", lsp.code_action, "code actions")
+  vim.keymap.set("n", "<Leader>c", "gcc", { remap = true, desc = "comment the line" })
+  key("<Leader>?", function() extra.keymaps() end, "every key")
+  key("gd", lsp.definition, "definition")
+  key("gr", function() extra.lsp({ scope = "references" }) end, "references")
+  key("gi", lsp.implementation, "implementation")
+end

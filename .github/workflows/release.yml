@@ -42,5 +42,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/hidex-lsp-*.tar.gz dist/hidex-pudb-*.tar.gz dist/hidex-broot-*.tar.gz \
+          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/hidex-lsp-*.tar.gz dist/hidex-pudb-*.tar.gz dist/hidex-broot-*.tar.gz dist/hidex-nvim-*.tar.gz \
             --title "hIDEx $GITHUB_REF_NAME" --notes-file notes.md
