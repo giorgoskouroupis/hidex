@@ -34,6 +34,8 @@ pick=$(printf '%s\n' "$editors" | hidex-fzf --prompt 'open with ' --header "${f#
 $note") ||
   exit 0
 [ "$pick" = helix ] && exec hidex-open "$f"
+# the bar reloads that file in Helix when the other editor quits (Helix keeps it in memory meanwhile)
+hidex-msg handover "$f"
 # Helix's pane, to take its place (none: a new pane where there is room); then the focus on it
 helix=$(zellij action list-panes 2>/dev/null | awk -F'  +' '$2 == "terminal" && $3 == "Helix" { print $1; exit }')
 id=$(zellij action new-pane ${helix:+--in-place --pane-id "$helix"} --close-on-exit --name "edit: ${f##*/} ($pick)" \

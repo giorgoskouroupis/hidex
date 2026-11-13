@@ -45,6 +45,9 @@ struct State {
     ending: bool,
     /// the project's Helix theme has been asked for (once both the session and Helix are known)
     restored: bool,
+    /// another editor holds Helix's place (hidex-open-with), and the file handed to it
+    editor_open: bool,
+    handed: Option<String>,
     /// messages wait here until zellij says whether this copy of the bar is the one to act (clients)
     gate: clients::Gate,
 }
@@ -85,6 +88,7 @@ impl State {
                     self.typist.request(typist::Job { pane, command, focus, quit: false });
                 }
             }
+            Action::Handover(file) => self.handed = Some(file),
             Action::Quit(how) => match how.as_str() {
                 "force" => self.quit_now("quit-all"),
                 "save" => self.quit_now("write-quit-all"),
@@ -152,6 +156,16 @@ impl State {
             panes::focus(id);
         }
         names::name_new(&self.panes);
+        // the other editor has quit and Helix is back: the file handed over, and only it, is reloaded from disk, so
+        // Helix shows what that editor saved (it had nothing unsaved there: it saved the file when it was left)
+        let editor_open = self.panes.for_role("editor").is_some();
+        if self.editor_open && !editor_open {
+            if let Some(file) = self.handed.take() {
+                self.run(Action::Helix(format!("open \"{file}\"")));
+                self.run(Action::Helix("reload".into()));
+            }
+        }
+        self.editor_open = editor_open;
         if !self.cwd_known {
             if let Some(Ok(cwd)) = self.panes.for_role("helix").map(|h| get_pane_cwd(PaneId::Terminal(h))) {
                 self.status.set_project(&cwd);

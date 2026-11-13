@@ -15,6 +15,8 @@ pub enum Action {
     Jump(usize),
     /// a Helix command, typed into it one key group at a time (e.g. "reload-all", "open a.py")
     Helix(String),
+    /// a file handed to another editor in Helix's place (hidex-open-with): reloaded in Helix when it quits
+    Handover(String),
     /// quit hIDEx: "" asks first if commands still run in the shells; "force" stops them; "save" also saves
     /// Helix's files. Helix goes first either way (it refuses while files are unsaved).
     Quit(String),
@@ -36,6 +38,7 @@ impl Action {
             "collapse" => Action::Collapse,
             "jump" => Action::Jump(payload.parse().ok()?),
             "helix" if !payload.is_empty() => Action::Helix(arg),
+            "handover" if !payload.is_empty() => Action::Handover(arg),
             "quit" => Action::Quit(arg),
             "status" => Action::Status,
             "copy" => Action::Copy(if payload == "-" { String::new() } else { arg }),
@@ -55,6 +58,7 @@ mod tests {
         assert_eq!(Action::from_message("jump", "2"), Some(Jump(2)));
         assert_eq!(Action::from_message("quit", "now"), Some(Quit("now".into())));
         assert_eq!(Action::from_message("helix", "reload-all"), Some(Helix("reload-all".into())));
+        assert_eq!(Action::from_message("handover", "/p/a.py"), Some(Handover("/p/a.py".into())));
         assert_eq!(Action::from_message("status", "-"), Some(Status));
         assert_eq!(Action::from_message("copy", "-"), Some(Copy(String::new())));
         assert_eq!(Action::from_message("copy", "side 2"), Some(Copy("side 2".into())));
