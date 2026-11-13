@@ -248,6 +248,7 @@ export TIDEX_EDITOR=nvim ED=Neovim NVIM_NOTTYFAST=1
 echo 'print("hi")' > "$T/proj/a.py"
 start
 check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/tidex/$S/nvim.sock" ]'
+nvim_at=$(list -g | awk -F"  +" '$3 == "Neovim" { print $4 "," $5 " " $7 "x" $6 }')
 key '\x1be' 1; key 'a.py' 2; key '\r' 3
 check "Enter on a file in the tree: Neovim opens it, in front" 'wait_for "screen Neovim | grep -q \"print(.hi.)\"" && [ "$(focused)" = Neovim ]'
 key ' f' 2
@@ -269,6 +270,11 @@ check "unsaved changes in Neovim: nothing handed over, save first" 'wait_for "sc
 key 'x' 2
 msg quit force; pause 3
 check "quitting: Neovim asks about the unsaved file first" 'screen Neovim | grep -qi "save changes"'
+key 'c' 2
+in_session "$out/bin/tidex-editor" switch helix
+check "switching to Helix live: Neovim asks about the unsaved file first" 'wait_for "screen Neovim | grep -qi \"save changes\""'
+key 'n' 4
+check "n drops it: Helix opens in Neovim's place, the session goes on" 'wait_for "has Helix" && ! has Neovim && [ "$(list -g | awk -F"  +" '\''$3 == "Helix" { print $4 "," $5 " " $7 "x" $6 }'\'')" = "$nvim_at" ] && grep -qx helix "$XDG_RUNTIME_DIR/tidex/$S/editor"'
 stop
 unset ED NVIM_NOTTYFAST
 export TIDEX_EDITOR=helix

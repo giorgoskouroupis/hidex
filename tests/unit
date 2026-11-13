@@ -150,6 +150,7 @@ fi
 
 echo "uninstall"
 p=$T/pfx; mkdir -p "$p/share/tidex/versions/v9/bin" "$p/share/tidex/tools/zellij-1" "$p/bin" "$T/state/tidex"
+mkdir -p "$T/state/tidex-nvim" "$HOME/.local/share/tidex-nvim"
 ln -s "$p/share/tidex/versions/v9/bin/tidex" "$p/bin/tidex"
 printf 'alias ll=ls\nexport PATH="%s/bin:$PATH"  # tIDEx\n' "$p" > "$HOME/.bashrc"
 mkdir -p "$HOME/.cache/zellij"; printf '"/x/tidex-panes.wasm" {\n    RunCommands\n}\n"/y/other.wasm" {\n    RunCommands\n}\n' > "$HOME/.cache/zellij/permissions.kdl"
@@ -157,6 +158,7 @@ echo n | env -u ZELLIJ_SESSION_NAME TIDEX_PREFIX="$p" tidex-uninstall >/dev/null
 check "asks first: N keeps everything" '[ -d "$p/share/tidex" ] && [ -L "$p/bin/tidex" ]'
 env -u ZELLIJ_SESSION_NAME TIDEX_PREFIX="$p" tidex-uninstall --yes >/dev/null
 check "removes versions, tools, the command and what was kept" '[ ! -e "$p/share/tidex" ] && [ ! -L "$p/bin/tidex" ] && [ ! -e "$T/state/tidex" ]'
+check "and its Neovim's own folders" '[ ! -e "$T/state/tidex-nvim" ] && [ ! -e "$HOME/.local/share/tidex-nvim" ]'
 check "takes its PATH line out, leaves the rest" '[ "$(cat "$HOME/.bashrc")" = "alias ll=ls" ]'
 check "drops only its plugin permissions" '! grep -q tidex-panes "$HOME/.cache/zellij/permissions.kdl" && grep -q other.wasm "$HOME/.cache/zellij/permissions.kdl"'
 mkdir -p "$XDG_RUNTIME_DIR/tidex/unit"

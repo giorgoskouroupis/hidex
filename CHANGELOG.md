@@ -7,6 +7,15 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+### Added
+- `/editor` switches live: after picking, `y` has the editor quit by its own guard (Neovim asks about unsaved
+  files, Helix refuses while any are unsaved), and the one picked opens in its place, the session going on.
+
+### Fixed
+- `tidex --uninstall` also removes tIDEx's cache and its Neovim's own folders (`tidex-nvim`: undo history,
+  shada).
+- The tests' installs no longer add a PATH line to your shell's files.
+
 ## [v0.3.0] - 2026-11-13
 
 hIDEx is now **tIDEx**, not bound to one editor: the command `tidex`, its folders `~/.local/share/tidex`,
