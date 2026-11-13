@@ -108,7 +108,12 @@ hidex-sandbox --gaps > "$s/sandbox-gaps"
 trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
   printf 'pane name="tree: %s" command="hidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1
 layout=$s/layout.kdl
-awk -v t="$trees" -v side="$side" -v plugin="$HIDEX_PLUGIN" '/@TREES@/ && !/\/\// { print t; next }
+# the welcome pop-up, until it has been seen once (hidex-welcome)
+welcome=
+[ -e "${XDG_STATE_HOME:-$HOME/.local/state}/hidex/welcomed" ] ||
+  welcome='floating_panes { pane name="welcome" command="hidex-welcome" close_on_exit=true x="20%" y="15%" width="60%" height="50%"; }'
+awk -v t="$trees" -v side="$side" -v plugin="$HIDEX_PLUGIN" -v welcome="$welcome" '/@TREES@/ && !/\/\// { print t; next }
+  /@WELCOME@/ && !/\/\// { print welcome; next }
   side == "none" && /name="side 1"/ { next } side == "none" { sub(/ size="60%"/, "") } { gsub(/@plugin@/, plugin); print }' \
   "$HIDEX_SHARE/layouts/hidex.kdl" > "$layout"
 zellij -s "$n" -n "$layout"
