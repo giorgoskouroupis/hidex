@@ -11,11 +11,12 @@ pub const QUIT_ASK: &str = "quit?";
 pub const COMMANDS: &str = "hidex-cmd";
 
 /// name (the pop-up's title) and what runs in it
-pub const POPUPS: [(&str, &str, &[&str]); 5] = [
+pub const POPUPS: [(&str, &str, &[&str]); 6] = [
     (LAZYGIT_RO, "hidex-lazygit", &[]),
     (LAZYGIT, "hidex-lazygit", &["--write"]),
     ("yazi", "hidex-yazi", &[]),
     ("commands", COMMANDS, &["--popup"]),
+    ("keys", COMMANDS, &["--popup", "keys"]),
     // Alt+q while commands still run in the shells
     (QUIT_ASK, "hidex-quit-ask", &[]),
 ];

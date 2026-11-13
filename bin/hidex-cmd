@@ -17,10 +17,42 @@ terminal	a new terminal, stacked with the others
 side	a new side terminal (Claude, or a shell for any AI tool)
 collapse	fold the last used pane to a strip, or unfold it
 copy	copy the output of the last command in the terminal last used ("copy zsh 2", "copy claude 1": in that one), zellij'"'"'s own copy
-keys	every hIDEx key
+keys	every hIDEx key, by group (Alt+k)
 about	this hIDEx: its version, where it is installed, its tools, the sandbox on this machine, links
 update	move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers
 quit	quit hIDEx (asks first; Helix refuses while files are unsaved)'
+
+# hIDEx's keys (Alt+k, and found by the palette as you type): group, keys, what they do
+KEYS='move	Alt+arrows	move between panes, and through a stack
+move	Alt+e / h / t / c	the explorer / Helix / the terminals / the side terminal
+move	Alt+1…9	terminal, side terminal or tree N, of the kind you are on
+move	Alt+\	back to the pane you were in
+attention	Alt+j	the next pane that needs you (Claude asking, a command failed or done)
+attention	Alt+Space	everything that needs you, across sessions (zellij inbox)
+panes	Alt+n	a new pane of the kind you are on, stacked with it
+panes	Alt+x	fold the pane to a strip, or unfold it
+panes	Alt+f, Shift+Esc	max: the pane fills the panes area, and back
+panes	Alt+z	zen: the pane covers the whole window, and back
+panes	Alt+= / Alt+-	grow / shrink the pane
+panes	Alt+Shift+arrows	grow the pane on that side
+panes	Alt+Ctrl+arrows	shrink the pane from that side
+copy	Alt+v	an earlier command: [ ] step, m copies it with its command line, Esc back
+pop-ups	Alt+p	the / commands
+pop-ups	Alt+k	these keys
+pop-ups	Alt+g / Alt+Shift+g	lazygit read-only / that can commit and push
+pop-ups	Alt+y	yazi
+pop-ups	Alt+w	show / hide the pop-ups
+trees	Enter	a file: Helix (logs and big files: lnav); a folder: into it
+quit	Alt+q	quit, asking first
+quit	Alt+Shift+q	quit at once: unsaved changes dropped'
+
+# the keys as list lines: keys, then group and what (dimmed), then "key" (not a command); --groups: a header
+# line before each group
+keys_lines() {
+  printf '%s\n' "$KEYS" | awk -F'\t' -v groups="$1" '
+    groups && $1 != g { g = $1; print "\033[1m" g "\033[0m\t\tkey" }
+    { printf "%s\t\033[2m%s\033[0m\tkey\n", (groups ? "  " : "") $2, (groups ? "" : $1 " · ") $3 }'
+}
 
 cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; }
 args_theme() { echo reset; hidex-theme list; }
@@ -54,10 +86,11 @@ cmd_about() {
     grep -v '^#' "$h/tools.lock" 2>/dev/null | awk -F'\t' 'NF { printf "  %-16s %s\n", $1, $2 }'
   } | less
 }
-# the keys table of the README, as two columns
+# the keys by group, filtered as you type; Enter or Esc closes
 cmd_keys() {
-  awk -F' [|] ' '/^[|] Keys/ { on = 1; next } on && !/^[|]/ { exit } on && !/^[|]---/ {
-    sub(/^[|] /, "", $1); sub(/ [|]$/, "", $2); gsub(/`/, ""); printf "%-34s %s\n", $1, $2 }' "$HIDEX_SHARE/README.md" | less
+  keys_lines --groups | hidex-fzf --ansi --prompt 'keys ' --delimiter '\t' --with-nth 1,2 --tabstop 22 \
+    --header 'type to filter · Esc closes' >/dev/null
+  exit 0
 }
 # the result stays on screen until a key: the pop-up closes when the command ends
 cmd_update() { hidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
@@ -71,7 +104,9 @@ suggest() {
       command -v "$f" >/dev/null && "$f" | awk -v c="$c" -v a="$a" 'index($0, a) == 1 { print c " " $0 "\t" }' ;;
     *)
       printf '%s\n' "$COMMANDS" | awk -F'\t' -v q="$1" '{ l = $1 "\t\033[2m" $2 "\033[0m" }
-        index($1, q) == 1 { print l; next } index($1, q) { rest[++n] = l } END { for (i = 1; i <= n; i++) print rest[i] }' ;;
+        index($1, q) == 1 { print l; next } index($1, q) { rest[++n] = l } END { for (i = 1; i <= n; i++) print rest[i] }'
+      # then the keys whose group or words have it ("copy": Alt+v)
+      [ -n "$1" ] && keys_lines | awk -v q="$1" 'index(tolower($0), tolower(q))' ;;
   esac
 }
 
@@ -81,6 +116,8 @@ palette() {
     --bind 'start,change:reload:hidex-cmd --suggest {q}' --bind 'tab:transform-query:printf "%s " {1}' \
     --header 'Tab completes · Enter runs · Esc closes')
   [ $? -eq 130 ] && exit 0
+  # a key line only informs: nothing to run
+  [ "$(printf '%s\n' "$out" | sed -n 2p | cut -f3)" = key ] && exit 0
   line=$(printf '%s\n' "$out" | sed -n 2p | cut -f1)
   line=${line:-$(printf '%s\n' "$out" | sed -n 1p)}
   # the line's words: the command, then its arguments

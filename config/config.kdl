@@ -84,6 +84,8 @@ keybinds {
         bind "Alt x" { MessagePlugin "file:@plugin@" { name "collapse"; }; }
         // the / commands: a line to type in, what fits listed below as you type (hidex-cmd)
         bind "Alt p" { MessagePlugin "file:@plugin@" { name "popup"; payload "commands"; }; }
+        // every hIDEx key, by group, filtered as you type (hidex-cmd keys)
+        bind "Alt k" { MessagePlugin "file:@plugin@" { name "popup"; payload "keys"; }; }
         // quit hIDEx, asking first (hidex-quit-ask): Helix quits first, and refuses while files are unsaved
         bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "ask"; }; }
         // quit on the spot: unsaved changes dropped, running commands stopped
