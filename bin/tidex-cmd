@@ -10,7 +10,7 @@ frames	look		the frame colours, focused and the others, yours in every project, 
 langs	project		the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
 reload	editor		reload every file open in the editor from disk
 lsp	editor		restart the editor'"'"'s language servers
-editor	editor		the main editor, Neovim or Helix, yours in every project, from the next start ("editor helix")
+editor	editor		the main editor, Neovim or Helix, yours in every project: now, or from the next start ("editor helix")
 git	open	Alt+g	lazygit, read-only
 git-write	open	Alt+Shift+g	lazygit that can stage, commit, push
 yazi	open	Alt+y	yazi, the file manager
@@ -45,7 +45,8 @@ pop-ups	Alt+g / Alt+Shift+g	lazygit read-only / that can commit and push
 pop-ups	Alt+y	yazi
 pop-ups	Alt+w	show / hide the pop-ups
 trees	Enter	a file: the editor (logs and big files: lnav); a folder: into it
-trees	F2	a file: open with another editor (Helix or Neovim, micro, nano), in the editor'"'"'s place
+trees	F2	a file: open with another editor (Helix or Neovim, micro, nano), in the editor'"'"'s place (with a guest there: closed first)
+trees	F3 / F4	copy the path (file or folder): absolute / relative to the tree'"'"'s folder
 quit	Alt+q	quit, asking first
 quit	Alt+Shift+q	quit at once: unsaved changes dropped'
 
@@ -54,7 +55,7 @@ quit	Alt+Shift+q	quit at once: unsaved changes dropped'
 keys_lines() {
   { printf '%s\n' "$KEYS"; tidex-editor notes 2>/dev/null | sed "s/^/editor\t$(tidex-editor title 2>/dev/null)\t/"; } |
     awk -F'\t' -v groups="$1" '
-    groups && $1 != g { g = $1; print "\033[1m" g "\033[0m\t\tkey" }
+    groups && $1 != g { g = $1; print "\033[1;33m" g "\033[0m\t\tkey" }
     { printf "%s\t\033[2m%s\033[0m\tkey\n", (groups ? "  " : "") $2, (groups ? "" : $1 " · ") $3 }'
 }
 
@@ -62,7 +63,7 @@ cmd_theme() { if [ -n "$1" ]; then tidex-theme "$*"; else tidex-theme pick; fi; 
 args_theme() { echo reset; tidex-theme list; }
 cmd_editor_theme() { tidex-editor theme "${1:-pick}"; }
 args_editor_theme() { tidex-editor theme list; }
-cmd_editor() { tidex-editor choose "${1:-pick}"; [ -n "$1" ] && { printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }; }
+cmd_editor() { tidex-editor choose "${1:-pick}"; if [ -n "$1" ]; then tidex-key 'press a key' >/dev/null; fi; }
 args_editor() { tidex-editor choose list; }
 cmd_frames() { [ $# -gt 0 ] || set -- pick; tidex-frames "$@"; }
 args_frames() { printf "reset\nfocused\nunfocused\n"; }
@@ -101,22 +102,24 @@ cmd_keys() {
   exit 0
 }
 # the result stays on screen until a key: the pop-up closes when the command ends
-cmd_update() { tidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
+cmd_update() { tidex-update "$@"; tidex-key 'press a key' >/dev/null; }
 cmd_quit() { tidex-msg quit ask; }
 
-# what fits the typed line: commands starting with it, then containing it; after "NAME ", its arguments
+# what fits the typed line: the command of that very name, then those starting with it, then containing it;
+# after "NAME ", its arguments
 suggest() {
   case $1 in
     *' '*)
       c=${1%% *} a=${1#* } f=args_$(printf '%s' "$c" | tr - _)
       command -v "$f" >/dev/null && "$f" | awk -v c="$c" -v a="$a" 'index($0, a) == 1 { print c " " $0 "\t" }' ;;
     '')
-      # nothing typed: every command, a header line before each group (not runnable, as the keys)
-      printf '%s\n' "$COMMANDS" | awk -F'\t' '$2 != g { g = $2; print "\033[1m" g "\033[0m\t\tkey" }
-        { print $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }' ;;
+      # nothing typed: every command under its group's header (indented; the header not runnable, as the keys)
+      printf '%s\n' "$COMMANDS" | awk -F'\t' '$2 != g { g = $2; print "\033[1;33m" g "\033[0m\t\tkey" }
+        { print "  " $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }' ;;
     *)
       printf '%s\n' "$COMMANDS" | awk -F'\t' -v q="$1" '{ l = $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }
-        index($1, q) == 1 { print l; next } index($1, q) { rest[++n] = l } END { for (i = 1; i <= n; i++) print rest[i] }'
+        $1 == q { print l; next } index($1, q) == 1 { starts[++s] = l; next } index($1, q) { rest[++n] = l }
+        END { for (i = 1; i <= s; i++) print starts[i]; for (i = 1; i <= n; i++) print rest[i] }'
       # then the keys whose group or words have it, from 3 letters ("copy": Alt+v)
       [ ${#1} -ge 3 ] && keys_lines | awk -v q="$1" 'index(tolower($0), tolower(q))' ;;
   esac
@@ -124,12 +127,12 @@ suggest() {
 
 # the palette: Enter runs the chosen line, or the typed one when nothing fits; Tab takes the chosen line
 palette() {
-  out=$(tidex-fzf --disabled --print-query --ansi --prompt '/' --delimiter '\t' --with-nth 1,2 --tabstop 14 \
-    --bind 'start,change:reload:tidex-cmd --suggest {q}' --bind 'tab:transform-query:printf "%s " {1}' \
+  out=$(tidex-fzf --disabled --print-query --ansi --prompt '/' --delimiter '\t' --with-nth 1,2 --tabstop 16 \
+    --bind 'start,change:reload:tidex-cmd --suggest {q}' --bind 'tab:transform-query:printf "%s " {1} | sed "s/^ *//"' \
+    --bind 'enter:transform:[ {3} = key ] || echo accept' \
     --header 'Tab completes · Enter runs · Esc closes')
   [ $? -eq 130 ] && exit 0
-  # a key line only informs: nothing to run
-  [ "$(printf '%s\n' "$out" | sed -n 2p | cut -f3)" = key ] && exit 0
+  # (Enter on a key line or a group's header does nothing: they only inform)
   line=$(printf '%s\n' "$out" | sed -n 2p | cut -f1)
   line=${line:-$(printf '%s\n' "$out" | sed -n 1p)}
   # the line's words: the command, then its arguments
