@@ -246,6 +246,9 @@ start
 check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/hidex/$S/nvim.sock" ]'
 key '\x1be' 1; key 'a.py' 2; key '\r' 3
 check "Enter on a file in the tree: Neovim opens it, in front" 'wait_for "screen Neovim | grep -q \"print(.hi.)\"" && [ "$(focused)" = Neovim ]'
+key ' f' 2
+check "Space f: the file picker of mini.nvim, shipped with hIDEx" 'screen Neovim | grep -q "Files"'
+key '\x1b' 1
 echo '# from Claude' >> "$T/proj/a.py"
 check "changed on disk, untouched here: Neovim shows it by itself" 'wait_for "screen Neovim | grep -q \"from Claude\""'
 key 'Oedited here' 1; "$Z" -s "$S" action write 27; pause 1
@@ -253,6 +256,11 @@ echo '# from git' >> "$T/proj/a.py"
 check "changed on disk and here: Neovim asks which to keep (W12)" 'wait_for "screen Neovim | grep -q W12"'
 key 'O' 2
 check "O keeps the text here" 'screen Neovim | grep -q "edited here"'
+key '\x1be' 1; key '\x1bOQ' 3
+check "F2 in a Neovim session: Helix is offered too" 'wait_for "screen \"open with\" | grep -q \"[ ▌]helix *\$\""'
+key 'micro' 1; key '\r' 3
+check "unsaved changes in Neovim: nothing handed over, save first" 'wait_for "screen \"open with\" | grep -q \"unsaved changes in Neovim\"" && ! has "edit: a.py (micro)"'
+key 'x' 2
 msg quit force; pause 3
 check "quitting: Neovim asks about the unsaved file first" 'screen Neovim | grep -qi "save changes"'
 stop
