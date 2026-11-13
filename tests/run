@@ -62,7 +62,7 @@ start() {
   (cd "$T/proj" && timeout 300 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null \
      < "$T/keys" > "$T/screen.log" 2>&1 &)
   exec 3> "$T/keys"
-  wait_for 'has Helix && has "term 1"' && pause 2
+  wait_for 'has "${ED:-Helix}" && has "term 1"' && pause 2
 }
 stop() { exec 3>&-; "$Z" kill-session "$S" >/dev/null 2>&1; "$Z" delete-session "$S" >/dev/null 2>&1; pause 1; }
 # the copied hIDEx (update test) keeps the store's read-only folders
@@ -236,6 +236,27 @@ check "the project's window theme comes back" 'grep -qx Dracula "$XDG_RUNTIME_DI
 msg editor theme
 check "the project's Helix theme comes back" 'wait_for "screen Helix | grep -q dracula"'
 stop
+
+echo "Neovim"
+# the same project with Neovim as the editor: driven through its remote API, files kept in step with the disk
+# (the fake terminal does not answer Neovim's background question; a real one does)
+export HIDEX_EDITOR=nvim ED=Neovim NVIM_NOTTYFAST=1
+echo 'print("hi")' > "$T/proj/a.py"
+start
+check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/hidex/$S/nvim.sock" ]'
+key '\x1be' 1; key 'a.py' 2; key '\r' 3
+check "Enter on a file in the tree: Neovim opens it, in front" 'wait_for "screen Neovim | grep -q \"print(.hi.)\"" && [ "$(focused)" = Neovim ]'
+echo '# from Claude' >> "$T/proj/a.py"
+check "changed on disk, untouched here: Neovim shows it by itself" 'wait_for "screen Neovim | grep -q \"from Claude\""'
+key 'Oedited here' 1; "$Z" -s "$S" action write 27; pause 1
+echo '# from git' >> "$T/proj/a.py"
+check "changed on disk and here: Neovim asks which to keep (W12)" 'wait_for "screen Neovim | grep -q W12"'
+key 'O' 2
+check "O keeps the text here" 'screen Neovim | grep -q "edited here"'
+msg quit force; pause 3
+check "quitting: Neovim asks about the unsaved file first" 'screen Neovim | grep -qi "save changes"'
+stop
+unset HIDEX_EDITOR ED NVIM_NOTTYFAST
 
 echo "Helix's sandbox"
 mkdir -p "$T/home/.ssh" "$T/home/notes" && touch "$T/home/.ssh/id_test" "$T/home/notes/a"
