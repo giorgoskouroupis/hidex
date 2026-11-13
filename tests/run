@@ -129,7 +129,10 @@ echo "open with"
 # a pane's place and size, as "x,y colsxrows"
 geom() { list -g | awk -F'  +' -v t="$1" '$3 == t { print $4 "," $5 " " $7 "x" $6 }'; }
 helix_at=$(geom Helix) tree_at=$(geom "tree: proj")
-key '\x1be' 1; key 'a.py' 2; key '\x1bOQ' 3
+# a.py open in Helix first, then handed to micro
+key '\x1be' 1; key 'a.py' 2; key '\r' 3
+check "Enter on a file in the tree: Helix opens it" 'wait_for "screen Helix | grep -q \"print(.hi.)\""'
+key '\x1be' 1; key '\x1bOQ' 3
 check "F2 on a file in the tree: the editors to pick from" 'wait_for "has \"open with\""'
 key 'micro' 1; key '\r' 4
 check "micro opens the file in Helix's place, focused" 'wait_for "has \"edit: a.py (micro)\"" && [ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ]'
@@ -137,8 +140,9 @@ key '\x1be' 1; key '\r' 3
 check "Enter on a file meanwhile: nothing opened, a pop-up says how to hand over" 'wait_for "screen \"open with\" | grep -q \"save and quit micro\""'
 key 'x' 2
 check "a key: back to micro, Helix not brought back elsewhere" '[ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ] && [ "$(geom "tree: proj")" = "$tree_at" ]'
-key '\x11' 3
+key '# from micro\r' 1; key '\x13' 2; key '\x11' 3
 check "micro quits: Helix is back, in its place" 'wait_for "has Helix" && ! has "edit: a.py (micro)" && [ "$(geom Helix)" = "$helix_at" ]'
+check "and Helix shows what micro saved (reloaded from disk)" 'grep -q "from micro" "$T/proj/a.py" && wait_for "screen Helix | grep -q \"from micro\""'
 key '\x1be' 1; key '\x1b' 1; key '\x1bh'
 
 echo "command palette"
