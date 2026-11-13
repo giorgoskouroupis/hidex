@@ -6,6 +6,9 @@
         // F2: pick the editor first (tidex-open-with: Helix, micro, nano); Ctrl and Alt keys do not reach broot's
         // verbs through zellij, a function key does
         { invocation: "open_with", key: "F2", apply_to: "file", external: "tidex-open --with {file}", leave_broot: false }
+        // F3, F4: the path of the line (file or folder) to the clipboard, absolute or relative to the tree's folder
+        { invocation: "copy_abs", key: "F3", external: "tidex-copy-path abs {file}", leave_broot: false }
+        { invocation: "copy_rel", key: "F4", external: "tidex-copy-path rel {file}", leave_broot: false }
         // Enter on a folder goes into it; on the top line it goes up, but not above the tree's own folder
         // (tidex-tree-enter); broot's parent commands do nothing
         { key: "enter", apply_to: "directory", external: "tidex-tree-enter {directory}", leave_broot: false }

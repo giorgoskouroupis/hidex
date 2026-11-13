@@ -79,7 +79,8 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+q` | quit tIDEx, after asking (lists running commands; the editor asks about, or refuses, unsaved files) |
 | `Alt+Shift+q` | quit at once: unsaved changes dropped, running commands stopped |
 | `Enter` on a file in a tree or yazi | the editor; logs and files over 10 MB in lnav (`q` closes) |
-| `F2` on a file in a tree | open with another editor: Helix or Neovim (the one not in use), micro, nano when the system has it; it opens in the editor's place (sandboxed the same), and the editor is back when it quits, that file reloaded. One at a time: meanwhile, opening a file asks whether to close it (`y`: with its own quit key, so it asks about unsaved changes itself); a file with unsaved changes in Neovim is not handed over |
+| `F2` on a file in a tree | open with another editor: Helix or Neovim (the one not in use), micro, nano when the system has it; it opens in the editor's place (sandboxed the same), and the editor is back when it quits, that file reloaded. One at a time: meanwhile, Enter on a file asks whether to close it (`y`: with its own quit key, so it asks about unsaved changes itself), and `F2` offers the list again: the guest closes first, then the one picked opens in its place; a file with unsaved changes in Neovim is not handed over |
+| `F3` / `F4` in a tree | copy the path of the line (file or folder) to the clipboard: absolute / relative to the tree's folder |
 | `Enter` on a folder in a tree | into it; on the top line, up one level, never above the tree's own folder |
 
 zellij stays locked, so every other key reaches the program in the pane; `Ctrl+g` unlocks its own modes.

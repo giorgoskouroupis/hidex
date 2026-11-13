@@ -1,0 +1,9 @@
+#!/bin/sh
+# tidex-copy-path abs|rel PATH: PATH to the clipboard (F3, F4 in a tree), absolute or relative to the tree's own
+# folder (TIDEX_TREE_TOP), through the terminal's standard clipboard code (OSC 52), which zellij hands on to the
+# window: no clipboard program needed, over ssh too
+case $1 in
+  rel) p=$(realpath --relative-to="${TIDEX_TREE_TOP:-$PWD}" -- "$2") ;;
+  *) p=$(realpath -- "$2") ;;
+esac || exit 1
+printf '\033]52;c;%s\a' "$(printf %s "$p" | base64 | tr -d '\n')" > /dev/tty
