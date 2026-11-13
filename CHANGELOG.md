@@ -1,4 +1,4 @@
-# Changelog test
+# Changelog
 
 What changed in each hIDEx release, newest first. A release's section here is its text on GitHub: write it before
 pushing the version's tag (the release Action stops when the section is missing). The format follows
