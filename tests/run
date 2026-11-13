@@ -14,6 +14,8 @@ R=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/hidex-tests.XXXXXX")
 mkdir -p "$T/proj" && chmod 700 "$R"
 export XDG_RUNTIME_DIR=$R XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache
 export SHELL=${BASH:-/bin/sh}  # plain shells, not your login setup
+# Helix as the editor for most checks (Neovim, the default, has its own section)
+export HIDEX_EDITOR=helix
 git -C "$T/proj" init -q && echo 'print("hi")' > "$T/proj/a.py"
 S=$(basename "$T")-proj
 failed=0
@@ -268,7 +270,8 @@ key 'x' 2
 msg quit force; pause 3
 check "quitting: Neovim asks about the unsaved file first" 'screen Neovim | grep -qi "save changes"'
 stop
-unset HIDEX_EDITOR ED NVIM_NOTTYFAST
+unset ED NVIM_NOTTYFAST
+export HIDEX_EDITOR=helix
 
 echo "Helix's sandbox"
 mkdir -p "$T/home/.ssh" "$T/home/notes" && touch "$T/home/.ssh/id_test" "$T/home/notes/a"

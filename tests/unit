@@ -105,7 +105,9 @@ check "anything else refused, nothing changed" '! hidex-frames focused 99 2>/dev
 check "reset: the defaults again (focused 3, others 8)" 'hidex-frames reset && framed frame_selected 3 && framed frame_unselected 8'
 
 echo "editor"
-check "the editor by default: Helix, through its adapter" '[ "$(hidex-editor title)" = Helix ]'
+check "the editor by default: Neovim, through its adapter" '[ "$(hidex-editor title)" = Neovim ]'
+check "/editor helix: Helix from the next start on, kept for you" 'hidex-editor choose helix >/dev/null && [ "$(hidex-editor name)" = helix ] && [ "$(HIDEX_EDITOR=nvim hidex-editor name)" = nvim ]'
+rm -f "$XDG_STATE_HOME/hidex/editor"
 check "an editor without an adapter is refused" '! HIDEX_EDITOR=nothing hidex-editor title 2>/dev/null'
 
 echo "update check"
