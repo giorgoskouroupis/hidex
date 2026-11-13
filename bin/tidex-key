@@ -1,0 +1,10 @@
+#!/bin/sh
+# tidex-key [PROMPT]: PROMPT shown (on stderr, the terminal, so `answer=$(tidex-key …)` still shows it), then one
+# key read from the terminal (no Enter needed, not echoed), the terminal put back as it was; prints the key. Every
+# one-key question in tIDEx goes through here.
+[ -n "${1:-}" ] && printf '%s' "$1" >&2
+old=$(stty -g 2>/dev/null)
+stty -icanon -echo 2>/dev/null
+k=$(dd bs=1 count=1 2>/dev/null)
+[ -n "$old" ] && stty "$old" 2>/dev/null
+printf '%s' "$k"

@@ -2,67 +2,84 @@
 # tidex-open-with FILE: F2 on a file in a tree, in a pop-up: pick the editor (the main one, the others with an
 # adapter, micro, nano when the system has it). The main one: as Enter does. Another, a guest: in the main
 # editor's place (zellij's open in place, sandboxed the same), and the main editor is back when it quits. One
-# guest holds that place at a time: while one does, opening anything (F2, or Enter in a tree or yazi:
-# tidex-open-with --held FILE) asks whether to close the guest first, and the file then opens in the main one.
+# guest holds that place at a time: while one does, Enter in a tree or yazi (tidex-open-with --held FILE) asks
+# whether to close it first, the file then opening in the main editor; F2 offers the same list, the guest closing
+# first for the main editor or for another guest (--after: that one opens once the guest has gone).
 main=$(tidex-editor name) title=$(tidex-editor title)
+adapters=${TIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/tidex}/editors
 
-# the guest holding the main editor's place, as "PANE_ID<TAB>TITLE" ("edit: a.py (micro)"), if any
-held() {
-  zellij action list-panes 2>/dev/null | awk -F'  +' '$2 == "terminal" && $3 ~ /^edit: / { print $1 "\t" $3; exit }'
+# the guest holding the place (tidex-panes guest: "ID<TAB>edit: a.py (micro)"): its pane id, file and editor
+parse_held() {
+  guest=${1#*	} id=${1%%	*} file=${guest#edit: } file=${file% (*} editor=${guest##*(} editor=${editor%)}
 }
-# ask the guest to quit with its own key: each one asks by itself about unsaved changes (or refuses)
+# close_guest [FILE [EDITOR]]: the guest leaves by its own quit (tidex-editor close: it asks about anything unsaved,
+# the focus on it for that); once it has gone, FILE opens in the main editor (the bar: after-guest), or in EDITOR,
+# another guest (run by the bar: a process left in this pop-up would go with it)
 close_guest() {
-  case $2 in
-    micro) zellij action write --pane-id "$1" 17 ;;
-    nano) zellij action write --pane-id "$1" 24 ;;
-    # Esc first, alone (Esc then ":" at once reads as Alt+:), then :q
-    helix) zellij action write --pane-id "$1" 27; sleep 0.2; zellij action write --pane-id "$1" 58 113 13 ;;
-    nvim) TIDEX_EDITOR=nvim tidex-editor do quit ;;
-  esac
+  if [ -n "${2:-}" ]; then
+    tidex-msg note "${1##*/}: $editor → $2…"
+    tidex-msg detach "$(printf 'tidex-open-with\t--after\t%s\t%s\t%s' "$id" "$2" "$1")"
+  elif [ -n "${1:-}" ]; then
+    tidex-msg after-guest "open \"$1\""
+  fi
+  tidex-editor close "$editor" "$id"
+  zellij action focus-pane-id "$id"
 }
 # who holds the place: y closes it (the file asked for then opens in the main editor), anything else goes back
 handover() {
-  guest=${1#*	} id=${1%%	*} file=${guest#edit: } file=${file% (*} editor=${guest##*(} editor=${editor%)}
-  printf '%s is open in %s, in %s'"'"'s place.\n\nClose %s now? y: yes (it asks you first if anything is unsaved), \nanything else: back to %s' \
-    "$file" "$editor" "$title" "$editor" "$editor"
-  stty -icanon -echo; answer=$(dd bs=1 count=1 2>/dev/null)
-  if [ "$answer" = y ]; then
-    [ -n "$2" ] && tidex-msg after-guest "open \"$2\""
-    close_guest "$id" "$editor"
-  fi
-  zellij action focus-pane-id "$id"
+  parse_held "$1"
+  answer=$(tidex-key "$(printf '%s is open in %s, in %s'"'"'s place.\n\nClose %s now? y: yes (it asks you first if anything is unsaved), \nanything else: back to %s' \
+    "$file" "$editor" "$title" "$editor" "$editor")")
+  if [ "$answer" = y ]; then close_guest "${2:-}"; else zellij action focus-pane-id "$id"; fi
+}
+# open_guest EDITOR FILE: EDITOR in the main editor's place (none: a new pane where there is room), focused; the
+# bar reloads FILE in the main editor when it quits (the main one keeps it in memory meanwhile). An editor with an
+# adapter runs through it (its settings, its sandbox), another one sandboxed as it is
+open_guest() {
+  tidex-msg handover "$2"
+  pane=$(tidex-panes id "$title")
+  if [ -x "$adapters/$1" ]; then run="env TIDEX_EDITOR=$1 tidex-editor run"; else run="tidex-sandbox machine -- $1"; fi
+  # shellcheck disable=SC2086
+  id=$(zellij action new-pane ${pane:+--in-place --pane-id "$pane"} --close-on-exit --name "edit: ${2##*/} ($1)" \
+    --cwd "${2%/*}" -- $run "$2")
+  [ -n "$id" ] && zellij action focus-pane-id "$id"
 }
 
+# --after ID EDITOR FILE: once the guest in pane ID has gone, EDITOR opens FILE in its place; still there after two
+# minutes (a question left unanswered, a cancel): nothing opens. Said on the bar either way
+if [ "$1" = --after ]; then
+  if tidex-panes wait "$2" gone 120; then open_guest "$3" "$4"; tidex-msg note "${4##*/}: in $3"
+  else tidex-msg note "the guest stayed: $3 not opened"; fi
+  exit 0
+fi
+
 tidex-popup-colors
-h=$(held)
-[ "$1" = --held ] && shift
-if [ -n "$h" ]; then handover "$h" "${1:+$(realpath -- "$1")}"; exit 0; fi
-[ -n "$1" ] || exit 0
+h=$(tidex-panes guest)
+[ "$1" = --held ] && { shift; [ -n "$h" ] && { handover "$h" "${1:+$(realpath -- "$1")}"; exit 0; }; }
+[ -n "$1" ] || { [ -n "$h" ] && handover "$h"; exit 0; }
 f=$(realpath -- "$1") || exit 1
 tidex-guard "$f" || { sleep 2; exit 1; }
-# the main editor, then the other editors tIDEx has an adapter for (Helix, Neovim), then micro, nano
-adapters=${TIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/tidex}/editors
+# the main editor, then the other editors tIDEx has an adapter for (Helix, Neovim), then micro, nano; a guest
+# holding the place is not offered again
+[ -n "$h" ] && parse_held "$h"
 editors=$(echo "$main"; ls "$adapters" | grep -vx "$main"; echo micro; command -v nano >/dev/null && echo nano)
+editors=$(printf '%s\n' "$editors" | grep -vx "${editor:-}")
 # Helix saves when left (its auto-save); an editor that answers (Neovim) is asked below instead
 note=; [ "$main" = helix ] && note="
 $title saved its changes when you left it: another editor opens the file as saved."
+[ -n "$h" ] && note="
+$editor holds $title's place ($file): it closes first, asking about anything unsaved."
 pick=$(printf '%s\n' "$editors" | tidex-fzf --prompt 'open with ' --header "${f##*/} · Enter opens · Esc closes$note") ||
   exit 0
-[ "$pick" = "$main" ] && exec tidex-open "$f"
+if [ "$pick" = "$main" ]; then
+  # with a guest there: it closes, then the file opens in the main editor
+  [ -n "$h" ] || exec tidex-open "$f"
+  close_guest "$f"; exit 0
+fi
 # unsaved changes to it in the main editor: nothing handed over until they are saved
 if [ "$(tidex-editor do modified "$f" 2>/dev/null)" = 1 ]; then
-  printf '%s has unsaved changes in %s: save it there first (:w), then open it with %s.\n\npress a key' \
-    "${f##*/}" "$title" "$pick"
-  stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1
+  tidex-key "$(printf '%s has unsaved changes in %s: save it there first (:w), then open it with %s.\n\npress a key' \
+    "${f##*/}" "$title" "$pick")" >/dev/null
   exit 0
 fi
-# the bar reloads that file in the main editor when the guest quits (the main one keeps it in memory meanwhile)
-tidex-msg handover "$f"
-# the main editor's pane, to take its place (none: a new pane where there is room); then the focus on it. An
-# editor with an adapter runs through it (its settings, its sandbox), another one sandboxed as it is
-pane=$(zellij action list-panes 2>/dev/null | awk -F'  +' -v t="$title" '$2 == "terminal" && $3 == t { print $1; exit }')
-if [ -x "$adapters/$pick" ]; then run="env TIDEX_EDITOR=$pick tidex-editor run"; else run="tidex-sandbox machine -- $pick"; fi
-# shellcheck disable=SC2086
-id=$(zellij action new-pane ${pane:+--in-place --pane-id "$pane"} --close-on-exit --name "edit: ${f##*/} ($pick)" \
-  --cwd "${f%/*}" -- $run "$f")
-[ -n "$id" ] && zellij action focus-pane-id "$id"
+if [ -n "$h" ]; then close_guest "$f" "$pick"; else open_guest "$pick" "$f"; fi

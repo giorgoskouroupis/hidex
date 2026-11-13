@@ -148,6 +148,18 @@ key '\x1be' 1; key '\r' 3; key 'y' 4
 check "y: micro quits by its own key: Helix is back, in its place" 'wait_for "has Helix" && ! has "edit: a.py (micro)" && [ "$(geom Helix)" = "$helix_at" ]'
 check "and Helix shows what micro saved (reloaded from disk)" 'grep -q "from micro" "$T/proj/a.py" && wait_for "screen Helix | grep -q \"from micro\""'
 key '\x1be' 1; key '\x1b' 1; key '\x1bh'
+# F2 while a guest holds the place: the list again; picking another editor closes the guest first
+key '\x1be' 1; key '\x1bOQ' 3; key 'micro' 1; key '\r' 4
+key '\x1be' 1; key '\x1bOQ' 3
+check "F2 with micro there: the list, saying micro closes first" 'wait_for "screen \"open with\" | grep -q \"micro holds Helix\""'
+key 'nvim' 1; key '\r' 6
+check "Neovim picked: micro closes, Neovim opens the file in Helix's place" 'wait_for "has \"edit: a.py (nvim)\"" && ! has "edit: a.py (micro)" && [ "$(geom "edit: a.py (nvim)")" = "$helix_at" ]'
+key '\x1be' 1; key '\r' 3; key 'y' 5
+check "y: Neovim quits, Helix is back" 'wait_for "has Helix" && ! has "edit: a.py (nvim)"'
+key '\x1be' 1; key '\x1bOR' 2; key '\x1bOS' 2
+copied() { grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | cut -d";" -f3 | while read -r b; do echo "$b" | base64 -d 2>/dev/null; echo; done; }
+check "F3, F4 in the tree: the path to the clipboard, absolute, then relative" 'copied | grep -qx "$T/proj/a.py" && copied | tail -1 | grep -qx a.py'
+key '\x1b' 1; key '\x1bh'
 
 echo "command palette"
 n=$(count "term ")
@@ -155,6 +167,11 @@ key '\x1bp' 3; key 'term' 2; key '\r' 3
 check "Alt+p, term, Enter: the suggested terminal opens" '[ "$(count "term ")" = $((n + 1)) ] && ! has commands'
 key '\x1bp' 3; key '\x1b' 2
 check "Esc closes the palette" '! has commands && [ "$(count "term ")" = $((n + 1)) ]'
+key '\x1bp' 3; key 'editor' 2; key '\r' 3
+check "editor, Enter: /editor itself (not /editor-theme), its list of editors" 'wait_for "screen commands | grep -q \"editor > \""'
+key '\x1b' 2; key '\x1bp' 3; key '\r' 2
+check "Enter on a group's header: nothing runs, the palette stays" 'has commands'
+key '\x1b' 2
 key '\x1bk' 3
 check "Alt+k: the keys, by group" 'has keys && screen keys | grep -q "attention"'
 key '\x1b' 2
@@ -275,6 +292,15 @@ in_session "$out/bin/tidex-editor" switch helix
 check "switching to Helix live: Neovim asks about the unsaved file first" 'wait_for "screen Neovim | grep -qi \"save changes\""'
 key 'n' 4
 check "n drops it: Helix opens in Neovim's place, the session goes on, and is kept for the next starts" 'wait_for "has Helix" && ! has Neovim && [ "$(list -g | awk -F"  +" '\''$3 == "Helix" { print $4 "," $5 " " $7 "x" $6 }'\'')" = "$nvim_at" ] && grep -qx helix "$XDG_RUNTIME_DIR/tidex/$S/editor" && grep -qx helix "$XDG_STATE_HOME/tidex/editor"'
+in_session "$out/bin/tidex-editor" switch nvim
+check "and back to Neovim live: Helix quits by its own :quit-all (Enter as a terminal sends it)" 'wait_for "has Neovim" && ! has Helix && grep -qx nvim "$XDG_STATE_HOME/tidex/editor"'
+# your editor changed meanwhile (r, at the next start): starting tidex again switches the running session to it
+echo helix > "$XDG_STATE_HOME/tidex/editor"
+# (its input open but silent: script sends Ctrl+D at the end of its input, which would answer the note)
+(cd "$T/proj" && sleep 8 | env -u TIDEX_EDITOR timeout 6 script -qfc "stty rows 42 cols 160; $out/bin/tidex --side shell ." /dev/null >/dev/null 2>&1) &
+check "attaching with Helix as your editor: a note says why, nothing switched before its OK" 'wait_for "screen \"your editor\" | grep -q \"your editor since\"" && has Neovim'
+key '\r' 2
+check "OK: the session switches to Helix" 'wait_for "has Helix" && ! has Neovim'
 stop
 unset ED NVIM_NOTTYFAST
 export TIDEX_EDITOR=helix

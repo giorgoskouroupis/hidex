@@ -1,9 +1,9 @@
 #!/bin/sh
 # tidex-editor run [ARGS] | do VERB … | theme [pick | NAME | restore | list] | health LANG | servers LANG | notes |
-# title | name | choose [pick | NAME | list] | switch NAME: the editor in the main pane, whichever it is, through its
-# adapter (share/tidex/editors/NAME). Which: TIDEX_EDITOR (given for one call or one start), else the session's
-# (its state folder's "editor", set at its start and by a switch), else the one you chose (/editor, kept in
-# ~/.local/state/tidex/editor), else Neovim. The bar drives the running editor (tidex-msg editor VERB:
+# title | name | choose [pick | NAME | list] | switch NAME | close EDITOR PANE: the editor in the main pane, whichever
+# it is, through its adapter (share/tidex/editors/NAME). Which: TIDEX_EDITOR (given for one call or one start), else
+# the session's (its state folder's "editor", set at its start and by a switch), else the one you chose (/editor,
+# kept in ~/.local/state/tidex/editor), else Neovim. The bar drives the running editor (tidex-msg editor VERB:
 # plugin/src/editor.rs); the rest of tIDEx asks here.
 adapters=${TIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/tidex}/editors
 chosen=${XDG_STATE_HOME:-$HOME/.local/state}/tidex/editor
@@ -26,7 +26,9 @@ choose() {
       n=$(for a in $(ls "$adapters"); do printf '%s\t%s\n' "$a" "$("$adapters/$a" title)"; done |
         tidex-fzf --delimiter '\t' --with-nth 2 --prompt 'editor > ' \
           --header "now: $("$adapter" title). Enter picks (then: now, at the next start, or cancel); Esc keeps it" |
-        cut -f1) || exit 0
+        cut -f1)
+      # Esc: nothing picked (the pipeline's status is cut's, so the choice itself is what tells)
+      [ -n "$n" ] || exit 0
       choose "$n" ;;
     *)
       [ -x "$adapters/$1" ] || { echo "tIDEx: no editor $1 (there are: $(ls "$adapters" | tr '\n' ' '))" >&2; exit 1; }
@@ -34,44 +36,46 @@ choose() {
       if [ -z "$live" ] || [ "$1" = "$e" ] || [ ! -t 0 ]; then
         keep_choice "$1"; printf '%s: the editor from the next start on.\n' "$new"; return 0
       fi
-      printf '%s instead of %s:\n\n  n  now: %s quits first and asks about unsaved files (cancelling there changes nothing)\n  r  at the next start\n  anything else: cancel, nothing changes\n' \
+      printf '%s instead of %s:\n\n  n  now: %s quits first and asks about unsaved files (cancelling there changes nothing)\n  r  the next time you start tidex (also when it re-attaches to this session)\n  anything else: cancel, nothing changes\n' \
         "$new" "$old" "$old"
-      stty -icanon -echo; answer=$(dd bs=1 count=1 2>/dev/null); stty icanon echo
+      answer=$(tidex-key)
       case $answer in
-        # the switch goes on after this pop-up closes, so the editor's own questions can be answered there
-        n) setsid -f tidex-editor switch "$1" >/dev/null 2>&1 ;;
+        # the switch goes on after this pop-up closes (run by the bar: a process left here would go with the
+        # pop-up), so the editor's own questions can be answered there
+        n) tidex-msg detach "$(printf 'tidex-editor\tswitch\t%s' "$1")" ;;
         r) keep_choice "$1" ;;
       esac ;;
   esac
 }
 
+# close EDITOR PANE: EDITOR, in PANE, quits by its own means, asking about unsaved files itself (or refusing):
+# an editor with an adapter through it; micro and nano, the plain guests (tidex-open-with), by their quit key.
+# The one place that knows how each editor quits, main or guest
+close() {
+  case $1 in
+    micro) zellij action write --pane-id "$2" 17 ;;
+    nano) zellij action write --pane-id "$2" 24 ;;
+    *) [ -x "$adapters/$1" ] && "$adapters/$1" close "$2" ;;
+  esac
+}
+
 # switch NAME: the running editor quits by its own guard (so nothing unsaved is lost), and NAME starts in its pane;
 # if it does not quit within two minutes (a question left unanswered, a cancel), nothing changes; done, it is
-# kept for the next starts too
+# kept for the next starts too. Each step said on the bar
 switch() {
-  pane=$(zellij action list-panes -s 2>/dev/null |
-    awk -F'  +' -v t="$("$adapter" title)" '$2 == "terminal" && $3 == t { print $1; exit }')
+  old=$("$adapter" title) new=$("$adapters/$1" title)
+  pane=$(tidex-panes id "$old")
   [ -n "$pane" ] || exit 1
+  tidex-msg note "switching editor: $old → $new…"
   # (not a quit for the bar: the session goes on when this editor leaves)
   tidex-msg quit cancel
   zellij action focus-pane-id "$pane"
-  case $e in
-    nvim) TIDEX_EDITOR=nvim tidex-editor do quit ;;
-    # Esc alone first (Esc then ":" at once reads as Alt+:), then :quit-all, which refuses while files are unsaved
-    helix) zellij action write --pane-id "$pane" 27; sleep 0.2; zellij action write-chars --pane-id "$pane" ':quit-all
-' ;;
-  esac
-  for _ in $(seq 120); do
-    zellij action list-panes -s 2>/dev/null | awk -F'  +' -v p="$pane" '$1 == p && $6 == "true" { f = 1 } END { exit !f }' &&
-      break
-    sleep 1
-  done || true
-  zellij action list-panes -s 2>/dev/null | awk -F'  +' -v p="$pane" '$1 == p && $6 == "true" { f = 1 } END { exit !f }' ||
-    exit 0
+  close "$e" "$pane"
+  tidex-panes wait "$pane" exited 120 || { tidex-msg note "$old kept"; exit 0; }
   echo "$1" > "$live"
   keep_choice "$1"
-  zellij action new-pane --in-place --pane-id "$pane" --close-replaced-pane --name "$("$adapters/$1" title)" \
-    -- env TIDEX_EDITOR="$1" tidex-editor run >/dev/null
+  zellij action new-pane --in-place --pane-id "$pane" --close-replaced-pane --name "$new"     -- env TIDEX_EDITOR="$1" tidex-editor run >/dev/null
+  tidex-msg note "editor: $new"
 }
 
 # theme: one of the editor's own, remembered for the project (TIDEX_PROJECT); the first it lists is tIDEx's own,
@@ -105,7 +109,8 @@ case $1 in
   theme) shift; theme "$@" ;;
   choose) shift; choose "$@" ;;
   switch) [ -n "$2" ] && [ -x "$adapters/$2" ] && [ -n "$live" ] || exit 1; switch "$2" ;;
+  close) [ -n "$3" ] || exit 1; close "$2" "$3" ;;
   name) echo "$e" ;;
   run | do | health | servers | notes | title) exec "$adapter" "$@" ;;
-  *) echo "usage: tidex-editor run | do | theme | health | servers | notes | title | name | choose | switch" >&2; exit 1 ;;
+  *) echo "usage: tidex-editor run | do | theme | health | servers | notes | title | name | choose | switch | close" >&2; exit 1 ;;
 esac

@@ -61,6 +61,23 @@ attach() {
   z=$s/current/tools/bin/zellij; [ -x "$z" ] || z=zellij
   # messages to its bar at its own address (the one through its "current" link)
   TIDEX_PLUGIN=$s/current/share/tidex/tidex-panes.wasm tidex-theme apply
+  # your editor (/editor, or TIDEX_EDITOR) is not the session's: it takes over as you attach, as /editor's n does
+  # (the session's editor asks first about anything unsaved; cancelled there, it stays), after a note saying why:
+  # the choice may be days old. The switch goes on once the note is acknowledged and closed, out of the way of
+  # that question
+  want=$(env -u ZELLIJ_SESSION_NAME tidex-editor name 2>/dev/null) has=$(cat "$s/editor" 2>/dev/null)
+  if [ -n "$want" ] && [ -n "$has" ] && [ "$want" != "$has" ]; then
+    chosen=${XDG_STATE_HOME:-$HOME/.local/state}/tidex/editor
+    if [ -n "${TIDEX_EDITOR:-}" ]; then why="TIDEX_EDITOR=$want"
+    else why="your editor since $(date -r "$chosen" '+%-d %b' 2>/dev/null) (/editor)"; fi
+    note="$(TIDEX_EDITOR=$has tidex-editor title) → $(TIDEX_EDITOR=$want tidex-editor title): $why.
+$(TIDEX_EDITOR=$has tidex-editor title) asks first about anything unsaved.
+
+Enter: OK"
+    env -u ZELLIJ_SESSION_NAME "$z" -s "$n" run --floating --close-on-exit --name "your editor" -- sh -c \
+      'printf "\n%s\n" "$1" | sed "s/^./  &/"; tidex-key >/dev/null
+       tidex-msg detach "$(printf "tidex-editor\\tswitch\\t%s" "$2")"' - "$note" "$want" >/dev/null 2>&1
+  fi
   env -u ZELLIJ_SESSION_NAME "$z" attach "$n"; end; exit
 }
 if [ -n "$running" ]; then

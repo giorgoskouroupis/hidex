@@ -11,8 +11,7 @@ if [ -n "$running" ]; then
   echo
 fi
 printf '  \033[33mq\033[0m quit   \033[33ms\033[0m save Helix'"'"'s files, quit   \033[33many other key\033[0m cancel\n'
-stty -icanon -echo 2>/dev/null
-k=$(dd bs=1 count=1 2>/dev/null)
+k=$(tidex-key)
 case $k in
   q) tidex-msg quit force ;;
   s) tidex-msg quit save ;;

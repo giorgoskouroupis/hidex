@@ -1,5 +1,5 @@
 #!/bin/sh
-# Neovim's adapter (tidex-editor): run | do VERB … | themes | health LANG | servers LANG | notes | title.
+# Neovim's adapter (tidex-editor): run | close PANE | do VERB … | themes | health LANG | servers LANG | notes | title.
 # Neovim answers other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
 share=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 sock() { echo "$(tidex-state)/nvim.sock"; }
@@ -18,6 +18,8 @@ case $1 in
       "${XDG_CACHE_HOME:-$HOME/.cache}/$NVIM_APPNAME"
     exec tidex-sandbox machine -- "${TIDEX_EDITOR_RUN:-nvim}" \
       ${s:+--listen "$s/nvim.sock"} -u "$share/nvim/init.lua" "$@" ;;
+  # it quits, asking first what to do with unsaved files (save, drop, cancel); through its API, so not by its pane
+  close) exec "$0" do quit ;;
   # the bar's verbs (plugin/src/editor.rs), as Neovim commands run in place (<Cmd>: whatever the mode)
   do)
     shift
@@ -49,5 +51,5 @@ case $1 in
   notes) echo "Files changed on disk (Claude, git) come back by themselves; changed here too, Neovim asks which to keep (W12)"
     echo "Space: Helix's menu (files, search, symbols, diagnostics), shown as you type; Space ? lists every key" ;;
   title) echo Neovim ;;
-  *) echo "usage: nvim run | do VERB … | themes | health LANG | servers LANG | notes | title" >&2; exit 1 ;;
+  *) echo "usage: nvim run | close PANE | do VERB … | themes | health LANG | servers LANG | notes | title" >&2; exit 1 ;;
 esac

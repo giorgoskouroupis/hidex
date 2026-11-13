@@ -7,6 +7,24 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+### Added
+- The bar says what happens out of sight: `switching editor: Neovim → Helix…`, then `editor: Helix` (or
+  `Neovim kept`); the same for one guest editor giving way to another.
+- Starting `tidex` again while its session runs with another editor than yours (`/editor`, `r`): a note says why,
+  and after its OK the session switches (the old editor asks first about anything unsaved).
+- `F2` while a guest editor holds the editor's place: the list again; the guest closes first, then the one picked
+  opens in its place.
+- `F3` / `F4` in a tree: the path of the line to the clipboard, absolute / relative to the tree's folder.
+
+### Changed
+- Lists: one clear mark for the line Enter picks (a `▶`, the whole line highlighted); the palette's commands
+  indented under their group's coloured header.
+
+### Fixed
+- `/editor` from the palette did not switch (the switch went with its pop-up); from Helix it never did (Enter
+  reached Helix as Ctrl+J); Esc in its list reopened it.
+- The palette: typing `editor` and Enter ran `/editor-theme`; Enter on a group's header closed it.
+
 ## [v0.3.1] - 2026-11-13
 
 ### Added
