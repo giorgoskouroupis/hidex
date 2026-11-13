@@ -7,9 +7,12 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.3.1] - 2026-11-13
+
 ### Added
-- `/editor` switches live: after picking, `y` has the editor quit by its own guard (Neovim asks about unsaved
-  files, Helix refuses while any are unsaved), and the one picked opens in its place, the session going on.
+- `/editor` switches live: after picking, `n` (now) has the editor quit by its own guard (Neovim asks about unsaved
+  files, Helix refuses while any are unsaved), and the one picked opens in its place, the session going on;
+  `r` keeps it for the next start; anything else cancels. A switch cancelled in the editor changes nothing.
 
 ### Fixed
 - `tidex --uninstall` also removes tIDEx's cache and its Neovim's own folders (`tidex-nvim`: undo history,
@@ -200,7 +203,8 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `nil`, the Nix language server (it publishes no ready-made Linux build).
 - The command line in the bar (`Alt+Shift+p`), replaced by the palette.
 
-[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.1...HEAD
+[v0.3.1]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.4...v0.3.0
 [v0.2.4]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.2...v0.2.3
