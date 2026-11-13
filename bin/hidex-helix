@@ -1,5 +1,0 @@
-#!/bin/sh
-# hidex-helix [ARGS]: Helix, sandboxed so it cannot open the secrets folders (hidex-sandbox machine): what the
-# trees and yazi refuse, Helix cannot open either, nor anything it starts (language servers, :sh).
-# HIDEX_HELIX: another program to run there instead (the tests).
-exec hidex-sandbox machine -- "${HIDEX_HELIX:-hx}" "$@"

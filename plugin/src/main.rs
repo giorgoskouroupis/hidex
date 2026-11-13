@@ -1,10 +1,10 @@
 //! hIDEx's zellij plugin. It lives in the bar at the bottom of the layout and does what keys (config.kdl),
 //! bar clicks and scripts (hidex-msg) ask, all as `Action`s. Each part is its own module:
-//!   panes     the panes and their roles (tree, Helix, terminals, side), jumping, new terminals
+//!   panes     the panes and their roles (tree, editor, terminals, side), jumping, new terminals
+//!   editor    the editor in the main pane behind one contract (open, reload, quit…); typist: Helix's way
 //!   names     the terminals' names: what runs in each, with its number
 //!   attention what needs you (zellij's attention event): those frames highlighted, the bar names the first
 //!   popups    lazygit, yazi, the command palette: toggled per key, tiled side by side
-//!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
 //!   status    branch, Python and theme for the bar; bar  the bar itself
 //!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
@@ -14,6 +14,7 @@ mod attention;
 mod bar;
 mod clients;
 mod collapse;
+mod editor;
 mod names;
 mod panes;
 mod popups;
@@ -23,30 +24,31 @@ mod timers;
 mod typist;
 
 use actions::Action;
+use editor::{Command, Quit};
 use std::collections::BTreeMap;
 use timers::Tick;
 use zellij_tile::prelude::*;
 
 #[derive(Default)]
 struct State {
-    /// the project folder: Helix's (in the bar, zellij gives the plugin a mangled starting folder)
+    /// the project folder: the editor's (in the bar, zellij gives the plugin a mangled starting folder)
     cwd: std::path::PathBuf,
     cwd_known: bool,
     panes: panes::Panes,
     popups: popups::Popups,
-    typist: typist::Typist,
+    editor: editor::Editor,
     collapse: collapse::Collapse,
     /// what needs you: frames highlighted, the bar's alert (attention)
     attention: attention::Attention,
     status: status::Status,
     bar: bar::Bar,
     floating_visible: bool,
-    /// quitting: Helix has gone, the shells' commands are being stopped
+    /// quitting: the editor has gone, the shells' commands are being stopped
     ending: bool,
-    /// the project's Helix theme has been asked for (once both the session and Helix are known)
+    /// the project's editor theme has been asked for (once both the session and the editor are known)
     restored: bool,
-    /// another editor holds Helix's place (hidex-open-with), and the file handed to it
-    editor_open: bool,
+    /// a guest editor holds the editor's place (hidex-open-with), and the file handed to it
+    guest_open: bool,
     handed: Option<String>,
     /// messages wait here until zellij says whether this copy of the bar is the one to act (clients)
     gate: clients::Gate,
@@ -55,12 +57,18 @@ struct State {
 register_plugin!(State);
 
 impl State {
+    /// the editor in the main pane: its pane and kind
+    fn main_editor(&self) -> Option<(u32, editor::Kind)> {
+        let id = self.panes.for_role("editor")?;
+        Some((id, editor::kind(&self.panes.get(id)?.title)?))
+    }
+
     fn run(&mut self, action: Action) {
         match action {
             Action::Focus(role) => {
-                // Alt+h while another editor holds Helix's place: that editor (Helix stays hidden)
-                let editor = if role == "helix" { self.panes.for_role("editor") } else { None };
-                if let Some(id) = editor.or_else(|| self.panes.for_role(&role)) {
+                // Alt+h while a guest editor holds the editor's place: that guest (the editor stays hidden)
+                let guest = if role == "editor" { self.panes.for_role("guest") } else { None };
+                if let Some(id) = guest.or_else(|| self.panes.for_role(&role)) {
                     self.go_to(id);
                 }
             }
@@ -76,24 +84,23 @@ impl State {
                     self.collapse.toggle(id, &self.panes);
                 }
             }
-            Action::Helix(command) => {
-                // another editor holds Helix's place (hidex-open-with): Helix is hidden, and anything sent to it would
-                // bring it back elsewhere; a file to open leads to that editor instead, to quit it first
-                if let Some(editor) = self.panes.for_role("editor") {
-                    if command.starts_with("open") {
-                        self.go_to(editor);
+            Action::Editor(command) => {
+                // a guest holds the editor's place (hidex-open-with): the editor is hidden, and anything sent to it
+                // would bring it back elsewhere; a file to open leads to the guest instead, to quit it first
+                if let Some(guest) = self.panes.for_role("guest") {
+                    if matches!(command, Command::Open(_)) {
+                        self.go_to(guest);
                     }
-                } else if let Some(pane) = self.panes.for_role("helix") {
-                    let focus = command.starts_with("open");
-                    self.typist.request(typist::Job { pane, command, focus, quit: false });
+                } else if let Some((pane, kind)) = self.main_editor() {
+                    self.editor.run(kind, pane, command);
                 }
             }
             Action::Handover(file) => self.handed = Some(file),
             Action::Quit(how) => match how.as_str() {
-                "force" => self.quit_now("quit-all"),
-                "save" => self.quit_now("write-quit-all"),
+                "force" => self.quit_now(Quit::Refusing),
+                "save" => self.quit_now(Quit::Saving),
                 // Alt+Shift+q: unsaved changes dropped, running commands stopped, no question
-                "now" => self.quit_now("quit-all!"),
+                "now" => self.quit_now(Quit::Dropping),
                 // Alt+q: the "quit?" pop-up asks first (and says what still runs)
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
@@ -114,11 +121,11 @@ impl State {
         }
     }
 
-    /// the Helix theme kept for the project (hidex-helix-theme), once Helix runs
+    /// the editor theme kept for the project (hidex-editor theme), once the editor runs
     fn restore(&mut self) {
         if !self.restored && self.cwd_known {
             self.restored = true;
-            scripts::run(&["hidex-helix-theme", "restore"], None);
+            scripts::run(&["hidex-editor", "theme", "restore"], None);
         }
     }
 
@@ -130,14 +137,11 @@ impl State {
         panes::focus(id);
     }
 
-    /// Helix quits first with that command (it refuses while files are unsaved), then `end`
-    fn quit_now(&mut self, command: &str) {
-        match self.panes.for_role("helix") {
+    /// the editor quits first (refusing while files are unsaved, unless told otherwise), then `end`
+    fn quit_now(&mut self, how: Quit) {
+        match self.main_editor() {
             None => self.end(),
-            Some(pane) => {
-                let job = typist::Job { pane, command: command.into(), focus: true, quit: true };
-                self.typist.request(job);
-            }
+            Some((pane, kind)) => self.editor.quit(kind, pane, how),
         }
     }
 
@@ -156,18 +160,17 @@ impl State {
             panes::focus(id);
         }
         names::name_new(&self.panes);
-        // the other editor has quit and Helix is back: the file handed over, and only it, is reloaded from disk, so
-        // Helix shows what that editor saved (it had nothing unsaved there: it saved the file when it was left)
-        let editor_open = self.panes.for_role("editor").is_some();
-        if self.editor_open && !editor_open {
+        // the guest has quit and the editor is back: the file handed over, and only it, is reloaded from disk, so the
+        // editor shows what the guest saved (it had nothing unsaved there: it saved the file when it was left)
+        let guest_open = self.panes.for_role("guest").is_some();
+        if self.guest_open && !guest_open {
             if let Some(file) = self.handed.take() {
-                self.run(Action::Helix(format!("open \"{file}\"")));
-                self.run(Action::Helix("reload".into()));
+                self.run(Action::Editor(Command::Reload(file)));
             }
         }
-        self.editor_open = editor_open;
+        self.guest_open = guest_open;
         if !self.cwd_known {
-            if let Some(Ok(cwd)) = self.panes.for_role("helix").map(|h| get_pane_cwd(PaneId::Terminal(h))) {
+            if let Some(Ok(cwd)) = self.panes.for_role("editor").map(|h| get_pane_cwd(PaneId::Terminal(h))) {
                 self.status.set_project(&cwd);
                 self.cwd = cwd;
                 self.cwd_known = true;
@@ -175,8 +178,8 @@ impl State {
                 self.restore();
             }
         }
-        // Helix has gone after a quit request: end the session
-        if self.typist.quitting() && self.panes.for_role("helix").is_none() {
+        // the editor has gone after a quit request: end the session
+        if self.editor.quitting() && self.panes.for_role("editor").is_none() {
             self.end();
         }
         popups::close_ended(&self.panes);
@@ -187,8 +190,8 @@ impl State {
     fn on_tick(&mut self, tick: Tick) {
         match tick {
             Tick::Fold => self.collapse.on_tick(),
-            Tick::Step => self.typist.on_step(),
-            Tick::QuitWait => self.typist.on_quit_wait(),
+            Tick::Step => self.editor.on_step(),
+            Tick::QuitWait => self.editor.on_quit_wait(),
             Tick::Refresh => {
                 self.status.refresh(&self.cwd);
                 Tick::Refresh.start();
@@ -204,7 +207,7 @@ impl ZellijPlugin for State {
             PermissionType::ReadApplicationState,
             PermissionType::ChangeApplicationState,
             PermissionType::RunCommands,
-            PermissionType::WriteToStdin, // to type commands into Helix
+            PermissionType::WriteToStdin, // to type commands into the editor (Helix)
             PermissionType::ReadCliPipes, // to answer scripts' messages (hidex-msg), which zellij resends otherwise
             PermissionType::RunActionsAsUser, // zellij's own actions (copying the last command output: /copy)
         ]);
