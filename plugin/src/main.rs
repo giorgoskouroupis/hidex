@@ -2,6 +2,7 @@
 //! bar clicks and scripts (hidex-msg) ask, all as `Action`s. Each part is its own module:
 //!   panes     the panes and their roles (tree, Helix, terminals, side), jumping, new terminals
 //!   names     the terminals' names: what runs in each, with its number
+//!   attention what needs you (zellij's attention event): those frames highlighted, the bar names the first
 //!   popups    lazygit, yazi, the command palette: toggled per key, tiled side by side
 //!   typist    commands typed into Helix safely (opening files, reloading, quitting)
 //!   collapse  folding a tiled pane to a strip and back
@@ -9,6 +10,7 @@
 //!   scripts   the scripts it runs, and their answers; timers  telling zellij's timers apart
 //!   clients   the windows attached: only the bar of a connected window acts on a message
 mod actions;
+mod attention;
 mod bar;
 mod clients;
 mod collapse;
@@ -34,6 +36,8 @@ struct State {
     popups: popups::Popups,
     typist: typist::Typist,
     collapse: collapse::Collapse,
+    /// what needs you: frames highlighted, the bar's alert (attention)
+    attention: attention::Attention,
     status: status::Status,
     bar: bar::Bar,
     floating_visible: bool,
@@ -191,7 +195,7 @@ impl ZellijPlugin for State {
             EventType::Mouse,
             EventType::ListClients,
             EventType::CommandChanged,
-            EventType::HostTerminalThemeChanged,
+            EventType::GlobalAttentionUpdate,
         ]);
         // the bar is not a pane to move to
         set_selectable(false);
@@ -220,8 +224,12 @@ impl ZellijPlugin for State {
                 _ => {}
             },
             Event::CommandChanged(PaneId::Terminal(id), ..) => names::on_command(&self.panes, id),
-            // the terminal switched dark/light: the frames' colour follows (hidex-config)
-            Event::HostTerminalThemeChanged(_) => scripts::run(&["hidex-config"], None),
+            // what needs you changed: frames, and the bar's alert
+            Event::GlobalAttentionUpdate(global) => {
+                let changed = self.attention.update(&global);
+                self.status.alert = self.attention.alert.clone();
+                return changed;
+            }
             Event::ListClients(clients) => {
                 let (actions, own) = self.gate.release(&clients);
                 if let Some(id) = own {

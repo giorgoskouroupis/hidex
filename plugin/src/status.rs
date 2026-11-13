@@ -12,6 +12,8 @@ pub struct Status {
     pub theme: String,
     /// "sandbox: partial" or "no sandbox" when this machine's sandbox is incomplete (hidex-sandbox --gaps)
     pub sandbox: String,
+    /// the first pane that needs you ("claude 1 needs you") and its colour (attention)
+    pub alert: Option<(String, u8)>,
 }
 
 impl Status {

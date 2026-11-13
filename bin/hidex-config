@@ -1,16 +1,10 @@
 #!/bin/sh
 # hidex-config [STATE]: writes the session's zellij config (STATE/config/config.kdl; default: this session's) from
-# hIDEx's, filled in: the plugin's path through the session's "current" link (so keys keep reaching the bar after
-# /update), and the unfocused frames' colour, just off the window's background (hidex-bg); when that is unknown
-# (the bar, after the terminal switched dark/light), the terminal's own grey, which follows the switch by itself.
-# zellij re-reads the file when it changes: /theme and a dark/light switch write it again.
+# hIDEx's, with the plugin's path filled in: the one through the session's "current" link, so keys keep reaching
+# the bar after /update. zellij re-reads the file when it changes.
 [ -n "${1:-}" ] || set -- "$(hidex-state)"
 share=$1/current/share/hidex
 # no session (a script run on its own): nothing to write
 [ -f "$share/config.kdl" ] || exit 0
-frame=$(hidex-bg </dev/null 2>/dev/null | awk -f "$share/brightness.awk" -e 'NF == 2 { print faint($1, $2) }')
-# a colour is quoted ("#42424f"), the terminal's grey a bare palette index
-frame=${frame:+"\"$frame\""}
 mkdir -p "$1/config"
-# (the file itself stays valid as it is: zellij reads it unfilled when attaching from outside a session)
-sed "s|@plugin@|$share/hidex-panes.wasm|g; /frame_unselected/ s|base 8;|base ${frame:-8};|" "$share/config.kdl" > "$1/config/config.kdl"
+sed "s|@plugin@|$share/hidex-panes.wasm|g" "$share/config.kdl" > "$1/config/config.kdl"

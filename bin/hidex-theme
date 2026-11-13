@@ -68,9 +68,5 @@ case $1 in
   # kept for the session, and for the project's next sessions (HIDEX_PROJECT)
   *) paint "$1" && echo "$1" > "$s/theme" && { [ -z "$HIDEX_PROJECT" ] || echo "$1" > "$HIDEX_PROJECT/theme"; } ;;
 esac
-# a new background (not apply: the same theme again): the frames' colour follows (hidex-config), and the bar
-case $1 in
-  preview|off) ;;
-  apply) hidex-msg status >/dev/null 2>&1 ;;
-  *) hidex-config "$s"; hidex-msg status >/dev/null 2>&1 ;;
-esac
+# the bar shows the new theme
+case $1 in preview|off) ;; *) hidex-msg status >/dev/null 2>&1 ;; esac

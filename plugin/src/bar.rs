@@ -47,6 +47,11 @@ fn left(status: &Status) -> Vec<Piece> {
             out.push((format!("{DIM}  ·  {RESET}{}", fg(color, &text)), 5 + text.chars().count()));
         }
     }
+    // what needs you, bold in its colour (attention)
+    if let Some((text, color)) = &status.alert {
+        let text = format!("● {text}");
+        out.push((format!("{DIM}  ·  {RESET}\u{1b}[1m{}", fg(*color, &text)), 5 + text.chars().count()));
+    }
     out
 }
 
