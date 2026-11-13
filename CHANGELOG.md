@@ -7,6 +7,8 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-11-13
+
 hIDEx is now **tIDEx**, not bound to one editor: the command `tidex`, its folders `~/.local/share/tidex`,
 `~/.local/state/tidex`, `~/.cache/tidex`, its variables `TIDEX_*` and the repository
 `giorgoskouroupis/tidex` (GitHub sends the old address there). Remove hIDEx first (`hidex --uninstall`), then
@@ -189,7 +191,8 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `nil`, the Nix language server (it publishes no ready-made Linux build).
 - The command line in the bar (`Alt+Shift+p`), replaced by the palette.
 
-[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.4...v0.3.0
 [v0.2.4]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.1...v0.2.2
