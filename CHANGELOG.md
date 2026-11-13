@@ -7,6 +7,21 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.2.4] - 2026-11-13
+
+### Added
+- Open with another editor: `F2` on a file in a tree picks Helix, micro (now among hIDEx's tools) or nano
+  (when the system has it). Another editor than Helix opens in Helix's place, sandboxed the same, and Helix is
+  back when it quits (zellij's open in place). One editor at a time: while another holds Helix's place,
+  opening a file opens nothing and says how to hand over (save and quit it); nothing is closed for you.
+- The palette (`Alt+p`) lists the commands by group, with their keys; typing narrows as before.
+- A welcome pop-up at the first start, once: above all, that Helix saves by itself when you leave it (it
+  keeps one version of each file between Helix and the other editors); the same note in `Alt+k`, in the `F2`
+  pop-up and at the top of the README.
+- `/frames`: the colours of the pane frames, the focused one and the others, from the terminal's 16 (previewed
+  as you move) or `#rrggbb`; yours in every project, taken at once by every running session; `/frames reset`
+  for yellow and grey.
+
 ## [v0.2.3] - 2026-11-13
 
 ### Added
@@ -148,7 +163,8 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `nil`, the Nix language server (it publishes no ready-made Linux build).
 - The command line in the bar (`Alt+Shift+p`), replaced by the palette.
 
-[Unreleased]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.4...HEAD
+[v0.2.4]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.0...v0.2.1

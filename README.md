@@ -7,6 +7,11 @@ pinned version (`tools.lock`), in its own folder: nothing else on the machine is
 
 A fun personal project, vibe coded with Claude: shaped around one person's daily work, shared as is.
 
+> **Helix saves by itself when you leave it** (another pane, `F2`, a pop-up): nothing stays behind as an
+> unsaved draft. `u` still undoes, and git shows what changed. It keeps one version of each file between Helix
+> and the other editors (`F2`): Helix offers no way to ask it what is unsaved, so saving on leaving is how
+> hIDEx stays safe. The first start says so in a pop-up.
+
 Install (Linux x86_64, any distribution, no root), and the same again to update:
 
 ```sh
@@ -68,6 +73,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+q` | quit hIDEx, after asking (lists running commands; Helix refuses while files are unsaved) |
 | `Alt+Shift+q` | quit at once: unsaved changes dropped, running commands stopped |
 | `Enter` on a file in a tree or yazi | Helix; logs and files over 10 MB in lnav (`q` closes) |
+| `F2` on a file in a tree | open with: Helix, micro, or nano when the system has it; another editor than Helix opens in Helix's place (sandboxed the same), and Helix is back when it quits. One at a time: while it holds that place, opening a file opens nothing and says how to hand over (save and quit it); nothing is closed for you |
 | `Enter` on a folder in a tree | into it; on the top line, up one level, never above the tree's own folder |
 
 zellij stays locked, so every other key reaches the program in the pane; `Ctrl+g` unlocks its own modes.
@@ -78,7 +84,9 @@ has buttons for the same actions as the keys (git, yazi, +term, +side, fold, cmd
 text: no icon font needed.
 
 **`/` commands**, typed or picked in the palette (`Alt+p`, `cmds` on the bar), one line each in the table
-of `bin/hidex-cmd` and one small function; those that need a list or a result open in a pop-up:
+of `bin/hidex-cmd` and one small function. With nothing typed, the palette lists them by group (look, project,
+Helix, open, panes, hIDEx), with the key of those that have one; typing narrows to what fits, keys included.
+Those that need a list or a result open in a pop-up:
 
 - `/theme`: recolours the whole window live, with any of the ~900 [iTerm2-Color-Schemes] (favourites first,
   then dark and light ones; each is previewed as you move, `Esc` goes back), kept for the project's next sessions;
@@ -87,6 +95,10 @@ of `bin/hidex-cmd` and one small function; those that need a list or a result op
   terminal must accept colour-setting sequences (alacritty, foot, kitty, wezterm do). Fonts stay the terminal's.
 - `/helix-theme`: one of Helix's own themes, for Helix only, previewed in Helix as you move, kept for the
   project; `/helix-theme terminal` (or `hidex`) follows `/theme` again.
+- `/frames`: the colours of the pane frames, the focused one and the others, picked from the terminal's 16
+  (previewed as you move) or given as `/frames focused 4`, `/frames unfocused #ff8800`; yours in every project,
+  and every running session takes them at once. `/frames reset`: yellow and grey again. The red frame of a pane
+  that needs you stays.
 - `/langs`: the project's languages, most files first, with their language servers (found or missing). hIDEx
   brings servers for Python and the files most projects have (shell, Markdown, TOML, YAML, JSON, HTML,
   CSS, JavaScript/TypeScript, Dockerfile); others (rust-analyzer, gopls, …) are used when on the PATH, e.g.
