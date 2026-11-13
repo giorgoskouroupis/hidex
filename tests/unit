@@ -104,6 +104,10 @@ check "a #rrggbb colour for the others, quoted" 'hidex-frames unfocused "#ff8800
 check "anything else refused, nothing changed" '! hidex-frames focused 99 2>/dev/null && framed frame_selected 4'
 check "reset: the defaults again (focused 3, others 8)" 'hidex-frames reset && framed frame_selected 3 && framed frame_unselected 8'
 
+echo "editor"
+check "the editor by default: Helix, through its adapter" '[ "$(hidex-editor title)" = Helix ]'
+check "an editor without an adapter is refused" '! HIDEX_EDITOR=nothing hidex-editor title 2>/dev/null'
+
 echo "update check"
 # a fake GitHub: v0.2.1 is out, with its changes and a newer zellij; its install.sh only says it ran
 u=$T/upd; mkdir -p "$u/fake" "$u/home"; printf 'v0.2.0\n' > "$u/home/VERSION"; printf 'zellij\t0.46.0\n' > "$u/home/tools.lock"

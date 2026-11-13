@@ -189,7 +189,7 @@ check "a window theme is kept for the project" 'grep -qx Dracula "$XDG_STATE_HOM
 mkdir -p "$T/venv/bin" && printf '#!/bin/sh\n' > "$T/venv/bin/python" && chmod +x "$T/venv/bin/python"
 in_session "$out/bin/hidex-python" set "$T/venv"
 check "a Python picked is kept for the project" 'grep -qx "$T/venv" "$XDG_STATE_HOME"/hidex/projects/*/python'
-in_session "$out/bin/hidex-helix-theme" dracula
+in_session "$out/bin/hidex-editor" theme dracula
 check "a Helix theme is kept for the project" 'grep -qx dracula "$XDG_STATE_HOME"/hidex/projects/*/helix-theme'
 
 echo "update"
@@ -233,14 +233,14 @@ start
 check "an ended session is replaced, not revived" 'has Helix && ! screen Helix | grep -q "Waiting to run"'
 check "the project's Python comes back" 'grep -qx "$T/venv" "$XDG_RUNTIME_DIR/hidex/$S/python"'
 check "the project's window theme comes back" 'grep -qx Dracula "$XDG_RUNTIME_DIR/hidex/$S/theme"'
-msg helix theme
+msg editor theme
 check "the project's Helix theme comes back" 'wait_for "screen Helix | grep -q dracula"'
 stop
 
 echo "Helix's sandbox"
 mkdir -p "$T/home/.ssh" "$T/home/notes" && touch "$T/home/.ssh/id_test" "$T/home/notes/a"
-check "hides ~/.ssh from Helix (empty, or refused)" 'seen=$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home HIDEX_HELIX=ls "$out/bin/hidex-helix" -A "$T/home/.ssh" 2>/dev/null); [ -z "$seen" ]'
-check "but not the rest" '[ "$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home HIDEX_HELIX=ls "$out/bin/hidex-helix" "$T/home/notes")" = a ]'
+check "hides ~/.ssh from Helix (empty, or refused)" 'seen=$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home HIDEX_EDITOR_RUN=ls "$out/bin/hidex-editor" run -A "$T/home/.ssh" 2>/dev/null); [ -z "$seen" ]'
+check "but not the rest" '[ "$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home HIDEX_EDITOR_RUN=ls "$out/bin/hidex-editor" run "$T/home/notes")" = a ]'
 
 echo "guard"
 check "refuses /" '! "$out/bin/hidex-guard" / 2>/dev/null'
