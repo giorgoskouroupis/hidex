@@ -6,5 +6,6 @@ set -euo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
 archive=${1:-$("$repo/scripts/release" test)}
 prefix=$repo/dist/test-install
-TIDEX_ARCHIVE=$archive TIDEX_PREFIX=$prefix TIDEX_CACHE=$repo/dist/cache sh "$repo/install.sh" >&2
+# (never a PATH line in your shell's files for a test install)
+TIDEX_ARCHIVE=$archive TIDEX_PREFIX=$prefix TIDEX_CACHE=$repo/dist/cache TIDEX_NO_MODIFY_PATH=1 sh "$repo/install.sh" >&2
 readlink -f "$prefix/bin/tidex" | sed 's|/bin/tidex$||'
