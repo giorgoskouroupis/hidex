@@ -4,6 +4,8 @@
 # install.sh fetches each tool from its official download into ~/.local/share/hidex/tools/NAME-VERSION, once.
 zellij	0.46.0	a8ee599eb357b6142443c91506a4ece3aa8811cb75dcf2b28d194bd66853c79d	https://github.com/zellij-org/zellij/releases/download/v0.46.0/zellij-x86_64-unknown-linux-musl.tar.gz	zellij
 helix	25.07.1	3f08e63ecd388fff657ad39722f88bb03dcf326f1f2da2700d99e1dc40ab2e8b	https://github.com/helix-editor/helix/releases/download/25.07.1/helix-25.07.1-x86_64-linux.tar.xz	dir
+# micro: a second editor, for "open with" in the trees (F2)
+micro	2.0.15	267d238eac1e26ed053d13d4d48bd421b87f9eb538b604f0b2f74a85598b6cc2	https://github.com/micro-editor/micro/releases/download/v2.0.15/micro-2.0.15-linux64-static.tar.gz	micro
 yazi	26.9.1	9b9c39decccf8cb0ff53a7d637d38f8a79d93bbd0099f4ea9c619ef6bb392f5d	https://github.com/sxyazi/yazi/releases/download/v26.9.1/yazi-x86_64-unknown-linux-musl.zip	yazi,ya
 # lazygit stays at 0.65: 0.66 takes ~700 ms instead of ~100 ms to start inside zellij
 lazygit	0.65.1	02beacbcda0fa342e50ae3480ba8147307353af3fb28e1d5f790e02329c201a6	https://github.com/jesseduffield/lazygit/releases/download/v0.65.1/lazygit_0.65.1_linux_x86_64.tar.gz	lazygit

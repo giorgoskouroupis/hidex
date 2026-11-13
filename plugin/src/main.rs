@@ -55,7 +55,9 @@ impl State {
     fn run(&mut self, action: Action) {
         match action {
             Action::Focus(role) => {
-                if let Some(id) = self.panes.for_role(&role) {
+                // Alt+h while another editor holds Helix's place: that editor (Helix stays hidden)
+                let editor = if role == "helix" { self.panes.for_role("editor") } else { None };
+                if let Some(id) = editor.or_else(|| self.panes.for_role(&role)) {
                     self.go_to(id);
                 }
             }
@@ -72,7 +74,13 @@ impl State {
                 }
             }
             Action::Helix(command) => {
-                if let Some(pane) = self.panes.for_role("helix") {
+                // another editor holds Helix's place (hidex-open-with): Helix is hidden, and anything sent to it would
+                // bring it back elsewhere; a file to open leads to that editor instead, to quit it first
+                if let Some(editor) = self.panes.for_role("editor") {
+                    if command.starts_with("open") {
+                        self.go_to(editor);
+                    }
+                } else if let Some(pane) = self.panes.for_role("helix") {
                     let focus = command.starts_with("open");
                     self.typist.request(typist::Job { pane, command, focus, quit: false });
                 }

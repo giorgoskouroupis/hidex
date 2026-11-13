@@ -1,10 +1,13 @@
-//! The panes of the hIDEx tab and their roles, which come from the pane names: "tree: <folder>", "Helix", a side
-//! terminal's name (it ends with the side mark, names::SIDE; "side N" in the layout); any other tiled terminal is
-//! part of the terminals area. Terminals and side terminals are named "<program> <n>" (names).
+//! The panes of the hIDEx tab and their roles, which come from the pane names: "tree: <folder>", "Helix", "edit: …"
+//! (another editor in Helix's place), a side terminal's name (it ends with the side mark, names::SIDE; "side N" in
+//! the layout); any other tiled terminal is part of the terminals area. Terminals and side terminals are named "<program> <n>" (names).
 use crate::names::{self, SIDE};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use zellij_tile::prelude::*;
+
+/// how hidex-open-with names an editor it opens in Helix's place: "edit: a.py (micro)"
+const EDIT: &str = "edit: ";
 
 #[derive(Default)]
 pub struct Panes {
@@ -26,6 +29,9 @@ pub fn role(p: &PaneInfo) -> Option<&'static str> {
         "tree"
     } else if p.title == "Helix" {
         "helix"
+    } else if p.title.starts_with(EDIT) {
+        // another editor in Helix's place (hidex-open-with): never renamed, typed into, nor stacked with
+        "editor"
     } else if p.title.ends_with(SIDE) || p.title.starts_with("side") {
         "side"
     } else {
@@ -218,6 +224,7 @@ pub mod tests {
     fn roles_come_from_titles() {
         assert_eq!(role(&pane(1, "tree: proj", false)), Some("tree"));
         assert_eq!(role(&pane(1, "Helix", false)), Some("helix"));
+        assert_eq!(role(&pane(1, "edit: a.py (micro)", false)), Some("editor"));
         assert_eq!(role(&pane(1, "side 2", false)), Some("side"));
         // what runs in it names a pane; the side mark keeps a side terminal a side terminal
         assert_eq!(role(&pane(1, &names::name("zsh", 2, true), false)), Some("side"));

@@ -1,0 +1,41 @@
+#!/bin/sh
+# hidex-open-with FILE: F2 on a file in a tree, in a pop-up: pick the editor (Helix, micro, nano when the
+# system has it). Helix: as Enter does. Another: in Helix's place (zellij's open in place, sandboxed like Helix),
+# and Helix is back when it quits. One editor holds that place at a time: while one does, opening anything
+# (here, Enter in a tree or yazi: hidex-open --held) says how to hand over (save and quit it), and goes back to it.
+
+# the editor holding Helix's place, as "PANE_ID<TAB>TITLE" ("edit: a.py (micro)"), if any
+held() {
+  zellij action list-panes 2>/dev/null | awk -F'  +' '$2 == "terminal" && $3 ~ /^edit: / { print $1 "\t" $3; exit }'
+}
+# say who holds the place and how to hand it over (its own save and quit keys), then back to it
+handover() {
+  title=${1#*	} id=${1%%	*} file=${title#edit: } file=${file% (*} editor=${title##*(} editor=${editor%)}
+  case $editor in
+    micro) keys='Ctrl+s saves, Ctrl+q quits' ;;
+    nano) keys='Ctrl+o saves, Ctrl+x quits' ;;
+    *) keys='save, then quit it' ;;
+  esac
+  printf '%s is open in %s, in Helix'"'"'s place.\n\nTo open files again, save and quit %s first (%s);\nHelix comes back. Nothing is closed for you.\n\npress a key: back to %s' \
+    "$file" "$editor" "$editor" "$keys" "$editor"
+  stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1
+  zellij action focus-pane-id "$id"
+}
+
+hidex-popup-colors
+h=$(held)
+if [ -n "$h" ]; then handover "$h"; exit 0; fi
+[ "$1" = --held ] && exit 0
+f=$(realpath -- "$1") || exit 1
+hidex-guard "$f" || { sleep 2; exit 1; }
+editors=$(printf 'helix\nmicro\n'; command -v nano >/dev/null && echo nano)
+note='Helix saved its changes when you left it: another editor opens the file as saved.'
+pick=$(printf '%s\n' "$editors" | hidex-fzf --prompt 'open with ' --header "${f##*/} · Enter opens · Esc closes
+$note") ||
+  exit 0
+[ "$pick" = helix ] && exec hidex-open "$f"
+# Helix's pane, to take its place (none: a new pane where there is room); then the focus on it
+helix=$(zellij action list-panes 2>/dev/null | awk -F'  +' '$2 == "terminal" && $3 == "Helix" { print $1; exit }')
+id=$(zellij action new-pane ${helix:+--in-place --pane-id "$helix"} --close-on-exit --name "edit: ${f##*/} ($pick)" \
+  --cwd "${f%/*}" -- hidex-sandbox machine -- "$pick" "$f")
+[ -n "$id" ] && zellij action focus-pane-id "$id"

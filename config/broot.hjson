@@ -3,6 +3,9 @@
 {
     verbs: [
         { invocation: "open", key: "enter", apply_to: "file", external: "hidex-open {file}", leave_broot: false }
+        // F2: pick the editor first (hidex-open-with: Helix, micro, nano); Ctrl and Alt keys do not reach broot's
+        // verbs through zellij, a function key does
+        { invocation: "open_with", key: "F2", apply_to: "file", external: "hidex-open --with {file}", leave_broot: false }
         // Enter on a folder goes into it; on the top line it goes up, but not above the tree's own folder
         // (hidex-tree-enter); broot's parent commands do nothing
         { key: "enter", apply_to: "directory", external: "hidex-tree-enter {directory}", leave_broot: false }
