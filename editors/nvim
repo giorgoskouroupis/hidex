@@ -1,6 +1,6 @@
 #!/bin/sh
-# Neovim's adapter (hidex-editor): run | do VERB … | themes | health LANG | servers LANG | title. Neovim answers
-# other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
+# Neovim's adapter (hidex-editor): run | do VERB … | themes | health LANG | servers LANG | notes | title.
+# Neovim answers other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
 share=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 sock() { echo "$(hidex-state)/nvim.sock"; }
 # (a headless, clean client: no screen codes around its answers, and none of your own config)
@@ -45,6 +45,9 @@ case $1 in
       sed -n 's/\.\(vim\|lua\)$//p' | grep -vx default | sort -u ;;
   # a language's servers, from config/nvim/lua/hidex/servers.lua: "✓ found ✘ missing", or "none"
   servers | health) nvim -l "$share/nvim/langs.lua" "$2" ;;
+  # what nobody would guess about it (the welcome pop-up, Alt+k)
+  notes) echo "Files changed on disk (Claude, git) come back by themselves; changed here too, Neovim asks which to keep (W12)"
+    echo "Space: Helix's menu (files, search, symbols, diagnostics), shown as you type; Space ? lists every key" ;;
   title) echo Neovim ;;
-  *) echo "usage: nvim run | do VERB … | themes | health LANG | servers LANG | title" >&2; exit 1 ;;
+  *) echo "usage: nvim run | do VERB … | themes | health LANG | servers LANG | notes | title" >&2; exit 1 ;;
 esac

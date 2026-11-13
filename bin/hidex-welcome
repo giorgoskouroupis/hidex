@@ -1,21 +1,18 @@
 #!/bin/sh
 # hidex-welcome: the first start's pop-up, shown once (then ~/.local/state/hidex/welcomed): what nobody would
-# guess, above all that Helix saves by itself when you leave it.
+# guess, above all about the editor (its adapter's notes: Helix saving when left, Neovim reloading…).
 hidex-popup-colors
 mark=${XDG_STATE_HOME:-$HOME/.local/state}/hidex/welcomed
 mkdir -p "${mark%/*}" && touch "$mark"
-cat <<'EOF'
-
-  Welcome to hIDEx
-
-  ! Helix saves by itself when you leave it (another pane, F2, a pop-up):
-    nothing stays as an unsaved draft. u still undoes, and git shows what changed.
+printf '\n  Welcome to hIDEx, with %s as the editor (/editor picks another)\n\n' "$(hidex-editor title)"
+hidex-editor notes | sed 's/^/  ! /'
+cat <<'EOF2'
 
   Alt+k   every key, by group
   Alt+p   the / commands
-  F2      on a file in a tree: open it with another editor (micro, nano)
+  F2      on a file in a tree: open it with another editor (Helix or Neovim, micro, nano)
   Alt+q   quit
 
   press a key
-EOF
+EOF2
 stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1

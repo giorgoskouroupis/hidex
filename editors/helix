@@ -1,7 +1,7 @@
 #!/bin/sh
-# Helix's adapter (hidex-editor): run | themes | health LANG | servers LANG | title. Helix has no interface for
-# other programs: the bar types its commands into it (plugin/src/typist.rs), and it saves when left (its config:
-# auto-save), the only way to hand files over safely.
+# Helix's adapter (hidex-editor): run | themes | health LANG | servers LANG | notes | title. Helix has no
+# interface for other programs: the bar types its commands into it (plugin/src/typist.rs), and it saves when left
+# (its config: auto-save), the only way to hand files over safely.
 case $1 in
   # Helix, sandboxed so it cannot open the secrets folders (hidex-sandbox machine), nor anything it starts
   # (language servers, :sh). HIDEX_EDITOR_RUN: another program to run there instead (the tests).
@@ -18,6 +18,8 @@ case $1 in
     hx --health "$2" 2>/dev/null | awk '/^Configured language servers/ { on = 1; next } on && /^[^ ]/ { exit }
       on && /✓|✘/ { s = $0; sub(/^ *[^ ]* */, "", s); sub(/:.*/, "", s); printf "%s %s  ", ($0 ~ /✓/ ? "✓" : "✘"), s }
       on && /None/ { printf "none" }' ;;
+  # what nobody would guess about it (the welcome pop-up, Alt+k)
+  notes) echo "Helix saves by itself when you leave it (another pane, F2, a pop-up): nothing stays as an unsaved draft; u still undoes" ;;
   title) echo Helix ;;
-  *) echo "usage: helix run | themes | health LANG | servers LANG | title" >&2; exit 1 ;;
+  *) echo "usage: helix run | themes | health LANG | servers LANG | notes | title" >&2; exit 1 ;;
 esac

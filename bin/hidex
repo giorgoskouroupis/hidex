@@ -81,6 +81,9 @@ PATH=$(swap "$PATH") PYTHONPATH=$(swap "$PYTHONPATH") LG_CONFIG_FILE=$(swap "$LG
 YAZI_CONFIG_HOME=$(swap "$YAZI_CONFIG_HOME") HIDEX_SHARE=$c/share/hidex HIDEX_PLUGIN=$c/share/hidex/hidex-panes.wasm
 ZELLIJ_CONFIG_DIR=$s/config
 export PATH PYTHONPATH LG_CONFIG_FILE YAZI_CONFIG_HOME HIDEX_SHARE HIDEX_PLUGIN ZELLIJ_CONFIG_DIR
+# the session's editor, fixed at its start (HIDEX_EDITOR, else the one chosen with /editor, else Neovim)
+HIDEX_EDITOR=$(hidex-editor name) || exit 1
+export HIDEX_EDITOR
 hidex-config "$s"
 hidex-zellij-setup
 

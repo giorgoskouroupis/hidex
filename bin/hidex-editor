@@ -1,11 +1,31 @@
 #!/bin/sh
-# hidex-editor run [ARGS] | do VERB … | theme [pick | NAME | restore | list] | health LANG | servers LANG | title: the
-# editor in the main pane, whichever it is (HIDEX_EDITOR, default helix), through its adapter
-# (share/hidex/editors/NAME). The bar drives the running editor (hidex-msg editor VERB: plugin/src/editor.rs);
-# the rest of hIDEx asks here.
-e=${HIDEX_EDITOR:-helix}
-adapter=${HIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/hidex}/editors/$e
+# hidex-editor run [ARGS] | do VERB … | theme [pick | NAME | restore | list] | health LANG | servers LANG | notes |
+# title | name | choose [pick | NAME | list]: the editor in the main pane, whichever it is, through its adapter
+# (share/hidex/editors/NAME). Which: HIDEX_EDITOR (the session's, set at its start), else the one you chose
+# (/editor, kept in ~/.local/state/hidex/editor), else Neovim. The bar drives the running editor (hidex-msg
+# editor VERB: plugin/src/editor.rs); the rest of hIDEx asks here.
+adapters=${HIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/hidex}/editors
+chosen=${XDG_STATE_HOME:-$HOME/.local/state}/hidex/editor
+e=${HIDEX_EDITOR:-$(cat "$chosen" 2>/dev/null)}
+e=${e:-nvim}
+adapter=$adapters/$e
 [ -x "$adapter" ] || { echo "hIDEx: no editor $e" >&2; exit 1; }
+
+# choose: the main editor for the next starts, yours in every project (the running session keeps its own)
+choose() {
+  case ${1:-pick} in
+    list) ls "$adapters" ;;
+    pick)
+      n=$(for a in $(ls "$adapters"); do printf '%s\t%s\n' "$a" "$("$adapters/$a" title)"; done |
+        hidex-fzf --delimiter '\t' --with-nth 2 --prompt 'editor > ' \
+          --header "now: $("$adapter" title). The next start opens the one picked; Esc keeps it" | cut -f1) || exit 0
+      choose "$n" ;;
+    *)
+      [ -x "$adapters/$1" ] || { echo "hIDEx: no editor $1 (there are: $(ls "$adapters" | tr '\n' ' '))" >&2; exit 1; }
+      mkdir -p "${chosen%/*}" && echo "$1" > "$chosen"
+      echo "$("$adapters/$1" title): the editor from the next start on" ;;
+  esac
+}
 
 # theme: one of the editor's own, remembered for the project (HIDEX_PROJECT); the first it lists is hIDEx's own,
 # in the window's colours. pick: previewed as you move, Enter keeps, Esc goes back. restore: the project's, once
@@ -36,6 +56,8 @@ theme() {
 
 case $1 in
   theme) shift; theme "$@" ;;
-  run | do | health | servers | title) exec "$adapter" "$@" ;;
-  *) echo "usage: hidex-editor run [ARGS] | theme [pick | NAME | restore | list] | health LANG | servers LANG | title" >&2; exit 1 ;;
+  choose) shift; choose "$@" ;;
+  name) echo "$e" ;;
+  run | do | health | servers | notes | title) exec "$adapter" "$@" ;;
+  *) echo "usage: hidex-editor run | do | theme | health | servers | notes | title | name | choose" >&2; exit 1 ;;
 esac

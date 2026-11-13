@@ -10,6 +10,7 @@ frames	look		the frame colours, focused and the others, yours in every project, 
 langs	project		the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
 reload	editor		reload every file open in the editor from disk
 lsp	editor		restart the editor'"'"'s language servers
+editor	editor		the main editor, Neovim or Helix, yours in every project, from the next start ("editor helix")
 git	open	Alt+g	lazygit, read-only
 git-write	open	Alt+Shift+g	lazygit that can stage, commit, push
 yazi	open	Alt+y	yazi, the file manager
@@ -22,9 +23,10 @@ about	hIDEx		this hIDEx: its version, where it is installed, its tools, the sand
 update	hIDEx		move this session to the newest hIDEx installed (after install.sh), keeping terminals and buffers
 quit	hIDEx	Alt+q	quit hIDEx (asks first; Helix refuses while files are unsaved)'
 
-# hIDEx's keys (Alt+k, and found by the palette as you type): group, keys, what they do
+# hIDEx's keys (Alt+k, and found by the palette as you type): group, keys, what they do; the editor's notes
+# (its adapter's) come after them
 KEYS='move	Alt+arrows	move between panes, and through a stack
-move	Alt+e / h / t / c	the explorer / Helix / the terminals / the side terminal
+move	Alt+e / h / t / c	the explorer / the editor / the terminals / the side terminal
 move	Alt+1…9	terminal, side terminal or tree N, of the kind you are on
 move	Alt+\	back to the pane you were in
 attention	Alt+j	the next pane that needs you (Claude asking, a command failed or done)
@@ -42,16 +44,16 @@ pop-ups	Alt+k	these keys
 pop-ups	Alt+g / Alt+Shift+g	lazygit read-only / that can commit and push
 pop-ups	Alt+y	yazi
 pop-ups	Alt+w	show / hide the pop-ups
-Helix	auto-save	Helix saves by itself when you leave it (another pane, F2, a pop-up); u still undoes
-trees	Enter	a file: Helix (logs and big files: lnav); a folder: into it
-trees	F2	a file: open with Helix, micro or nano, in Helix'"'"'s place
+trees	Enter	a file: the editor (logs and big files: lnav); a folder: into it
+trees	F2	a file: open with another editor (Helix or Neovim, micro, nano), in the editor'"'"'s place
 quit	Alt+q	quit, asking first
 quit	Alt+Shift+q	quit at once: unsaved changes dropped'
 
 # the keys as list lines: keys, then group and what (dimmed), then "key" (not a command); --groups: a header
 # line before each group
 keys_lines() {
-  printf '%s\n' "$KEYS" | awk -F'\t' -v groups="$1" '
+  { printf '%s\n' "$KEYS"; hidex-editor notes 2>/dev/null | sed "s/^/editor\t$(hidex-editor title 2>/dev/null)\t/"; } |
+    awk -F'\t' -v groups="$1" '
     groups && $1 != g { g = $1; print "\033[1m" g "\033[0m\t\tkey" }
     { printf "%s\t\033[2m%s\033[0m\tkey\n", (groups ? "  " : "") $2, (groups ? "" : $1 " · ") $3 }'
 }
@@ -60,6 +62,8 @@ cmd_theme() { if [ -n "$1" ]; then hidex-theme "$*"; else hidex-theme pick; fi; 
 args_theme() { echo reset; hidex-theme list; }
 cmd_editor_theme() { hidex-editor theme "${1:-pick}"; }
 args_editor_theme() { hidex-editor theme list; }
+cmd_editor() { hidex-editor choose "${1:-pick}"; [ -n "$1" ] && { printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }; }
+args_editor() { hidex-editor choose list; }
 cmd_frames() { [ $# -gt 0 ] || set -- pick; hidex-frames "$@"; }
 args_frames() { printf "reset\nfocused\nunfocused\n"; }
 cmd_langs() { hidex-langs "$@"; }
