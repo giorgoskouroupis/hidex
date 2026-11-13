@@ -14,6 +14,8 @@ pub struct Status {
     pub sandbox: String,
     /// the first pane that needs you ("claude 1 needs you") and its colour (attention)
     pub alert: Option<(String, u8)>,
+    /// a short note from a script (tidex-msg note): what goes on ("switching editor: …") or what just happened
+    pub note: Note,
 }
 
 impl Status {
@@ -37,7 +39,38 @@ impl Status {
         }
         changed
     }
+}
 
+/// a note on the bar and how long it stays: one ending in "…" while it goes on (two minutes at most), another a
+/// few seconds; counted in the bar's refreshes (every 2 s)
+#[derive(Default)]
+pub struct Note {
+    text: String,
+    ticks: u32,
+}
+
+impl Note {
+    /// "-" clears it
+    pub fn set(&mut self, text: &str) {
+        self.text = if text == "-" { String::new() } else { text.to_string() };
+        self.ticks = if self.text.ends_with('…') { 60 } else { 3 };
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// a refresh: one tick older. Says whether it went (the bar is drawn again)
+    pub fn age(&mut self) -> bool {
+        if self.text.is_empty() {
+            return false;
+        }
+        self.ticks = self.ticks.saturating_sub(1);
+        if self.ticks == 0 {
+            self.text.clear();
+        }
+        self.text.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -53,5 +86,21 @@ mod tests {
         assert!(s.read(b"dev\t\t\tsandbox: partial\n"));
         assert_eq!(s.sandbox, "sandbox: partial");
         assert_eq!(s.python, "");
+    }
+
+    #[test]
+    fn a_note_stays_a_few_refreshes_one_going_on_until_the_next() {
+        let mut n = Note::default();
+        n.set("editor: Helix");
+        assert!(!n.age() && !n.age());
+        assert!(n.age() && n.text().is_empty());
+        n.set("switching editor: Neovim → Helix…");
+        for _ in 0..10 {
+            assert!(!n.age());
+        }
+        n.set("Neovim kept");
+        assert_eq!(n.text(), "Neovim kept");
+        n.set("-");
+        assert!(n.text().is_empty() && !n.age());
     }
 }

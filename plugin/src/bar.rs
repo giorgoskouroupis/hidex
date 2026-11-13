@@ -52,6 +52,11 @@ fn left(status: &Status) -> Vec<Piece> {
         let text = format!("● {text}");
         out.push((format!("{DIM}  ·  {RESET}\u{1b}[1m{}", fg(*color, &text)), 5 + text.chars().count()));
     }
+    // a script's note (switching the editor…), bold in the accent colour
+    let note = status.note.text();
+    if !note.is_empty() {
+        out.push((format!("{DIM}  ·  {RESET}\u{1b}[1m{}", fg(ACCENT, note)), 5 + note.chars().count()));
+    }
     out
 }
 

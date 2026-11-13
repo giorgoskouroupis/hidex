@@ -110,6 +110,8 @@ impl State {
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },
             Action::Status => self.status.refresh(&self.cwd),
+            Action::Detach(words) => scripts::run(&words.iter().map(String::as_str).collect::<Vec<_>>(), None),
+            Action::Note(text) => self.status.note.set(&text),
             // zellij's own copy of the terminal's last command output (its shell marks it: OSC 133), the focus back
             // where it was
             Action::Copy(name) => {
@@ -195,7 +197,8 @@ impl State {
         self.collapse.forget_closed(&self.panes);
     }
 
-    fn on_tick(&mut self, tick: Tick) {
+    /// a timer gone off; says whether the bar is to be drawn again
+    fn on_tick(&mut self, tick: Tick) -> bool {
         match tick {
             Tick::Fold => self.collapse.on_tick(),
             Tick::Step => self.editor.on_step(),
@@ -203,8 +206,10 @@ impl State {
             Tick::Refresh => {
                 self.status.refresh(&self.cwd);
                 Tick::Refresh.start();
+                return self.status.note.age();
             }
         }
+        false
     }
 }
 
@@ -248,7 +253,7 @@ impl ZellijPlugin for State {
                     self.floating_visible = t.are_floating_panes_visible;
                 }
             }
-            Event::Timer(elapsed) => self.on_tick(Tick::from_elapsed(elapsed)),
+            Event::Timer(elapsed) => return self.on_tick(Tick::from_elapsed(elapsed)),
             Event::CommandPaneOpened(id, context) => panes::on_opened(id, &context),
             // a script's answer, by its tag
             Event::RunCommandResult(_, stdout, _, context) => match scripts::tag(&context) {
@@ -268,9 +273,12 @@ impl ZellijPlugin for State {
                 if let Some(id) = own {
                     self.panes.set_focused(id);
                 }
+                // a note changes the bar: drawn again
+                let note = actions.iter().any(|a| matches!(a, Action::Note(_)));
                 for action in actions {
                     self.run(action);
                 }
+                return note;
             }
             Event::Mouse(Mouse::LeftClick(_, col)) => {
                 if let Some(action) = self.bar.click(col) {

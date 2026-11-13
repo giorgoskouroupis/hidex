@@ -1,6 +1,7 @@
 #!/bin/sh
 # tidex-msg NAME [PAYLOAD]: a message to the tIDEx plugin, the same ones the keys send (config.kdl):
-# focus <role>, new <kind>, popup <name>, collapse, quit, helix <command>, handover <file>, status.
+# focus <role>, new <kind>, popup <name>, collapse, quit, editor <command>, handover <file>, status, note <text> (on
+# the bar a few seconds), detach <tidex script, words tab-separated> (run by the bar, outliving a pop-up).
 # Sent to the plugins already running, named "tidex:NAME" (no other plugin takes it), not to the plugin's path:
 # zellij (0.46) would start another bar for that path, which then acts on every key too.
 # Never a blank payload: zellij would then wait for input on stdin; never more than 5 s (a bar that cannot answer

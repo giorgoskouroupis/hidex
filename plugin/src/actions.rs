@@ -28,6 +28,11 @@ pub enum Action {
     /// a terminal's last command output to the clipboard (zellij's own copy): the one named ("zsh 2",
     /// "claude1"), or "" for the terminal last used
     Copy(String),
+    /// a tIDEx script (tidex-…) run by the bar in the background, outliving the pop-up that asked for it (whose
+    /// processes go when it closes): its words, tab-separated
+    Detach(Vec<String>),
+    /// a short note on the bar (status::set_note): what goes on, or what just happened
+    Note(String),
 }
 
 impl Action {
@@ -46,6 +51,8 @@ impl Action {
             "quit" => Action::Quit(arg),
             "status" => Action::Status,
             "copy" => Action::Copy(if payload == "-" { String::new() } else { arg }),
+            "note" => Action::Note(arg),
+            "detach" if payload.starts_with("tidex-") => Action::Detach(payload.split('\t').map(String::from).collect()),
             _ => return None,
         })
     }
@@ -67,6 +74,11 @@ mod tests {
         assert_eq!(Action::from_message("status", "-"), Some(Status));
         assert_eq!(Action::from_message("copy", "-"), Some(Copy(String::new())));
         assert_eq!(Action::from_message("copy", "side 2"), Some(Copy("side 2".into())));
+        assert_eq!(Action::from_message("note", "editor: Helix"), Some(Note("editor: Helix".into())));
+        assert_eq!(
+            Action::from_message("detach", "tidex-editor\tswitch\thelix"),
+            Some(Detach(vec!["tidex-editor".into(), "switch".into(), "helix".into()]))
+        );
     }
 
     #[test]
@@ -74,5 +86,7 @@ mod tests {
         assert_eq!(Action::from_message("jump", "x"), None);
         assert_eq!(Action::from_message("editor", ""), None);
         assert_eq!(Action::from_message("dance", "now"), None);
+        // only tIDEx's own scripts
+        assert_eq!(Action::from_message("detach", "rm\t-rf\t/"), None);
     }
 }
