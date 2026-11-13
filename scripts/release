@@ -5,7 +5,7 @@
 #   hidex-lsp-HASH.tar.gz              the Node language servers (release/lsp), named after their lock file
 #   hidex-pudb-HASH.tar.gz             pudb (release/pudb.txt), named after it
 #   hidex-broot-HASH.tar.gz            broot's Linux program, out of its official download for every system
-#   hidex-nvim-HASH.tar.gz             Neovim's packages (mini.nvim), named after their build.lock lines
+#   hidex-nvim-HASH.tar.gz             Neovim's packages (mini.nvim) and tree-sitter parsers, named after their inputs
 # A bundle keeps its name while its content does not change, so an update downloads it only when it changed; the
 # tools come from their own downloads (tools.lock). Prints the core's path. Needs cargo with the wasm32-wasip1
 # target, curl, tar, xz (nix develop gives them).
@@ -19,12 +19,13 @@ rm -rf "$out" "$dist"/hidex-lsp-*.tar.gz "$dist"/hidex-pudb-*.tar.gz "$dist"/hid
 mkdir -p "$out/bin" "$out/share" "$store"
 tools() { "$repo/bin/hidex-tools" "$@"; }
 
-# the build's own tools: Node and Python (to make the bundles), the colour schemes
-tools fetch "$repo/tools.lock" "$store" node python
+# the build's own tools: Node, Python and Neovim (to make the bundles), the colour schemes
+tools fetch "$repo/tools.lock" "$store" node python neovim
 tools fetch "$repo/release/build.lock" "$store"
 node=$(ls -d "$store"/node-*/bin) python=$(ls -d "$store"/python-*/bin/python3) themes=$(ls -d "$store"/themes-*)
 shell=$(ls -d "$store"/shell-integration-[0-9a-f]*) shell_license=$(ls -d "$store"/shell-integration-license-*)
-broot=$(ls -d "$store"/broot-*) mini=$(ls -d "$store"/mini-*)
+broot=$(ls -d "$store"/broot-*) mini=$(ls -d "$store"/mini-*) nvim=$(ls -d "$store"/neovim-*/bin)
+tree_sitter=$(ls -d "$store"/tree-sitter-*) nvim_treesitter=$(ls -d "$store"/nvim-treesitter-*)
 
 # bundle NAME DIR: DIR packed as hidex-NAME-HASH.tar.gz (HASH: of its inputs, $hash); its BUNDLES line
 bundle() {
@@ -52,11 +53,17 @@ cp "$broot/broot" "$work/broot/bin/"
 hash=$(awk -F'\t' '$1 == "broot" { print substr($3, 1, 12) }' "$repo/release/build.lock")
 bundle broot "$work/broot" tools/broot
 
-# Neovim's own packages (config/nvim loads them from tools/nvim-pack): mini.nvim, its code and help
-m=$work/nvim/pack/hidex/start/mini.nvim
-mkdir -p "$m"
-cp -r "$mini/lua" "$mini/doc" "$mini/LICENSE" "$m/"
-hash=$(awk -F'\t' '$1 == "mini" { print substr($3, 1, 12) }' "$repo/release/build.lock")
+# Neovim's own packages (config/nvim loads them from tools/nvim-pack): mini.nvim, its code and help; the tree-sitter
+# parsers and queries nvim-treesitter builds (site/, at the revisions it pins: needs a C compiler), and its own
+# code for their predicates (nothing is downloaded or built where hIDEx runs)
+p=$work/nvim/pack/hidex/start
+mkdir -p "$p/mini.nvim" "$p/nvim-treesitter" "$work/nvim/site"
+cp -r "$mini/lua" "$mini/doc" "$mini/LICENSE" "$p/mini.nvim/"
+cp -r "$nvim_treesitter/lua" "$nvim_treesitter/plugin" "$nvim_treesitter/LICENSE" "$p/nvim-treesitter/"
+PATH=$tree_sitter:$nvim:$PATH nvim -l "$repo/release/nvim-parsers.lua" "$nvim_treesitter" "$work/nvim/site" \
+  "$repo/release/nvim-parsers.txt" >&2
+hash=$({ grep -E '^(mini|tree-sitter|nvim-treesitter)	' "$repo/release/build.lock"
+  cat "$repo/release/nvim-parsers.txt" "$repo/release/nvim-parsers.lua"; } | sha256sum | cut -c1-12)
 bundle nvim "$work/nvim" tools/nvim-pack
 
 # the core: hIDEx's own files

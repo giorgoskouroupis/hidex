@@ -1,0 +1,17 @@
+# The tree-sitter parsers hIDEx's Neovim brings (built at release time: release/nvim-parsers.lua), for the
+# languages most projects have; Neovim itself brings c, lua, vim, vimdoc, query, markdown and markdown_inline.
+python
+bash
+toml
+yaml
+json
+html
+css
+javascript
+typescript
+tsx
+dockerfile
+rust
+go
+gitcommit
+diff

@@ -49,7 +49,11 @@ vim.diagnostic.config({ virtual_text = { current_line = true }, severity_sort = 
 
 -- mini.nvim (tools/nvim-pack, shipped with hIDEx, pinned): pickers, git markers, and the keys that follow Space
 -- or g shown as you type them. The keys are Helix's space menu, so both editors answer the same.
-vim.opt.packpath:prepend(vim.fs.normalize(here .. "/../../../tools/nvim-pack"))
+local pack = vim.fs.normalize(here .. "/../../../tools/nvim-pack")
+vim.opt.packpath:prepend(pack)
+-- the tree-sitter parsers and queries built for hIDEx (nvim-parsers.txt): colours and structure for those files
+vim.opt.runtimepath:prepend(pack .. "/site")
+vim.api.nvim_create_autocmd("FileType", { callback = function(args) pcall(vim.treesitter.start, args.buf) end })
 if pcall(vim.cmd.packadd, "mini.nvim") then
   require("mini.pick").setup()
   require("mini.extra").setup()
