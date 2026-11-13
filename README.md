@@ -1,16 +1,22 @@
 # hIDEx
 
-A terminal IDE around [Helix], in [zellij]: a file tree ([broot]) and Helix on top, a shell below, a side
-terminal on the right ([Claude Code] first, then any AI tool), a bar at the bottom, [lazygit] and [yazi] as
-pop-ups, [lnav] for big logs, `/` commands for themes and the project's languages. Every tool comes with it, at a
-pinned version (`tools.lock`), in its own folder: nothing else on the machine is touched.
+A terminal IDE in [zellij], around an editor: [Neovim] by default, or [Helix] (`/editor`). A file tree ([broot])
+and the editor on top, a shell below, a side terminal on the right ([Claude Code] first, then any AI tool), a bar
+at the bottom, [lazygit] and [yazi] as pop-ups, [lnav] for big logs, `/` commands for themes and the project's
+languages. Every tool comes with it, at a pinned version (`tools.lock`), in its own folder: nothing else on the
+machine is touched.
 
 A fun personal project, vibe coded with Claude: shaped around one person's daily work, shared as is.
 
-> **Helix saves by itself when you leave it** (another pane, `F2`, a pop-up): nothing stays behind as an
-> unsaved draft. `u` still undoes, and git shows what changed. It keeps one version of each file between Helix
-> and the other editors (`F2`): Helix offers no way to ask it what is unsaved, so saving on leaving is how
-> hIDEx stays safe. The first start says so in a pop-up.
+> **Files changed on disk** (by Claude, git, another editor) **come back in the editor by themselves** with
+> Neovim; changed there too, it asks which to keep (W12). Neovim answers hIDEx through its remote API, so hIDEx
+> asks it what is unsaved before handing a file to another editor (`F2`), and nothing is lost.
+>
+> **Helix saves by itself when you leave it** (another pane, `F2`, a pop-up): it offers no way to ask it what is
+> unsaved, so saving on leaving is how hIDEx keeps one version of each file. `u` still undoes, and git shows what
+> changed. Files changed on disk do not come back by themselves: `/reload` (or `Ctrl+r` in Helix).
+>
+> The first start says what matters for its editor in a pop-up.
 
 Install (Linux x86_64, any distribution, no root), and the same again to update:
 
@@ -39,7 +45,7 @@ hidex --side shell ~/some/project                           # side terminal with
 
 Every folder gets its own tree, stacked, locked to it: a sandbox ([Landlock]) that sees only that folder,
 read-only.
-Logs and files over 10 MB open in lnav, the rest in Helix.
+Logs and files over 10 MB open in lnav, the rest in the editor.
 
 Each project is a zellij session named after its (first) folder and that folder's parent, e.g. `code-myproject`.
 Running `hidex` there again reattaches to it, also after the window was closed or the ssh connection
@@ -53,7 +59,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | Keys | |
 |---|---|
 | `Alt+←/→/↑/↓` | move between panes, and through a stack |
-| `Alt+e` / `Alt+h` / `Alt+t` / `Alt+c` | jump to the explorer / Helix / the terminals / the side terminal (unfolds it) |
+| `Alt+e` / `Alt+h` / `Alt+t` / `Alt+c` | jump to the explorer / the editor / the terminals / the side terminal (unfolds it) |
 | `Alt+f`, `Shift+Esc` | max: the focused pane fills the panes' area (the bar stays), and back |
 | `Alt+z` | zen: the focused pane covers the whole window, the bar too, and back |
 | `Alt+\` | back to the pane you were in before |
@@ -70,10 +76,10 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
 | `Alt+Shift+g` | lazygit that can stage, commit, push: it replaces the read-only one |
 | `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred, 80% of the window; all share one solid colour set from the theme: lighter with white text on a dark one, darker on a light one) |
-| `Alt+q` | quit hIDEx, after asking (lists running commands; Helix refuses while files are unsaved) |
+| `Alt+q` | quit hIDEx, after asking (lists running commands; the editor asks about, or refuses, unsaved files) |
 | `Alt+Shift+q` | quit at once: unsaved changes dropped, running commands stopped |
-| `Enter` on a file in a tree or yazi | Helix; logs and files over 10 MB in lnav (`q` closes) |
-| `F2` on a file in a tree | open with: Helix, micro, or nano when the system has it; another editor than Helix opens in Helix's place (sandboxed the same), and Helix is back when it quits, that file reloaded from disk. One at a time: while it holds that place, opening a file opens nothing and says how to hand over (save and quit it); nothing is closed for you |
+| `Enter` on a file in a tree or yazi | the editor; logs and files over 10 MB in lnav (`q` closes) |
+| `F2` on a file in a tree | open with another editor: Helix or Neovim (the one not in use), micro, nano when the system has it; it opens in the editor's place (sandboxed the same), and the editor is back when it quits, that file reloaded. One at a time: meanwhile, opening a file asks whether to close it (`y`: with its own quit key, so it asks about unsaved changes itself); a file with unsaved changes in Neovim is not handed over |
 | `Enter` on a folder in a tree | into it; on the top line, up one level, never above the tree's own folder |
 
 zellij stays locked, so every other key reaches the program in the pane; `Ctrl+g` unlocks its own modes.
@@ -93,6 +99,8 @@ Those that need a list or a result open in a pop-up:
   `reset` gives the terminal's colours back, and so does leaving hIDEx. Every hIDEx colour is one
   of the terminal's 16, so zellij, Helix, the trees, lazygit and pudb follow (Claude Code keeps its own). The
   terminal must accept colour-setting sequences (alacritty, foot, kitty, wezterm do). Fonts stay the terminal's.
+- `/editor`: the main editor, Neovim (the default) or Helix, yours in every project, from the next start;
+  `/editor helix` straight away. `HIDEX_EDITOR=helix hidex .` picks one for a single start.
 - `/editor-theme`: one of the editor's own themes, for the editor only, previewed in it as you move, kept for the
   project; `/editor-theme terminal` (or `hidex`) follows `/theme` again.
 - `/frames`: the colours of the pane frames, the focused one and the others, picked from the terminal's 16
@@ -221,6 +229,7 @@ new panes, jumps, folding, pop-ups, what is kept per project, `/update`, quittin
 its own temporary folders, never in your sessions or settings, in a few minutes; fine to leave in the background.
 
 [Helix]: https://helix-editor.com
+[Neovim]: https://neovim.io
 [zellij]: https://zellij.dev
 [broot]: https://dystroy.org/broot
 [Claude Code]: https://github.com/anthropics/claude-code

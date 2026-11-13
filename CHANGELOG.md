@@ -7,6 +7,26 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+### Added
+- Neovim (0.12.6, official build) is the editor by default; Helix stays one to pick: `/editor` (yours in every
+  project, from the next start), or `HIDEX_EDITOR=helix hidex .` for one start.
+- With Neovim, files changed on disk (Claude, git, another editor) come back by themselves; changed there too,
+  Neovim asks which to keep (W12). hIDEx drives it through its remote API, never by typing into it, so it asks
+  Neovim what is unsaved: a file with unsaved changes is not handed to another editor, and quitting lets Neovim
+  ask about them.
+- Neovim comes ready: the language servers hIDEx brings, completion as you type, pickers and key hints on Helix's
+  space-menu keys (mini.nvim), git markers, and tree-sitter colours for 15 languages, all built at release time
+  and shipped in one bundle: nothing is downloaded or compiled where hIDEx runs.
+- `F2` offers every other editor (Helix in a Neovim session, Neovim in a Helix one) besides micro and nano. While
+  one holds the editor's place, opening a file asks whether to close it (`y`: its own quit key, so it asks about
+  unsaved changes itself), and the file then opens in the editor.
+- The welcome pop-up and `Alt+k` say what matters for the editor in use.
+
+### Changed
+- The editor sits behind one contract (open, reload, theme, servers, quit): the bar's `editor` module, and one
+  adapter per editor in `editors/` (`hidex-editor`). `/helix-theme` is `/editor-theme`; `hidex-msg helix …` is
+  `hidex-msg editor …`.
+
 ## [v0.2.4] - 2026-11-13
 
 ### Added
