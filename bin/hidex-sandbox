@@ -20,7 +20,8 @@ secret_files=(.netrc .git-credentials .pgpass)
 # twice keeps its first value
 env_args() {
   local v own=" ${*%%=*} "
-  for v in $(compgen -e); do case $own in *" $v "*) ;; *) printf -- '--env\n%s\n' "$v" ;; esac; done
+  # (env, not compgen: a minimal bash has no compgen)
+  for v in $(env -0 | tr '\0\n' '\n ' | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p'); do case $own in *" $v "*) ;; *) printf -- '--env\n%s\n' "$v" ;; esac; done
   for v; do printf -- '--env\n%s\n' "$v"; done
 }
 
