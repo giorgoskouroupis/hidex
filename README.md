@@ -93,8 +93,8 @@ Those that need a list or a result open in a pop-up:
   `reset` gives the terminal's colours back, and so does leaving hIDEx. Every hIDEx colour is one
   of the terminal's 16, so zellij, Helix, the trees, lazygit and pudb follow (Claude Code keeps its own). The
   terminal must accept colour-setting sequences (alacritty, foot, kitty, wezterm do). Fonts stay the terminal's.
-- `/helix-theme`: one of Helix's own themes, for Helix only, previewed in Helix as you move, kept for the
-  project; `/helix-theme terminal` (or `hidex`) follows `/theme` again.
+- `/editor-theme`: one of the editor's own themes, for the editor only, previewed in it as you move, kept for the
+  project; `/editor-theme terminal` (or `hidex`) follows `/theme` again.
 - `/frames`: the colours of the pane frames, the focused one and the others, picked from the terminal's 16
   (previewed as you move) or given as `/frames focused 4`, `/frames unfocused #ff8800`; yours in every project,
   and every running session takes them at once. `/frames reset`: yellow and grey again. The red frame of a pane
@@ -117,7 +117,7 @@ Those that need a list or a result open in a pop-up:
   terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
   everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
 
-Scripts can ask the same of hIDEx: `hidex-msg popup yazi`, `hidex-msg helix reload-all`, …
+Scripts can ask the same of hIDEx: `hidex-msg popup yazi`, `hidex-msg editor reload-all`, …
 
 ## What it takes from the machine
 
@@ -156,7 +156,7 @@ their place, so no key pressed there can reach further.
   (a file manager). A private empty home and temp folder: not your `~/.ssh`, `~/.gitconfig` or anything else in
   it. No network.
 - They still open files: `Enter` reaches Helix and lnav through zellij's socket, the one way out.
-- Helix runs in a lighter sandbox (`bin/hidex-helix`): it sees the machine as usual (it saves files, runs the
+- The editor runs in a lighter sandbox (`editors/helix run`): it sees the machine as usual (it saves files, runs the
   language servers, uses your envs and the clipboard), except the secrets: `~/.ssh`, `~/.gnupg`, password
   stores, `~/.aws`, `~/.kube`, `~/.docker`, `.netrc`, `.git-credentials` look empty to it and to anything it
   starts. Other system files stay readable (opening `/etc/hosts` is harmless).
@@ -188,13 +188,16 @@ concern lives in one place (named below).
   newer release offered at start), `bin/hidex-uninstall` (`hidex --uninstall`).
 - **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks and
   `hidex-msg` can ask), `panes` (roles, jumps, new panes), `names` (the terminals named after what runs),
-  `clients` (only the bar of a connected window acts), `popups`, `typist` (commands typed into Helix), `collapse`
+  `clients` (only the bar of a connected window acts), `popups`, `editor` (the editor behind one contract: open,
+  reload, quit…) and `typist` (Helix's way: commands typed into it), `collapse`
   (folding), `status` and `bar`, `scripts` (the scripts it runs, and how their answers are told apart), `timers`.
   Its `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/hidex-msg`.
 - **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,
-  `bin/hidex-helix-theme`, `bin/hidex-langs`, `bin/hidex-python`, `bin/hidex-quit-ask`.
+  `bin/hidex-editor` (editor themes, and the rest asked of the editor), `bin/hidex-langs`, `bin/hidex-python`,
+  `bin/hidex-quit-ask`.
 - **Panes:** `bin/hidex-shell` (terminals, and side terminals after Claude: `bin/hidex-side`), `bin/hidex-tree`
-  and `bin/hidex-tree-enter` (the trees), `bin/hidex-helix` (Helix), `bin/hidex-lazygit` and `bin/hidex-yazi`
+  and `bin/hidex-tree-enter` (the trees), `bin/hidex-editor` with one adapter per editor in `editors/` (`run`,
+  `themes`, `health`, `servers`, `title`: Helix's is `editors/helix`), `bin/hidex-lazygit` and `bin/hidex-yazi`
   (pop-ups), `bin/hidex-open` (a picked file to Helix or lnav).
 - **Shared pieces, one each:** `bin/hidex-sandbox` (every sandbox), `bin/hidex-guard` (the off-limits folders),
   `bin/hidex-osc` (codes to the window: colours, clipboard), `bin/hidex-bg` and `config/brightness.awk` (the
