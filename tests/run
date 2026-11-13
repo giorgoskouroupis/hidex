@@ -249,6 +249,8 @@ check "Enter on a file in the tree: Neovim opens it, in front" 'wait_for "screen
 key ' f' 2
 check "Space f: the file picker of mini.nvim, shipped with hIDEx" 'screen Neovim | grep -q "Files"'
 key '\x1b' 1
+ask_nvim() { "$out/tools/bin/nvim" --headless --clean --server "$XDG_RUNTIME_DIR/hidex/$S/nvim.sock" --remote-expr "$1" 2>/dev/null; }
+check "Python coloured by tree-sitter (the parsers shipped with hIDEx)" '[ "$(ask_nvim "luaeval(\"vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] and 1 or 0\")")" = 1 ]'
 echo '# from Claude' >> "$T/proj/a.py"
 check "changed on disk, untouched here: Neovim shows it by itself" 'wait_for "screen Neovim | grep -q \"from Claude\""'
 key 'Oedited here' 1; "$Z" -s "$S" action write 27; pause 1
