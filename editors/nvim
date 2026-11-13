@@ -1,0 +1,46 @@
+#!/bin/sh
+# Neovim's adapter (hidex-editor): run | do VERB … | themes | health LANG | servers LANG | title. Neovim answers
+# other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
+share=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+sock() { echo "$(hidex-state)/nvim.sock"; }
+remote() { timeout 5 nvim --server "$(sock)" "$@" >/dev/null 2>&1; }
+case $1 in
+  # Neovim with hIDEx's settings (config/nvim) and state of its own (NVIM_APPNAME), listening on the session's
+  # socket; sandboxed like any editor (hidex-sandbox machine). HIDEX_EDITOR_RUN: another program (the tests).
+  run)
+    shift
+    s=$(hidex-state 2>/dev/null) && rm -f "$s/nvim.sock"
+    export NVIM_APPNAME=hidex-nvim
+    # its folders made first: the sandbox allows writing in what exists (not new folders beside the secrets)
+    mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/$NVIM_APPNAME" "${XDG_STATE_HOME:-$HOME/.local/state}/$NVIM_APPNAME" \
+      "${XDG_CACHE_HOME:-$HOME/.cache}/$NVIM_APPNAME"
+    exec hidex-sandbox machine -- "${HIDEX_EDITOR_RUN:-nvim}" \
+      ${s:+--listen "$s/nvim.sock"} -u "$share/nvim/init.lua" "$@" ;;
+  # the bar's verbs (plugin/src/editor.rs), as Neovim commands run in place (<Cmd>: whatever the mode)
+  do)
+    shift
+    case $1 in
+      open) shift; remote --remote "$@" ;;
+      # changed files: untouched ones reloaded, the others ask (W12)
+      reload | reload-all) remote --remote-send '<Cmd>checktime<CR>' ;;
+      lsp-restart) remote --remote-send '<Cmd>lsp restart<CR>' ;;
+      theme) remote --remote-send "<Cmd>colorscheme ${2:-}<CR>" ;;
+      config-reload) remote --remote-send '<Cmd>source $MYVIMRC<CR>' ;;
+      # refusing: Neovim asks what to do with unsaved files (save, drop, cancel)
+      quit)
+        case $2 in saving) c=wqa ;; dropping) c='qa!' ;; *) c='confirm qa' ;; esac
+        remote --remote-send "<Cmd>$c<CR>" ;;
+      # how many files have unsaved changes
+      unsaved) timeout 5 nvim --server "$(sock)" --remote-expr "len(getbufinfo({'bufmodified':1}))" ;;
+      *) echo "nvim do: open FILE… | reload | reload-all | lsp-restart | theme [NAME] | config-reload | quit [saving|dropping] | unsaved" >&2; exit 1 ;;
+    esac ;;
+  # Neovim's own scheme first (in the terminal's colours), then the others it brings
+  themes)
+    echo default
+    ls "$(dirname "$(readlink -f "$(command -v nvim)")")/../share/nvim/runtime/colors" 2>/dev/null |
+      sed -n 's/\.\(vim\|lua\)$//p' | grep -vx default | sort -u ;;
+  # a language's servers, from config/nvim/lua/hidex/servers.lua: "✓ found ✘ missing", or "none"
+  servers | health) nvim -l "$share/nvim/langs.lua" "$2" ;;
+  title) echo Neovim ;;
+  *) echo "usage: nvim run | do VERB … | themes | health LANG | servers LANG | title" >&2; exit 1 ;;
+esac
