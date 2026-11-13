@@ -73,7 +73,7 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+q` | quit hIDEx, after asking (lists running commands; Helix refuses while files are unsaved) |
 | `Alt+Shift+q` | quit at once: unsaved changes dropped, running commands stopped |
 | `Enter` on a file in a tree or yazi | Helix; logs and files over 10 MB in lnav (`q` closes) |
-| `F2` on a file in a tree | open with: Helix, micro, or nano when the system has it; another editor than Helix opens in Helix's place (sandboxed the same), and Helix is back when it quits. One at a time: while it holds that place, opening a file opens nothing and says how to hand over (save and quit it); nothing is closed for you |
+| `F2` on a file in a tree | open with: Helix, micro, or nano when the system has it; another editor than Helix opens in Helix's place (sandboxed the same), and Helix is back when it quits, that file reloaded from disk. One at a time: while it holds that place, opening a file opens nothing and says how to hand over (save and quit it); nothing is closed for you |
 | `Enter` on a folder in a tree | into it; on the top line, up one level, never above the tree's own folder |
 
 zellij stays locked, so every other key reaches the program in the pane; `Ctrl+g` unlocks its own modes.

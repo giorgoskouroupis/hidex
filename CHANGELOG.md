@@ -1,4 +1,4 @@
-# Changelog
+# Changelog test
 
 What changed in each hIDEx release, newest first. A release's section here is its text on GitHub: write it before
 pushing the version's tag (the release Action stops when the section is missing). The format follows
@@ -12,8 +12,9 @@ pushing the version's tag (the release Action stops when the section is missing)
 ### Added
 - Open with another editor: `F2` on a file in a tree picks Helix, micro (now among hIDEx's tools) or nano
   (when the system has it). Another editor than Helix opens in Helix's place, sandboxed the same, and Helix is
-  back when it quits (zellij's open in place). One editor at a time: while another holds Helix's place,
-  opening a file opens nothing and says how to hand over (save and quit it); nothing is closed for you.
+  back when it quits (zellij's open in place), with that file reloaded from disk. One editor at a time: while
+  another holds Helix's place, opening a file opens nothing and says how to hand over (save and quit it);
+  nothing is closed for you.
 - The palette (`Alt+p`) lists the commands by group, with their keys; typing narrows as before.
 - A welcome pop-up at the first start, once: above all, that Helix saves by itself when you leave it (it
   keeps one version of each file between Helix and the other editors); the same note in `Alt+k`, in the `F2`
