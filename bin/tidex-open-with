@@ -4,7 +4,7 @@
 # editor's place (zellij's open in place, sandboxed the same), and the main editor is back when it quits. One
 # guest holds that place at a time: while one does, opening anything (F2, or Enter in a tree or yazi:
 # tidex-open-with --held FILE) asks whether to close the guest first, and the file then opens in the main one.
-main=${TIDEX_EDITOR:-helix} title=$(tidex-editor title)
+main=$(tidex-editor name) title=$(tidex-editor title)
 
 # the guest holding the main editor's place, as "PANE_ID<TAB>TITLE" ("edit: a.py (micro)"), if any
 held() {

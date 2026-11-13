@@ -70,6 +70,11 @@ impl Typist {
         self.quit_waits = self.quit_waits.saturating_sub(1);
     }
 
+    /// a quit typed before is off (the editor leaves for another one)
+    pub fn cancel_quit(&mut self) {
+        self.quit_waits = 0;
+    }
+
     /// a quit was typed and is still waiting for Helix to go
     pub fn quitting(&self) -> bool {
         self.quit_waits > 0

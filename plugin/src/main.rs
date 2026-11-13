@@ -104,6 +104,8 @@ impl State {
                 "save" => self.quit_now(Quit::Saving),
                 // Alt+Shift+q: unsaved changes dropped, running commands stopped, no question
                 "now" => self.quit_now(Quit::Dropping),
+                // the editor is leaving for another (tidex-editor switch): not a quit, the session goes on
+                "cancel" => self.editor.cancel_quit(),
                 // Alt+q: the "quit?" pop-up asks first (and says what still runs)
                 _ => popups::toggle(popups::QUIT_ASK, &self.panes, self.floating_visible, &self.cwd),
             },

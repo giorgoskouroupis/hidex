@@ -81,9 +81,11 @@ PATH=$(swap "$PATH") PYTHONPATH=$(swap "$PYTHONPATH") LG_CONFIG_FILE=$(swap "$LG
 YAZI_CONFIG_HOME=$(swap "$YAZI_CONFIG_HOME") TIDEX_SHARE=$c/share/tidex TIDEX_PLUGIN=$c/share/tidex/tidex-panes.wasm
 ZELLIJ_CONFIG_DIR=$s/config
 export PATH PYTHONPATH LG_CONFIG_FILE YAZI_CONFIG_HOME TIDEX_SHARE TIDEX_PLUGIN ZELLIJ_CONFIG_DIR
-# the session's editor, fixed at its start (TIDEX_EDITOR, else the one chosen with /editor, else Neovim)
-TIDEX_EDITOR=$(tidex-editor name) || exit 1
-export TIDEX_EDITOR
+# the session's editor, recorded in its state folder at its start (TIDEX_EDITOR, else the one chosen with /editor,
+# else Neovim); a switch (/editor) changes it there, so TIDEX_EDITOR is not passed on to the session
+editor=$(tidex-editor name) || exit 1
+echo "$editor" > "$s/editor"
+unset TIDEX_EDITOR
 tidex-config "$s"
 tidex-zellij-setup
 
@@ -115,7 +117,7 @@ layout=$s/layout.kdl
 welcome=
 [ -e "${XDG_STATE_HOME:-$HOME/.local/state}/tidex/welcomed" ] ||
   welcome='floating_panes { pane name="welcome" command="tidex-welcome" close_on_exit=true x="20%" y="15%" width="60%" height="50%"; }'
-awk -v t="$trees" -v side="$side" -v plugin="$TIDEX_PLUGIN" -v welcome="$welcome" -v editor="$(tidex-editor title)" '/@TREES@/ && !/\/\// { print t; next }
+awk -v t="$trees" -v side="$side" -v plugin="$TIDEX_PLUGIN" -v welcome="$welcome" -v editor="$(TIDEX_EDITOR=$editor tidex-editor title)" '/@TREES@/ && !/\/\// { print t; next }
   /@WELCOME@/ && !/\/\// { print welcome; next }
   side == "none" && /name="side 1"/ { next } side == "none" { sub(/ size="60%"/, "") } { gsub(/@plugin@/, plugin); gsub(/@EDITOR@/, editor); print }' \
   "$TIDEX_SHARE/layouts/tidex.kdl" > "$layout"

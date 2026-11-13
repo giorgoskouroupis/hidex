@@ -149,6 +149,12 @@ impl Editor {
         self.typist.request(Job { pane, command: command.into(), focus: true, quit: true });
     }
 
+    /// a quit asked before is off (the editor leaves for another one: tidex-editor switch)
+    pub fn cancel_quit(&mut self) {
+        self.waits = 0;
+        self.typist.cancel_quit();
+    }
+
     /// a quit was asked and the editor has not gone yet
     pub fn quitting(&self) -> bool {
         self.typist.quitting() || self.waits > 0
