@@ -1,5 +1,5 @@
 #!/bin/sh
-# hidex-editor run [ARGS] | theme [pick | NAME | restore | list] | health LANG | servers LANG | title: the
+# hidex-editor run [ARGS] | do VERB … | theme [pick | NAME | restore | list] | health LANG | servers LANG | title: the
 # editor in the main pane, whichever it is (HIDEX_EDITOR, default helix), through its adapter
 # (share/hidex/editors/NAME). The bar drives the running editor (hidex-msg editor VERB: plugin/src/editor.rs);
 # the rest of hIDEx asks here.
@@ -36,6 +36,6 @@ theme() {
 
 case $1 in
   theme) shift; theme "$@" ;;
-  run | health | servers | title) exec "$adapter" "$@" ;;
+  run | do | health | servers | title) exec "$adapter" "$@" ;;
   *) echo "usage: hidex-editor run [ARGS] | theme [pick | NAME | restore | list] | health LANG | servers LANG | title" >&2; exit 1 ;;
 esac
