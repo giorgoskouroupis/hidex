@@ -7,6 +7,22 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.2.3] - 2026-11-13
+
+### Added
+- What needs you is visible: a terminal where Claude asks for you, or where a command failed or finished, gets a
+  red frame, and the bar names it with how many more wait (`● claude 1 needs you`, `● zsh 2 done +1` in blue).
+  Claude asking shows until answered; failed and done show for panes out of sight (zellij counts a pane on
+  screen as seen).
+- `Alt+k`: every hIDEx key, by group, filtered as you type; the palette (`Alt+p`) lists the keys that fit too
+  (`copy`: `Alt+v`).
+
+### Changed
+- Unfocused pane frames are the terminal's grey again (the computed fainter colour is gone).
+
+### Fixed
+- The sandbox works with a minimal bash (one without `compgen`, as in some Nix shells).
+
 ## [v0.2.2] - 2026-11-13
 
 ### Added
@@ -17,12 +33,6 @@ pushing the version's tag (the release Action stops when the section is missing)
   sessions need a restart to use it), and asks whether to install it; asked again each start until updated.
   GitHub is asked at most once a day, nothing is said offline; `HIDEX_NO_UPDATE_CHECK=1` turns it off.
 - `/about`: the version, the install folder, the tools and their versions, the sandbox this machine allows.
-- What needs you is visible: a terminal where Claude asks for you, or where a command failed or finished, gets a
-  red frame, and the bar names it with how many more wait (`● claude 1 needs you`, `● zsh 2 done +1` in blue).
-  Claude asking shows until answered; failed and done show for panes out of sight (zellij counts a pane on
-  screen as seen).
-- `Alt+k`: every hIDEx key, by group, filtered as you type; the palette (`Alt+p`) lists the keys that fit too
-  (`copy`: `Alt+v`).
 - `Alt+z`: zen, the focused pane covers the whole window, the bar too (zellij's own);
   `Alt+j`: to the next pane that needs you (Claude waiting, a command failed or finished: zellij's attention, which
   Claude Code reports by itself); `Alt+Space`: all of them, zellij's inbox; `Alt+\`: back to the pane
@@ -43,6 +53,8 @@ pushing the version's tag (the release Action stops when the section is missing)
 - The bar warns ("sandbox: partial" or "no sandbox", in red) when this machine's kernel cannot give the full
   sandbox; `/about` and the installer say what is not protected. The Rust compiler for the bar is pinned
   (`plugin/rust-toolchain.toml`), the same for the release build and `nix develop`.
+- Unfocused pane frames are fainter: a colour just off the window's background (darker on a light theme),
+  following `/theme` and the terminal's own dark/light switch.
 
 ### Fixed
 - yazi: going up stops at the project folder (above it, the sandbox refused and yazi hung).
@@ -136,7 +148,8 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `nil`, the Nix language server (it publishes no ready-made Linux build).
 - The command line in the bar (`Alt+Shift+p`), replaced by the palette.
 
-[Unreleased]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.3...HEAD
+[v0.2.3]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/giorgoskouroupis/hidex/compare/v0.1.1...v0.2.0
