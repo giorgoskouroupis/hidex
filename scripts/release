@@ -53,6 +53,7 @@ bundle broot "$work/broot" tools/broot
 
 # the core: hIDEx's own files
 cp -r "$repo/config" "$out/share/hidex"
+cp -r "$repo/editors" "$out/share/hidex/"
 mkdir "$out/share/hidex/themes"
 cp "$themes/kitty"/*.conf "$themes/LICENSE" "$out/share/hidex/themes/"
 cp "$repo/README.md" "$out/share/hidex/"

@@ -1,13 +1,13 @@
 #!/bin/sh
 # hidex-langs [python]: the project's languages, most files first, with their language servers (✓ found,
-# ✘ missing, as `hx --health` says) and, for Python, the env. Enter on Python picks its env (hidex-python);
-# on another language, Helix's full health report for it.
+# ✘ missing, as the editor says) and, for Python, the env. Enter on Python picks its env (hidex-python);
+# on another language, the editor's full report on it.
 [ "$1" = python ] && exec hidex-python pick
 
 # the project's files: git's list (skips build output, venvs), else up to 20000 found
 files() { git ls-files 2>/dev/null | grep . || find . -type f -not -path '*/.*' 2>/dev/null | head -20000; }
 
-# Helix's language name per extension (the common ones), counted
+# the language name per extension (the common ones), counted
 count() {
   awk -F/ '{ f = $NF; e = f; sub(/.*\./, "", e) }
     f == "Dockerfile" || f ~ /\.dockerfile$/ { n["dockerfile"]++; next }
@@ -21,12 +21,8 @@ count() {
     END { for (l in n) print n[l] "\t" l }' | sort -rn
 }
 
-# the language's servers, from `hx --health LANG`: "✓ name ✘ other"
-servers() {
-  hx --health "$1" 2>/dev/null | awk '/^Configured language servers/ { on = 1; next } on && /^[^ ]/ { exit }
-    on && /✓|✘/ { s = $0; sub(/^ *[^ ]* */, "", s); sub(/:.*/, "", s); printf "%s %s  ", ($0 ~ /✓/ ? "✓" : "✘"), s }
-    on && /None/ { printf "none" }'
-}
+# the language's servers as the editor sees them: "✓ name ✘ other"
+servers() { hidex-editor servers "$1" 2>/dev/null; }
 
 listing() {
   files | count | head -15 | while IFS="$(printf '\t')" read -r n l; do
@@ -36,9 +32,9 @@ listing() {
 }
 
 choice=$(listing | hidex-fzf --ansi --no-sort --prompt 'langs > ' --delimiter '\t' --with-nth 1 \
-  --header 'Enter: Python'"'"'s env, or a language'"'"'s health in Helix') || exit 0
+  --header 'Enter: Python'"'"'s env, or a language'"'"'s report in the editor') || exit 0
 l=$(printf '%s' "$choice" | cut -f2)
 case $l in
   python) hidex-python pick ;;
-  ?*) hx --health "$l" | less -R ;;
+  ?*) hidex-editor health "$l" | less -R ;;
 esac

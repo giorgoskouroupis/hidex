@@ -21,6 +21,6 @@ export HIDEX_PLUGIN=$s/current/share/hidex/hidex-panes.wasm
 zellij action start-or-reload-plugin "file:$HIDEX_PLUGIN"
 # the bar needs a moment to start again before it can pass a command to Helix
 sleep 1
-hidex-msg helix config-reload
+hidex-msg editor config-reload
 hidex-msg status
 echo "hIDEx: updated ($old → $new)"

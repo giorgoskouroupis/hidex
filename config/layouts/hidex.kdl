@@ -11,7 +11,8 @@ layout {
                     pane stacked=true size="28%" {
                         @TREES@
                     }
-                    pane name="Helix" command="hidex-helix" focus=true
+                    // the editor (hidex-editor), named after it: "Helix"
+                    pane name="@EDITOR@" command="hidex-editor" focus=true { args "run"; }
                 }
                 pane name="term 1" command="hidex-shell"
             }

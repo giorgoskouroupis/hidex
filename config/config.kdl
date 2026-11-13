@@ -39,7 +39,7 @@ keybinds {
         // jump straight to a pane: the explorer, Helix, the terminals, the side terminal (Claude); the keys
         // below go to the hIDEx plugin, which lives in the bar (layouts/hidex.kdl)
         bind "Alt e" { MessagePlugin "file:@plugin@" { name "focus"; payload "tree"; }; }
-        bind "Alt h" { MessagePlugin "file:@plugin@" { name "focus"; payload "helix"; }; }
+        bind "Alt h" { MessagePlugin "file:@plugin@" { name "focus"; payload "editor"; }; }
         bind "Alt t" { MessagePlugin "file:@plugin@" { name "focus"; payload "terminals"; }; }
         bind "Alt c" { MessagePlugin "file:@plugin@" { name "focus"; payload "side"; }; }
         // Alt+1…9: term N, side N or the Nth tree, of the kind of pane you are on (from Helix: term N)

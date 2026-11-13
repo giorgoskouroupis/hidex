@@ -1,0 +1,23 @@
+#!/bin/sh
+# Helix's adapter (hidex-editor): run | themes | health LANG | servers LANG | title. Helix has no interface for
+# other programs: the bar types its commands into it (plugin/src/typist.rs), and it saves when left (its config:
+# auto-save), the only way to hand files over safely.
+case $1 in
+  # Helix, sandboxed so it cannot open the secrets folders (hidex-sandbox machine), nor anything it starts
+  # (language servers, :sh). HIDEX_EDITOR_RUN: another program to run there instead (the tests).
+  run) shift; exec hidex-sandbox machine -- "${HIDEX_EDITOR_RUN:-hx}" "$@" ;;
+  # hIDEx's own first (in the window's colours), then every theme in Helix's runtime folders
+  themes)
+    echo hidex
+    hx --health 2>/dev/null | sed -n 's/^Runtime directories: //p' | tr ';' '\n' |
+      while read -r d; do ls "$d/themes" 2>/dev/null; done | sed -n 's/\.toml$//p' | sort -u ;;
+  # Helix's report on a language
+  health) hx --health "$2" ;;
+  # its language servers, one line: "✓ found ✘ missing", or "none"
+  servers)
+    hx --health "$2" 2>/dev/null | awk '/^Configured language servers/ { on = 1; next } on && /^[^ ]/ { exit }
+      on && /✓|✘/ { s = $0; sub(/^ *[^ ]* */, "", s); sub(/:.*/, "", s); printf "%s %s  ", ($0 ~ /✓/ ? "✓" : "✘"), s }
+      on && /None/ { printf "none" }' ;;
+  title) echo Helix ;;
+  *) echo "usage: helix run | themes | health LANG | servers LANG | title" >&2; exit 1 ;;
+esac

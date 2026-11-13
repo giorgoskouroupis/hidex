@@ -1,0 +1,41 @@
+#!/bin/sh
+# hidex-editor run [ARGS] | theme [pick | NAME | restore | list] | health LANG | servers LANG | title: the
+# editor in the main pane, whichever it is (HIDEX_EDITOR, default helix), through its adapter
+# (share/hidex/editors/NAME). The bar drives the running editor (hidex-msg editor VERB: plugin/src/editor.rs);
+# the rest of hIDEx asks here.
+e=${HIDEX_EDITOR:-helix}
+adapter=${HIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/hidex}/editors/$e
+[ -x "$adapter" ] || { echo "hIDEx: no editor $e" >&2; exit 1; }
+
+# theme: one of the editor's own, remembered for the project (HIDEX_PROJECT); the first it lists is hIDEx's own,
+# in the window's colours. pick: previewed as you move, Enter keeps, Esc goes back. restore: the project's, once
+# the editor runs (the bar asks for it at start).
+theme() {
+  mem=${HIDEX_PROJECT:+$HIDEX_PROJECT/$e-theme}
+  own=$("$adapter" themes | head -1)
+  current() { cat "$mem" 2>/dev/null || echo "$own"; }
+  keep() {
+    hidex-msg editor "theme $1"
+    [ -n "$mem" ] || return 0
+    if [ "$1" = "$own" ]; then rm -f "$mem"; else echo "$1" > "$mem"; fi
+  }
+  case ${1:-pick} in
+    list) "$adapter" themes ;;
+    # the editor has only just started: a moment before sending it anything
+    restore) t=$(current); [ "$t" = "$own" ] || { sleep 1; hidex-msg editor "theme $t"; } ;;
+    pick)
+      was=$(current)
+      t=$("$adapter" themes | hidex-fzf --prompt "$e theme > " \
+            --header "$own: in the window's colours. Moving previews; Enter keeps, Esc goes back" \
+            --bind 'focus:execute-silent(hidex-msg editor "theme {}")') || { hidex-msg editor "theme $was"; exit 0; }
+      keep "$t" ;;
+    terminal) keep "$own" ;;
+    *) keep "$1" ;;
+  esac
+}
+
+case $1 in
+  theme) shift; theme "$@" ;;
+  run | health | servers | title) exec "$adapter" "$@" ;;
+  *) echo "usage: hidex-editor run [ARGS] | theme [pick | NAME | restore | list] | health LANG | servers LANG | title" >&2; exit 1 ;;
+esac
