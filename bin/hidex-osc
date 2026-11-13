@@ -1,7 +1,0 @@
-#!/bin/sh
-# hidex-osc CODE...: sends terminal codes (OSC, without the ESC ] … ESC \ around them) straight
-# to the window hIDEx runs in (its tty, noted by hidex), past zellij: the colours (hidex-theme). Fails when the
-# window is not known.
-s=$(hidex-state) || exit 1
-tty=$(cat "$s/tty" 2>/dev/null) && [ -w "$tty" ] || { echo "hIDEx: the window's terminal is not known" >&2; exit 1; }
-for code; do printf '\033]%s\033\\' "$code"; done >> "$tty"

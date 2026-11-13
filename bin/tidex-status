@@ -1,0 +1,17 @@
+#!/bin/sh
+# tidex-status DIR: one line for the bar, tab-separated: git branch, project Python (only in a Python
+# project: an env chosen, or Python files), colour theme, and the sandbox when it is incomplete ("sandbox:
+# partial", "no sandbox"; tidex-sandbox --gaps, noted at start).
+cd "$1" 2>/dev/null || exit 0
+s=$(tidex-state)
+b=$(git branch --show-current 2>/dev/null) || b=
+[ -z "$b" ] && b=$(git rev-parse --short HEAD 2>/dev/null)
+python_project() {
+  [ -f "$s/python" ] || [ -f pyproject.toml ] || [ -f setup.py ] || [ -f requirements.txt ] ||
+    git ls-files '*.py' 2>/dev/null | grep -q . || find . -maxdepth 3 -name '*.py' -print 2>/dev/null | grep -q .
+}
+p=; python_project && p=$(tidex-python label)
+t=$(cat "$s/theme" 2>/dev/null)
+sb=
+case $(cat "$s/sandbox-gaps" 2>/dev/null) in "") ;; "no sandbox"*) sb="no sandbox" ;; *) sb="sandbox: partial" ;; esac
+printf '%s\t%s\t%s\t%s\n' "$b" "$p" "$t" "$sb"

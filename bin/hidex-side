@@ -1,6 +1,0 @@
-#!/bin/sh
-# The side terminal: Claude first when HIDEX_SIDE is "claude" and it is installed (with the arguments given,
-# e.g. --resume for the first one), then a shell (hidex-shell side), where any other AI tool on the PATH can be
-# started (each keeps its own login).
-if [ "${HIDEX_SIDE:-claude}" = claude ] && command -v claude >/dev/null; then hidex-env claude "$@"; fi
-exec hidex-shell side

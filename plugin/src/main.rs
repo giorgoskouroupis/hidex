@@ -1,5 +1,5 @@
-//! hIDEx's zellij plugin. It lives in the bar at the bottom of the layout and does what keys (config.kdl),
-//! bar clicks and scripts (hidex-msg) ask, all as `Action`s. Each part is its own module:
+//! tIDEx's zellij plugin. It lives in the bar at the bottom of the layout and does what keys (config.kdl),
+//! bar clicks and scripts (tidex-msg) ask, all as `Action`s. Each part is its own module:
 //!   panes     the panes and their roles (tree, editor, terminals, side), jumping, new terminals
 //!   editor    the editor in the main pane behind one contract (open, reload, quit…); typist: Helix's way
 //!   names     the terminals' names: what runs in each, with its number
@@ -47,10 +47,10 @@ struct State {
     ending: bool,
     /// the project's editor theme has been asked for (once both the session and the editor are known)
     restored: bool,
-    /// a guest editor holds the editor's place (hidex-open-with), and the file handed to it
+    /// a guest editor holds the editor's place (tidex-open-with), and the file handed to it
     guest_open: bool,
     handed: Option<String>,
-    /// what to do in the editor once the guest has quit (a file asked for meanwhile: hidex-open-with)
+    /// what to do in the editor once the guest has quit (a file asked for meanwhile: tidex-open-with)
     after_guest: Option<Command>,
     /// messages wait here until zellij says whether this copy of the bar is the one to act (clients)
     gate: clients::Gate,
@@ -87,7 +87,7 @@ impl State {
                 }
             }
             Action::Editor(command) => {
-                // a guest holds the editor's place (hidex-open-with): the editor is hidden, and anything sent to it
+                // a guest holds the editor's place (tidex-open-with): the editor is hidden, and anything sent to it
                 // would bring it back elsewhere; a file to open leads to the guest instead, to quit it first
                 if let Some(guest) = self.panes.for_role("guest") {
                     if matches!(command, Command::Open(_)) {
@@ -124,11 +124,11 @@ impl State {
         }
     }
 
-    /// the editor theme kept for the project (hidex-editor theme), once the editor runs
+    /// the editor theme kept for the project (tidex-editor theme), once the editor runs
     fn restore(&mut self) {
         if !self.restored && self.cwd_known {
             self.restored = true;
-            scripts::run(&["hidex-editor", "theme", "restore"], None);
+            scripts::run(&["tidex-editor", "theme", "restore"], None);
         }
     }
 
@@ -149,13 +149,13 @@ impl State {
     }
 
     /// the last step: stop what still runs in the shells (nothing left behind, on a server too), then the
-    /// session ends (when hidex-stop answers)
+    /// session ends (when tidex-stop answers)
     fn end(&mut self) {
         if self.ending {
             return;
         }
         self.ending = true;
-        scripts::run(&["hidex-stop"], Some(scripts::STOPPED));
+        scripts::run(&["tidex-stop"], Some(scripts::STOPPED));
     }
 
     fn on_panes(&mut self, manifest: PaneManifest) {
@@ -207,14 +207,14 @@ impl State {
 }
 
 impl ZellijPlugin for State {
-    // the permissions: the same list as bin/hidex approves ahead
+    // the permissions: the same list as bin/tidex approves ahead
     fn load(&mut self, _configuration: BTreeMap<String, String>) {
         request_permission(&[
             PermissionType::ReadApplicationState,
             PermissionType::ChangeApplicationState,
             PermissionType::RunCommands,
             PermissionType::WriteToStdin, // to type commands into the editor (Helix)
-            PermissionType::ReadCliPipes, // to answer scripts' messages (hidex-msg), which zellij resends otherwise
+            PermissionType::ReadCliPipes, // to answer scripts' messages (tidex-msg), which zellij resends otherwise
             PermissionType::RunActionsAsUser, // zellij's own actions (copying the last command output: /copy)
         ]);
         subscribe(&[
@@ -281,7 +281,7 @@ impl ZellijPlugin for State {
     }
 
     fn pipe(&mut self, message: PipeMessage) -> bool {
-        // a message from a script (hidex-msg): answer it, or zellij sends it again after a second
+        // a message from a script (tidex-msg): answer it, or zellij sends it again after a second
         if let PipeSource::Cli(id) = &message.source {
             unblock_cli_pipe_input(id);
             // zellij follows each script message with an empty one, its end of input
@@ -290,8 +290,8 @@ impl ZellijPlugin for State {
             }
         }
         let payload = message.payload.as_deref().unwrap_or("");
-        // scripts name their messages "hidex:NAME" (hidex-msg), keys plain NAME
-        let name = message.name.strip_prefix("hidex:").unwrap_or(&message.name);
+        // scripts name their messages "tidex:NAME" (tidex-msg), keys plain NAME
+        let name = message.name.strip_prefix("tidex:").unwrap_or(&message.name);
         if let Some(action) = Action::from_message(name, payload) {
             self.gate.hold(action);
         }

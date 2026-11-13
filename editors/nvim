@@ -1,22 +1,22 @@
 #!/bin/sh
-# Neovim's adapter (hidex-editor): run | do VERB … | themes | health LANG | servers LANG | notes | title.
+# Neovim's adapter (tidex-editor): run | do VERB … | themes | health LANG | servers LANG | notes | title.
 # Neovim answers other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
 share=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-sock() { echo "$(hidex-state)/nvim.sock"; }
+sock() { echo "$(tidex-state)/nvim.sock"; }
 # (a headless, clean client: no screen codes around its answers, and none of your own config)
 ask() { timeout 5 nvim --headless --clean --server "$(sock)" "$@"; }
 remote() { ask "$@" >/dev/null 2>&1; }
 case $1 in
-  # Neovim with hIDEx's settings (config/nvim) and state of its own (NVIM_APPNAME), listening on the session's
-  # socket; sandboxed like any editor (hidex-sandbox machine). HIDEX_EDITOR_RUN: another program (the tests).
+  # Neovim with tIDEx's settings (config/nvim) and state of its own (NVIM_APPNAME), listening on the session's
+  # socket; sandboxed like any editor (tidex-sandbox machine). TIDEX_EDITOR_RUN: another program (the tests).
   run)
     shift
-    s=$(hidex-state 2>/dev/null) && rm -f "$s/nvim.sock"
-    export NVIM_APPNAME=hidex-nvim
+    s=$(tidex-state 2>/dev/null) && rm -f "$s/nvim.sock"
+    export NVIM_APPNAME=tidex-nvim
     # its folders made first: the sandbox allows writing in what exists (not new folders beside the secrets)
     mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/$NVIM_APPNAME" "${XDG_STATE_HOME:-$HOME/.local/state}/$NVIM_APPNAME" \
       "${XDG_CACHE_HOME:-$HOME/.cache}/$NVIM_APPNAME"
-    exec hidex-sandbox machine -- "${HIDEX_EDITOR_RUN:-nvim}" \
+    exec tidex-sandbox machine -- "${TIDEX_EDITOR_RUN:-nvim}" \
       ${s:+--listen "$s/nvim.sock"} -u "$share/nvim/init.lua" "$@" ;;
   # the bar's verbs (plugin/src/editor.rs), as Neovim commands run in place (<Cmd>: whatever the mode)
   do)
@@ -43,7 +43,7 @@ case $1 in
     echo default
     ls "$(dirname "$(readlink -f "$(command -v nvim)")")/../share/nvim/runtime/colors" 2>/dev/null |
       sed -n 's/\.\(vim\|lua\)$//p' | grep -vx default | sort -u ;;
-  # a language's servers, from config/nvim/lua/hidex/servers.lua: "✓ found ✘ missing", or "none"
+  # a language's servers, from config/nvim/lua/tidex/servers.lua: "✓ found ✘ missing", or "none"
   servers | health) nvim -l "$share/nvim/langs.lua" "$2" ;;
   # what nobody would guess about it (the welcome pop-up, Alt+k)
   notes) echo "Files changed on disk (Claude, git) come back by themselves; changed here too, Neovim asks which to keep (W12)"

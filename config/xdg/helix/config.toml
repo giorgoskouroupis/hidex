@@ -1,6 +1,6 @@
-# hIDEx's own Helix config (its hx runs with XDG_CONFIG_HOME pointing here; the machine's is not read).
+# tIDEx's own Helix config (its hx runs with XDG_CONFIG_HOME pointing here; the machine's is not read).
 # A copy of the usual settings, without Helix's own file explorer: the tree pane is the explorer.
-theme = "hidex"
+theme = "tidex"
 
 [editor]
 bufferline = "multiple"

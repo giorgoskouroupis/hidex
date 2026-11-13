@@ -1,0 +1,5 @@
+#!/bin/sh
+# tidex-state: prints (and creates) the session's (ZELLIJ_SESSION_NAME) state folder, where tIDEx keeps what can change
+# while it runs: the colour theme, the project Python, the window's terminal. Gone when the machine restarts.
+d=${XDG_RUNTIME_DIR:-/tmp}/tidex/${ZELLIJ_SESSION_NAME:?not in a tIDEx session}
+mkdir -p "$d" && echo "$d"

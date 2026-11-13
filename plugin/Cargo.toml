@@ -1,12 +1,12 @@
 [package]
-name = "hidex-panes"
+name = "tidex-panes"
 version = "0.1.0"
 edition = "2021"
-description = "hIDEx's zellij plugin: jump to a pane by role, open a new terminal or Claude in its area"
+description = "tIDEx's zellij plugin: jump to a pane by role, open a new terminal or Claude in its area"
 license = "MIT"
 
 [dependencies]
-# must match the zellij that hIDEx bundles (tools.lock)
+# must match the zellij that tIDEx bundles (tools.lock)
 zellij-tile = "=0.46.0"
 
 [profile.release]

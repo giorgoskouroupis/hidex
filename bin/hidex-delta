@@ -1,4 +1,0 @@
-#!/bin/sh
-# hidex-delta: delta for lazygit's diffs, in light colours when hidex-lazygit found a light background
-# (delta cannot tell by itself there, and assumes dark: white text on dark red and green)
-exec delta ${HIDEX_DELTA_LIGHT:+--light} "$@"

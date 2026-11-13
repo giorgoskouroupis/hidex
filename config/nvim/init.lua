@@ -1,5 +1,5 @@
--- tIDEx's Neovim (editors/nvim run: nvim -u this file, NVIM_APPNAME=hidex-nvim, so your own Neovim config and
--- state are never read): plain Neovim, the language servers of lua/hidex/servers.lua, files kept in step with
+-- tIDEx's Neovim (editors/nvim run: nvim -u this file, NVIM_APPNAME=tidex-nvim, so your own Neovim config and
+-- state are never read): plain Neovim, the language servers of lua/tidex/servers.lua, files kept in step with
 -- the disk, the terminal's 16 colours (so it follows /theme).
 local here = vim.fs.dirname(debug.getinfo(1, "S").source:sub(2))
 vim.opt.runtimepath:prepend(here)
@@ -32,7 +32,7 @@ end))
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, { command = "silent! checktime" })
 
 -- Language servers: those found on the PATH; completion as you type; diagnostics in full on the cursor line
-for name, config in pairs(require("hidex.servers")) do
+for name, config in pairs(require("tidex.servers")) do
   vim.lsp.config(name, config)
   if vim.fn.executable(config.cmd[1]) == 1 then vim.lsp.enable(name) end
 end
@@ -47,11 +47,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 vim.diagnostic.config({ virtual_text = { current_line = true }, severity_sort = true })
 
--- mini.nvim (tools/nvim-pack, shipped with hIDEx, pinned): pickers, git markers, and the keys that follow Space
+-- mini.nvim (tools/nvim-pack, shipped with tIDEx, pinned): pickers, git markers, and the keys that follow Space
 -- or g shown as you type them. The keys are Helix's space menu, so both editors answer the same.
 local pack = vim.fs.normalize(here .. "/../../../tools/nvim-pack")
 vim.opt.packpath:prepend(pack)
--- the tree-sitter parsers and queries built for hIDEx (nvim-parsers.txt): colours and structure for those files
+-- the tree-sitter parsers and queries built for tIDEx (nvim-parsers.txt): colours and structure for those files
 vim.opt.runtimepath:prepend(pack .. "/site")
 vim.api.nvim_create_autocmd("FileType", { callback = function(args) pcall(vim.treesitter.start, args.buf) end })
 if pcall(vim.cmd.packadd, "mini.nvim") then

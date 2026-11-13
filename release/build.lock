@@ -1,8 +1,8 @@
 # Downloads only the release build uses (scripts/release), not installed as tools: the colour schemes for /theme
 # (iTerm2-Color-Schemes, MIT), whose kitty files go into the core archive; WezTerm's shell integration for bash and
-# zsh (MIT), the standard prompt and output marks (OSC 133) zellij reads (share/hidex/shell); broot, whose official
+# zsh (MIT), the standard prompt and output marks (OSC 133) zellij reads (share/tidex/shell); broot, whose official
 # download holds builds for every system (65 MB): its Linux one is published as a small bundle of its own;
-# mini.nvim (MIT), the pickers and git markers of hIDEx's Neovim, in the bundle "nvim" (its code and help only),
+# mini.nvim (MIT), the pickers and git markers of tIDEx's Neovim, in the bundle "nvim" (its code and help only),
 # with the tree-sitter parsers nvim-treesitter (Apache-2.0) builds with the tree-sitter CLI (MIT): nvim-parsers.txt.
 # Same format as tools.lock.
 themes	314a551	4ee03a7a0f337cd5c74bcce49403a71e405053ce8b71c318afacaa484c25d9b8	https://github.com/mbadolato/iTerm2-Color-Schemes/archive/314a551246c00f9c954b581ade61855e5aaf3ab2.tar.gz	dir

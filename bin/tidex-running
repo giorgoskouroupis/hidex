@@ -1,0 +1,22 @@
+#!/bin/sh
+# tidex-running [--pids]: what still runs in the session's shells (terminals, side terminals): one
+# "pane: command" line each, or with --pids every process under them (for tidex-stop). Claude does not count.
+s=$(tidex-state) || exit 1
+names=$(zellij action list-panes 2>/dev/null)
+for f in "$s"/panes/*; do
+  [ -f "$f" ] || continue
+  pid=$(cat "$f")
+  kill -0 "$pid" 2>/dev/null || { rm -f "$f"; continue; }
+  name=$(printf '%s\n' "$names" | awk -v id="terminal_${f##*/}" '$1 == id { $1 = $2 = ""; sub(/^ +/, ""); print }')
+  # the pane's shell is a child of its tidex-shell / tidex-side; what runs in it, the shell's children
+  for sh in $(pgrep -P "$pid" -x "${SHELL##*/}"); do
+    if [ "$1" = --pids ]; then
+      # every descendant, depth first, from the process table
+      ps -e -o pid=,ppid= | awk -v root="$sh" '{ kids[$2] = kids[$2] " " $1 }
+        END { n = split(kids[root], q, " "); for (i = 1; i <= n; i++) { print q[i]; m = split(kids[q[i]], c, " ")
+              for (j = 1; j <= m; j++) q[++n] = c[j] } }'
+    else
+      ps -o args= --ppid "$sh" | sed "s|^|${name:-shell}: |"
+    fi
+  done
+done

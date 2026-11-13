@@ -1,23 +1,23 @@
-// broot as hIDEx's tree: Enter on a file opens it through hidex-open (Helix, or lnav for logs and big files);
+// broot as tIDEx's tree: Enter on a file opens it through tidex-open (Helix, or lnav for logs and big files);
 // directories still expand. File-changing commands are switched off for now: each prints a note instead.
 {
     verbs: [
-        { invocation: "open", key: "enter", apply_to: "file", external: "hidex-open {file}", leave_broot: false }
-        // F2: pick the editor first (hidex-open-with: Helix, micro, nano); Ctrl and Alt keys do not reach broot's
+        { invocation: "open", key: "enter", apply_to: "file", external: "tidex-open {file}", leave_broot: false }
+        // F2: pick the editor first (tidex-open-with: Helix, micro, nano); Ctrl and Alt keys do not reach broot's
         // verbs through zellij, a function key does
-        { invocation: "open_with", key: "F2", apply_to: "file", external: "hidex-open --with {file}", leave_broot: false }
+        { invocation: "open_with", key: "F2", apply_to: "file", external: "tidex-open --with {file}", leave_broot: false }
         // Enter on a folder goes into it; on the top line it goes up, but not above the tree's own folder
-        // (hidex-tree-enter); broot's parent commands do nothing
-        { key: "enter", apply_to: "directory", external: "hidex-tree-enter {directory}", leave_broot: false }
+        // (tidex-tree-enter); broot's parent commands do nothing
+        { key: "enter", apply_to: "directory", external: "tidex-tree-enter {directory}", leave_broot: false }
         { invocation: "parent", internal: ":refresh" }
         { invocation: "up_tree", internal: ":refresh" }
         { invocation: "root_up", internal: ":refresh" }
-        { invocation: "rm", external: "echo rm is off in hIDEx", leave_broot: false }
-        { invocation: "mv", external: "echo mv is off in hIDEx", leave_broot: false }
-        { invocation: "cp", external: "echo cp is off in hIDEx", leave_broot: false }
-        { invocation: "mvp", external: "echo mvp is off in hIDEx", leave_broot: false }
-        { invocation: "cpp", external: "echo cpp is off in hIDEx", leave_broot: false }
-        { invocation: "mkdir", external: "echo mkdir is off in hIDEx", leave_broot: false }
+        { invocation: "rm", external: "echo rm is off in tIDEx", leave_broot: false }
+        { invocation: "mv", external: "echo mv is off in tIDEx", leave_broot: false }
+        { invocation: "cp", external: "echo cp is off in tIDEx", leave_broot: false }
+        { invocation: "mvp", external: "echo mvp is off in tIDEx", leave_broot: false }
+        { invocation: "cpp", external: "echo cpp is off in tIDEx", leave_broot: false }
+        { invocation: "mkdir", external: "echo mkdir is off in tIDEx", leave_broot: false }
     ]
     // terminal colours (ansi indexes) on the terminal's own background: follows the theme like the other panes
     skin: {

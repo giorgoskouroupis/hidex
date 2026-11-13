@@ -1,0 +1,18 @@
+#!/bin/sh
+# tidex-welcome: the first start's pop-up, shown once (then ~/.local/state/tidex/welcomed): what nobody would
+# guess, above all about the editor (its adapter's notes: Helix saving when left, Neovim reloading…).
+tidex-popup-colors
+mark=${XDG_STATE_HOME:-$HOME/.local/state}/tidex/welcomed
+mkdir -p "${mark%/*}" && touch "$mark"
+printf '\n  Welcome to tIDEx, with %s as the editor (/editor picks another)\n\n' "$(tidex-editor title)"
+tidex-editor notes | sed 's/^/  ! /'
+cat <<'EOF2'
+
+  Alt+k   every key, by group
+  Alt+p   the / commands
+  F2      on a file in a tree: open it with another editor (Helix or Neovim, micro, nano)
+  Alt+q   quit
+
+  press a key
+EOF2
+stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1

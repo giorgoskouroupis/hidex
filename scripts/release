@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# scripts/release [VERSION]: hIDEx's release files in dist/, from this checkout:
-#   hidex-VERSION-x86_64-linux.tar.gz  the core: scripts, config, the plugin (cargo, wasm32-wasip1), the /theme
+# scripts/release [VERSION]: tIDEx's release files in dist/, from this checkout:
+#   tidex-VERSION-x86_64-linux.tar.gz  the core: scripts, config, the plugin (cargo, wasm32-wasip1), the /theme
 #                                      colour schemes, tools.lock and BUNDLES (what install.sh fetches next)
-#   hidex-lsp-HASH.tar.gz              the Node language servers (release/lsp), named after their lock file
-#   hidex-pudb-HASH.tar.gz             pudb (release/pudb.txt), named after it
-#   hidex-broot-HASH.tar.gz            broot's Linux program, out of its official download for every system
-#   hidex-nvim-HASH.tar.gz             Neovim's packages (mini.nvim) and tree-sitter parsers, named after their inputs
+#   tidex-lsp-HASH.tar.gz              the Node language servers (release/lsp), named after their lock file
+#   tidex-pudb-HASH.tar.gz             pudb (release/pudb.txt), named after it
+#   tidex-broot-HASH.tar.gz            broot's Linux program, out of its official download for every system
+#   tidex-nvim-HASH.tar.gz             Neovim's packages (mini.nvim) and tree-sitter parsers, named after their inputs
 # A bundle keeps its name while its content does not change, so an update downloads it only when it changed; the
 # tools come from their own downloads (tools.lock). Prints the core's path. Needs cargo with the wasm32-wasip1
 # target, curl, tar, xz (nix develop gives them).
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
 version=${1:-$(git -C "$repo" describe --tags --always --dirty)}
-name=hidex-$version
+name=tidex-$version
 dist=$repo/dist out=$repo/dist/$name store=$repo/dist/store
-export HIDEX_CACHE=$repo/dist/cache
-rm -rf "$out" "$dist"/hidex-lsp-*.tar.gz "$dist"/hidex-pudb-*.tar.gz "$dist"/hidex-broot-*.tar.gz "$dist"/hidex-nvim-*.tar.gz
+export TIDEX_CACHE=$repo/dist/cache
+rm -rf "$out" "$dist"/tidex-lsp-*.tar.gz "$dist"/tidex-pudb-*.tar.gz "$dist"/tidex-broot-*.tar.gz "$dist"/tidex-nvim-*.tar.gz
 mkdir -p "$out/bin" "$out/share" "$store"
-tools() { "$repo/bin/hidex-tools" "$@"; }
+tools() { "$repo/bin/tidex-tools" "$@"; }
 
 # the build's own tools: Node, Python and Neovim (to make the bundles), the colour schemes
 tools fetch "$repo/tools.lock" "$store" node python neovim
@@ -27,9 +27,9 @@ shell=$(ls -d "$store"/shell-integration-[0-9a-f]*) shell_license=$(ls -d "$stor
 broot=$(ls -d "$store"/broot-*) mini=$(ls -d "$store"/mini-*) nvim=$(ls -d "$store"/neovim-*/bin)
 tree_sitter=$(ls -d "$store"/tree-sitter-*) nvim_treesitter=$(ls -d "$store"/nvim-treesitter-*)
 
-# bundle NAME DIR: DIR packed as hidex-NAME-HASH.tar.gz (HASH: of its inputs, $hash); its BUNDLES line
+# bundle NAME DIR: DIR packed as tidex-NAME-HASH.tar.gz (HASH: of its inputs, $hash); its BUNDLES line
 bundle() {
-  local file=hidex-$1-$hash.tar.gz
+  local file=tidex-$1-$hash.tar.gz
   tar -C "$2" -czf "$dist/$file" .
   printf '%s\t%s\t%s\t%s\n' "$1" "$file" "$(sha256sum "$dist/$file" | cut -d' ' -f1)" "$3" >> "$out/BUNDLES"
 }
@@ -45,7 +45,7 @@ bundle lsp "$work/lsp" tools/lsp
 "$python" -m pip install --quiet --no-deps --no-compile --disable-pip-version-check --target "$work/pudb" \
   -r "$repo/release/pudb.txt" >&2
 hash=$(sha256sum "$repo/release/pudb.txt" | cut -c1-12)
-bundle pudb "$work/pudb" share/hidex/python/lib
+bundle pudb "$work/pudb" share/tidex/python/lib
 
 # broot: its Linux program alone, out of its official download for every system
 mkdir -p "$work/broot/bin"
@@ -55,8 +55,8 @@ bundle broot "$work/broot" tools/broot
 
 # Neovim's own packages (config/nvim loads them from tools/nvim-pack): mini.nvim, its code and help; the tree-sitter
 # parsers and queries nvim-treesitter builds (site/, at the revisions it pins: needs a C compiler), and its own
-# code for their predicates (nothing is downloaded or built where hIDEx runs)
-p=$work/nvim/pack/hidex/start
+# code for their predicates (nothing is downloaded or built where tIDEx runs)
+p=$work/nvim/pack/tidex/start
 mkdir -p "$p/mini.nvim" "$p/nvim-treesitter" "$work/nvim/site"
 cp -r "$mini/lua" "$mini/doc" "$mini/LICENSE" "$p/mini.nvim/"
 cp -r "$nvim_treesitter/lua" "$nvim_treesitter/plugin" "$nvim_treesitter/LICENSE" "$p/nvim-treesitter/"
@@ -66,17 +66,17 @@ hash=$({ grep -E '^(mini|tree-sitter|nvim-treesitter)	' "$repo/release/build.loc
   cat "$repo/release/nvim-parsers.txt" "$repo/release/nvim-parsers.lua"; } | sha256sum | cut -c1-12)
 bundle nvim "$work/nvim" tools/nvim-pack
 
-# the core: hIDEx's own files
-cp -r "$repo/config" "$out/share/hidex"
-cp -r "$repo/editors" "$out/share/hidex/"
-mkdir "$out/share/hidex/themes"
-cp "$themes/kitty"/*.conf "$themes/LICENSE" "$out/share/hidex/themes/"
-cp "$repo/README.md" "$out/share/hidex/"
-mkdir -p "$out/share/hidex/shell"
-cp "$shell/wezterm.sh" "$out/share/hidex/shell/"
-cp "$shell_license/LICENSE.md" "$out/share/hidex/shell/LICENSE-wezterm.md"
+# the core: tIDEx's own files
+cp -r "$repo/config" "$out/share/tidex"
+cp -r "$repo/editors" "$out/share/tidex/"
+mkdir "$out/share/tidex/themes"
+cp "$themes/kitty"/*.conf "$themes/LICENSE" "$out/share/tidex/themes/"
+cp "$repo/README.md" "$out/share/tidex/"
+mkdir -p "$out/share/tidex/shell"
+cp "$shell/wezterm.sh" "$out/share/tidex/shell/"
+cp "$shell_license/LICENSE.md" "$out/share/tidex/shell/LICENSE-wezterm.md"
 (cd "$repo/plugin" && cargo build --release --locked --target wasm32-wasip1 >&2)
-cp "$repo/plugin/target/wasm32-wasip1/release/hidex-panes.wasm" "$out/share/hidex/"
+cp "$repo/plugin/target/wasm32-wasip1/release/tidex-panes.wasm" "$out/share/tidex/"
 install -m755 "$repo/bin"/* "$out/bin/"
 cp "$repo/install.sh" "$repo/LICENSE" "$repo/tools.lock" "$out/"
 echo "$version" > "$out/VERSION"

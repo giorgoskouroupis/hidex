@@ -3,9 +3,9 @@
 use std::collections::BTreeMap;
 use zellij_tile::prelude::run_command;
 
-/// hidex-status's line for the bar
+/// tidex-status's line for the bar
 pub const STATUS_LINE: &str = "status";
-/// hidex-stop is done: the session can end
+/// tidex-stop is done: the session can end
 pub const STOPPED: &str = "stopped";
 
 /// run a script; with a tag, its answer comes back carrying it

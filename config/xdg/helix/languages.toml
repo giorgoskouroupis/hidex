@@ -1,4 +1,4 @@
-# Language servers come with hIDEx (package.nix) for Python (basedpyright, ruff) and the files most projects
+# Language servers come with tIDEx (package.nix) for Python (basedpyright, ruff) and the files most projects
 # have: shell, Markdown, TOML, Nix, YAML, JSON, HTML, CSS, JavaScript/TypeScript, Dockerfile. Others (rust-analyzer, gopls, …) are
 # found on the PATH, e.g. from the project's dev shell; `hx --health LANG` or /langs shows what is missing.
 [[language]]
@@ -6,9 +6,9 @@ name = "python"
 language-servers = ["basedpyright", "ruff"]
 
 # "standard", not basedpyright's default "recommended", which flags every unknown or partial type
-# hidex-pyright: basedpyright on the project's Python (hidex-python, /python)
+# tidex-pyright: basedpyright on the project's Python (tidex-python, /python)
 [language-server.basedpyright]
-command = "hidex-pyright"
+command = "tidex-pyright"
 args = ["--stdio"]
 config.basedpyright.analysis.typeCheckingMode = "standard"
 
@@ -16,7 +16,7 @@ config.basedpyright.analysis.typeCheckingMode = "standard"
 command = "ruff"
 args = ["server"]
 
-# only the servers hIDEx brings (Helix would also try marksman, nixd, ansible, superhtml, tombi)
+# only the servers tIDEx brings (Helix would also try marksman, nixd, ansible, superhtml, tombi)
 [[language]]
 name = "markdown"
 language-servers = ["markdown-oxide"]

@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+# tidex-tools fetch LOCK STORE [NAME…]: the tools of LOCK (tools.lock's format; only NAMEs when given), each
+#   unpacked once into STORE/NAME-VERSION, from its official download checked against its sha256; tools already
+#   there are kept (an update downloads only what changed). TIDEX_CACHE: a folder of downloads to use first and
+#   fill (the release build's dist/cache).
+# tidex-tools link LOCK STORE VERSION: VERSION/tools as tIDEx's scripts expect it, links into STORE: each tool's
+#   programs in tools/bin, a "dir" tool as tools/NAME.
+# tidex-tools bundles LIST STORE VERSION SOURCE: tIDEx's own bundles (LIST: name, file, sha256, path), each from
+#   SOURCE (the release's download address, or a folder) unpacked once into STORE/NAME-HASH and linked at
+#   VERSION/PATH; its programs (node_modules/.bin, bin/) also in VERSION/tools/bin.
+# Used by install.sh and scripts/release, so both unpack the same way.
+set -euo pipefail
+cmd=$1 lock=$2 store=$3
+shift 3
+
+# the lock's lines: name, version, sha256, url, take
+lines() { grep -v '^#' "$lock" | grep .; }
+
+# bytes as "12.3 MB"
+mb() { printf '%d.%d MB' $(($1 / 1048576)) $(($1 % 1048576 * 10 / 1048576)); }
+
+# one line, redrawn: spinner, LABEL, a bar, percent, size so far / total, speed (bar and percent need the total)
+draw() {
+  local label=$1 size=$2 total=$3 ms=$4 spin=${5:-} w=24 n pct bar rest speed
+  speed=$((ms > 0 ? size * 1000 / ms : 0))
+  if [ "$total" -gt 0 ]; then
+    pct=$((size * 100 / total)) n=$((size * w / total))
+    printf -v bar '%*s' "$n" ''; printf -v rest '%*s' $((w - n)) ''
+    printf '\r  \033[33m%s\033[0m %-22s \033[33m%s\033[2m%s\033[0m %4d%%   %s / %s   %s/s\033[K' "$spin" "$label" \
+      "${bar// /━}" "${rest// /─}" "$pct" "$(mb "$size")" "$(mb "$total")" "$(mb "$speed")" >&2
+  else
+    printf '\r  \033[33m%s\033[0m %-22s %s   %s/s\033[K' "$spin" "$label" "$(mb "$size")" "$(mb "$speed")" >&2
+  fi
+}
+
+# fetch URL FILE LABEL: the download, with its progress line when someone watches (a terminal); plain in the
+# release build's log
+fetch() {
+  local url=$1 out=$2 label=$3 total pid t0 i=0 frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+  if [ ! -t 2 ]; then echo "tIDEx: downloading $label" >&2; curl -fsSL -o "$out" "$url"; return; fi
+  total=$(curl -fsIL "$url" | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n + 0 }')
+  t0=$(date +%s%N)
+  curl -fsSL -o "$out" "$url" & pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    draw "$label" "$(stat -c %s "$out" 2>/dev/null || echo 0)" "$total" $((($(date +%s%N) - t0) / 1000000)) \
+      "${frames[i++ % 10]}"
+    sleep 0.1
+  done
+  wait "$pid" || { printf '\r  \033[31m✗\033[0m %s: download failed\033[K\n' "$label" >&2; return 1; }
+  printf '\r  \033[32m✓\033[0m %-22s %s\033[K\n' "$label" "$(mb "$(stat -c %s "$out")")" >&2
+}
+
+# download URL SHA256 LABEL → the checked file's path
+download() {
+  local f
+  # in the cache by checksum too: a file name can stay the same across versions (zellij's does)
+  if [ -n "${TIDEX_CACHE:-}" ]; then f=$TIDEX_CACHE/${2:0:12}-${1##*/}; mkdir -p "$TIDEX_CACHE"; else f=$work/${1##*/}; fi
+  if [ ! -f "$f" ]; then
+    fetch "$1" "$f.part" "${3:-${1##*/}}"
+    mv "$f.part" "$f"
+  fi
+  echo "$2  $f" | sha256sum -c --quiet - >&2 || { echo "tIDEx: ${1##*/} does not match its checksum" >&2; exit 1; }
+  echo "$f"
+}
+
+# a zip, with unzip or else with the Python already fetched (minimal systems have no unzip)
+unzip_into() {
+  if command -v unzip >/dev/null; then unzip -q "$1" -d "$2"; return; fi
+  local py; py=$(ls -d "$store"/python-*/bin/python3 2>/dev/null | head -1)
+  [ -n "$py" ] || { echo "tIDEx: unzip is needed for ${1##*/}" >&2; exit 1; }
+  "$py" -m zipfile -e "$1" "$2"
+}
+
+# unpack FILE DIR NAME: an archive's content into DIR; a single program (gzipped or not) as DIR/NAME
+unpack() {
+  case $1 in
+    *.tar.gz | *.tgz) tar xzf "$1" -C "$2" ;;
+    *.tar.xz) tar xJf "$1" -C "$2" ;;
+    *.zip) unzip_into "$1" "$2" ;;
+    *.gz) gunzip -c "$1" > "$2/$3" ;;
+    *) cp "$1" "$2/$3" ;;
+  esac
+}
+
+# one tool into STORE/NAME-VERSION: a "dir" tool's folder as it is; else its programs, found by name (or by the
+# end of their path)
+fetch_one() {
+  local name=$1 v=$2 sha=$3 url=$4 take=$5 dest=$store/$1-$2 d f t p
+  [ -e "$dest" ] && return
+  f=$(download "$url" "$sha" "$name $v")
+  d=$work/$name
+  mkdir -p "$d" "$store"
+  unpack "$f" "$d" "${take%%,*}"
+  if [[ $take == dir* ]]; then
+    mv "$(find "$d" -mindepth 1 -maxdepth 1 -type d | head -1)" "$dest.part"
+  else
+    mkdir "$dest.part"
+    for t in ${take//,/ }; do
+      p=$(find "$d" -type f -path "*/$t" | head -1)
+      [ -n "$p" ] || { echo "tIDEx: $t not found in ${url##*/}" >&2; exit 1; }
+      install -m755 "$p" "$dest.part/${t##*/}"
+    done
+  fi
+  mv "$dest.part" "$dest"
+  rm -rf "$d"
+}
+
+# a "dir" tool is linked as tools/NAME, its programs named after "dir:" in tools/bin; another tool's programs
+# straight in tools/bin
+link_one() {
+  local name=$1 v=$2 take=$5 src=$store/$1-$2 t
+  if [[ $take == dir* ]]; then
+    ln -sfn "$src" "$target/tools/$name"
+    [[ $take == dir:* ]] && t=${take#dir:} && for t in ${t//,/ }; do ln -sf "../$name/$t" "$target/tools/bin/${t##*/}"; done
+  else
+    for t in ${take//,/ }; do ln -sf "$src/${t##*/}" "$target/tools/bin/${t##*/}"; done
+  fi
+  return 0
+}
+
+
+# one bundle: FILE (tidex-lsp-HASH.tar.gz) unpacked once as STORE/lsp-HASH, linked at VERSION/PATH
+bundle_one() {
+  local file=$2 sha=$3 path=$4 dest f b
+  dest=$store/${file#tidex-}; dest=${dest%.tar.gz}
+  if [ ! -e "$dest" ]; then
+    case $source in
+      http*) f=$(download "$source/$file" "$sha" "$1 (bundle)") ;;
+      *) f=$source/$file; echo "$sha  $f" | sha256sum -c --quiet - >&2 || { echo "tIDEx: $file does not match" >&2; exit 1; } ;;
+    esac
+    mkdir -p "$dest.part"
+    tar xzf "$f" -C "$dest.part"
+    mv "$dest.part" "$dest"
+  fi
+  mkdir -p "$(dirname "$target/$path")" "$target/tools/bin"
+  ln -sfn "$dest" "$target/$path"
+  # its programs in tools/bin: Node's (node_modules/.bin) and plain ones (bin/)
+  for b in "$dest/node_modules/.bin"/* "$dest/bin"/*; do
+    [ -e "$b" ] && ln -sf "$target/$path/${b#"$dest"/}" "$target/tools/bin/${b##*/}"
+  done
+  return 0
+}
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+case $cmd in
+  fetch)
+    # zips last: they may need the Python
+    { lines | grep -v '\.zip	'; lines | grep '\.zip	' || true; } | while IFS=$'\t' read -r n v sha url take; do
+      [ $# -eq 0 ] || [[ " $* " == *" $n "* ]] || continue
+      fetch_one "$n" "$v" "$sha" "$url" "$take"
+    done ;;
+  link)
+    target=$1
+    mkdir -p "$target/tools/bin"
+    lines | while IFS=$'\t' read -r n v sha url take; do link_one "$n" "$v" "$sha" "$url" "$take"; done ;;
+  bundles)
+    target=$1 source=$2
+    lines | while IFS=$'\t' read -r n file sha path; do bundle_one "$n" "$file" "$sha" "$path"; done ;;
+  *) echo "tidex-tools fetch LOCK STORE [NAME…] | link LOCK STORE VERSION | bundles LIST STORE VERSION SOURCE" >&2; exit 2 ;;
+esac

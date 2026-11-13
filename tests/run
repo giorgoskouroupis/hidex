@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# tests/run [HIDEX]: hIDEx's tests. Each starts hIDEx in a hidden session (no window: keys go in through a fake
+# tests/run [TIDEX]: tIDEx's tests. Each starts tIDEx in a hidden session (no window: keys go in through a fake
 # terminal), drives it with keys and messages, and checks the panes zellij reports. Everything lives in its own
 # temporary folders (runtime, state, cache, the project), never in your sessions or settings, so it is safe to
-# run in the background. HIDEX: an installed hIDEx (default: tests/installed). Exit status: failed tests.
+# run in the background. TIDEX: an installed tIDEx (default: tests/installed). Exit status: failed tests.
 set -u
 repo=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-$("$repo/tests/installed")} || exit 1
 Z=$out/tools/bin/zellij
-T=$(mktemp -d "${TMPDIR:-/tmp}/hidex-tests.XXXXXX")
+T=$(mktemp -d "${TMPDIR:-/tmp}/tidex-tests.XXXXXX")
 # zellij's sockets need a short path (Unix sockets allow ~100 characters): its runtime folder goes in the
 # system's, still a separate one
-R=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/hidex-tests.XXXXXX")
+R=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/tidex-tests.XXXXXX")
 mkdir -p "$T/proj" && chmod 700 "$R"
 export XDG_RUNTIME_DIR=$R XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache
 export SHELL=${BASH:-/bin/sh}  # plain shells, not your login setup
 # Helix as the editor for most checks (Neovim, the default, has its own section)
-export HIDEX_EDITOR=helix
+export TIDEX_EDITOR=helix
 git -C "$T/proj" init -q && echo 'print("hi")' > "$T/proj/a.py"
 S=$(basename "$T")-proj
 failed=0
@@ -26,7 +26,7 @@ ok() { printf '  ok    %s\n' "$1"; }
 fail() { printf '  FAIL  %s\n' "$1"; failed=$((failed + 1)); }
 check() { if eval "$2"; then ok "$1"; else fail "$1"; fi; }
 pause() { timeout "$1" tail -f /dev/null; }
-# zellij's pane list, the terminals' names as their roles: hIDEx names them after what runs ("bash 2"; a side
+# zellij's pane list, the terminals' names as their roles: tIDEx names them after what runs ("bash 2"; a side
 # terminal's name ends with an invisible mark), the checks below speak of "term 2" and "side 2"
 MARK=$(printf '\342\200\213')
 list() { "$Z" -s "$S" action list-panes "$@" 2>/dev/null | awk -F'  +' -v OFS='  ' -v mark="$MARK" '
@@ -52,7 +52,7 @@ count() { titles | tr ';' '\n' | grep -c "^$1"; }
 rows() { panes | awk -F'|' -v t="$1" '$1 == t { print $4 }'; }
 key() { printf '%b' "$1" >&3; pause "${2:-1.5}"; }
 # (a message the bar never answers fails its check rather than stalling the run)
-msg() { timeout 10 "$Z" -s "$S" pipe --name "hidex:$1" -- "${2:--}"; pause 2; }
+msg() { timeout 10 "$Z" -s "$S" pipe --name "tidex:$1" -- "${2:--}"; pause 2; }
 in_session() { "$Z" -s "$S" run --close-on-exit --floating --name test -- "$@" >/dev/null; pause 2; }
 wait_for() { local i; for i in $(seq 40); do eval "$1" && return 0; pause 0.25; done; return 1; }
 # what a pane shows (its screen), by title
@@ -61,31 +61,31 @@ screen() { local id; id=$(list | awk -F'  +' -v t="$1" '$3 == t { print $1 }' | 
 
 start() {
   rm -f "$T/keys"; mkfifo "$T/keys"
-  (cd "$T/proj" && timeout 300 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null \
+  (cd "$T/proj" && timeout 300 script -qfc "stty rows 42 cols 160; $out/bin/tidex --side shell ." /dev/null \
      < "$T/keys" > "$T/screen.log" 2>&1 &)
   exec 3> "$T/keys"
   wait_for 'has "${ED:-Helix}" && has "term 1"' && pause 2
 }
 stop() { exec 3>&-; "$Z" kill-session "$S" >/dev/null 2>&1; "$Z" delete-session "$S" >/dev/null 2>&1; pause 1; }
-# the copied hIDEx (update test) keeps the store's read-only folders
+# the copied tIDEx (update test) keeps the store's read-only folders
 trap 'stop; chmod -R u+w "$T" 2>/dev/null; rm -rf "$T" "$R"' EXIT
 
-echo "hIDEx tests ($out)"
+echo "tIDEx tests ($out)"
 
 echo "start"
 start
 check "the first start: the welcome pop-up, Helix saving by itself first" 'wait_for "screen welcome | grep -q \"Helix saves by itself\""'
 key 'x' 2
-check "a key closes it, for good" '! has welcome && [ -e "$XDG_STATE_HOME/hidex/welcomed" ]'
+check "a key closes it, for good" '! has welcome && [ -e "$XDG_STATE_HOME/tidex/welcomed" ]'
 check "layout: tree, Helix, term 1, side 1" 'has "tree: proj" && has Helix && has "term 1" && has "side 1"'
-check "the tree runs (broot listening on its socket)" 'wait_for "ls /tmp/broot-server-hidex-$S-* >/dev/null 2>&1"'
+check "the tree runs (broot listening on its socket)" 'wait_for "ls /tmp/broot-server-tidex-$S-* >/dev/null 2>&1"'
 check "terminals are named after what runs in them: bash 1, and the side one bash 1 too" 'wait_for "named \"bash 1\" && named \"bash 1$MARK\""'
 key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 4
 '
 check "a name follows what runs: sleep 1 while sleep runs" 'wait_for "named \"sleep 1\""'
 # (the test sessions run in the background, where Ctrl+C reaches nothing: a command that ends by itself)
 check "and back to bash 1 when it ends" 'wait_for "named \"bash 1\""'
-check "running hidex again attaches to the live session" '! (cd "$T/proj" && timeout 4 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null </dev/null 2>&1) | grep -q "panicked\|not supported" && has Helix'
+check "running tidex again attaches to the live session" '! (cd "$T/proj" && timeout 4 script -qfc "stty rows 42 cols 160; $out/bin/tidex --side shell ." /dev/null </dev/null 2>&1) | grep -q "panicked\|not supported" && has Helix'
 # (until that second window has gone, zellij may still count it: a focus change could land there)
 wait_for '[ "$("$Z" -s "$S" action list-clients 2>/dev/null | tail -n +2 | wc -l)" = 1 ]'; pause 1
 
@@ -161,19 +161,19 @@ key '\x1b' 2
 check "Esc closes them" '! has keys'
 
 echo "copy"
-key '\x1bt'; "$Z" -s "$S" action write-chars 'echo hidex-copy-marker
+key '\x1bt'; "$Z" -s "$S" action write-chars 'echo tidex-copy-marker
 '; pause 1
 msg copy; pause 2
-check "/copy: zellij copies the terminal's last output to the window's clipboard" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | grep -q hidex-copy-marker'
+check "/copy: zellij copies the terminal's last output to the window's clipboard" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | grep -q tidex-copy-marker'
 for i in 1 2 3 4 5 6 7 8 9 10 11 12; do "$Z" -s "$S" action write-chars "seq $i 40
 "; pause 0.3; done
 key '\x1bv' 1; key 'm' 2
 check "Alt+v, m: an earlier command copied with its command line" 'grep -a -o "]52;c;[A-Za-z0-9+/=]*" "$T/screen.log" | tail -1 | cut -d";" -f3 | base64 -d 2>/dev/null | head -1 | grep -q "^seq [0-9]* 40"'
 key '\x1bh'
-check "and hIDEx's keys work again right after" '[ "$(focused)" = Helix ]'
+check "and tIDEx's keys work again right after" '[ "$(focused)" = Helix ]'
 
 echo "attention"
-# a command failing out of sight (another tab, hIDEx's shell): the bar names it, Alt+j goes there
+# a command failing out of sight (another tab, tIDEx's shell): the bar names it, Alt+j goes there
 at=$(stat -c %s "$T/screen.log")
 rc=$(list -a | grep -o "rcfile [^ ]*" | head -1 | cut -d" " -f2)
 "$Z" -s "$S" action new-tab; pause 2
@@ -188,30 +188,30 @@ check "Alt+j goes to it" 'f=$(focused); [ -n "$f" ] && [ "$f" != Helix ]'
 "$Z" -s "$S" action close-tab; pause 1; key '\x1bh'
 
 echo "memory"
-in_session "$out/bin/hidex-theme" Dracula
-check "a window theme is kept for the project" 'grep -qx Dracula "$XDG_STATE_HOME"/hidex/projects/*/theme'
+in_session "$out/bin/tidex-theme" Dracula
+check "a window theme is kept for the project" 'grep -qx Dracula "$XDG_STATE_HOME"/tidex/projects/*/theme'
 mkdir -p "$T/venv/bin" && printf '#!/bin/sh\n' > "$T/venv/bin/python" && chmod +x "$T/venv/bin/python"
-in_session "$out/bin/hidex-python" set "$T/venv"
-check "a Python picked is kept for the project" 'grep -qx "$T/venv" "$XDG_STATE_HOME"/hidex/projects/*/python'
-in_session "$out/bin/hidex-editor" theme dracula
-check "a Helix theme is kept for the project" 'grep -qx dracula "$XDG_STATE_HOME"/hidex/projects/*/helix-theme'
+in_session "$out/bin/tidex-python" set "$T/venv"
+check "a Python picked is kept for the project" 'grep -qx "$T/venv" "$XDG_STATE_HOME"/tidex/projects/*/python'
+in_session "$out/bin/tidex-editor" theme dracula
+check "a Helix theme is kept for the project" 'grep -qx dracula "$XDG_STATE_HOME"/tidex/projects/*/helix-theme'
 
 echo "update"
 key '\x1bh'; "$Z" -s "$S" action write-chars 'ohello unsaved'; "$Z" -s "$S" action write 27; pause 1
 cp -rs "$out" "$T/next"
-in_session "$out/bin/hidex-update" "$T/next"
-check "the session's hIDEx moves to the newer one" '[ "$(readlink "$XDG_RUNTIME_DIR/hidex/$S/current")" = "$T/next" ]'
+in_session "$out/bin/tidex-update" "$T/next"
+check "the session's tIDEx moves to the newer one" '[ "$(readlink "$XDG_RUNTIME_DIR/tidex/$S/current")" = "$T/next" ]'
 check "terminals and Helix stay" 'has Helix && has "term 1" && has "term 3" && has "side 2"'
 check "Helix keeps its unsaved text" 'screen Helix | grep -q "hello unsaved"'
 n=$(count "term ")
 msg new terminal
 check "the reloaded bar still answers" '[ "$(count "term ")" = $((n + 1)) ]'
-(cd "$T/proj" && timeout 5 script -qfc "stty rows 42 cols 160; $out/bin/hidex --side shell ." /dev/null </dev/null >/dev/null 2>&1)
-check "attaching from another hIDEx moves the session to it" '[ "$(readlink -f "$XDG_RUNTIME_DIR/hidex/$S/current")" = "$(readlink -f "$out")" ] && has Helix'
+(cd "$T/proj" && timeout 5 script -qfc "stty rows 42 cols 160; $out/bin/tidex --side shell ." /dev/null </dev/null >/dev/null 2>&1)
+check "attaching from another tIDEx moves the session to it" '[ "$(readlink -f "$XDG_RUNTIME_DIR/tidex/$S/current")" = "$(readlink -f "$out")" ] && has Helix'
 
 echo "reattach"
 # the window closes (as closing the terminal does) and a new one attaches: the keys must act in the new one
-exec 3>&-; pkill -f "script -qfc stty rows 42 cols 160; $out/bin/hidex --side shell ."; pause 2
+exec 3>&-; pkill -f "script -qfc stty rows 42 cols 160; $out/bin/tidex --side shell ."; pause 2
 start
 key '\x1bh'
 check "after a reattach, Alt+h reaches Helix" '[ "$(focused)" = Helix ]'
@@ -229,14 +229,14 @@ key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 40
 key '\x1bQ' 10
 check "Alt+Shift+q ends the session" '! "$Z" ls -n 2>/dev/null | grep -q "^$S .*" || "$Z" ls -n 2>/dev/null | grep -q "^$S .*EXITED"'
 check "and stops what ran in it" '! pgrep -f "^sleep 40$" >/dev/null'
-# the ended session is left to hidex, as after a real quit
+# the ended session is left to tidex, as after a real quit
 exec 3>&-; pause 1
 
 echo "next session"
 start
 check "an ended session is replaced, not revived" 'has Helix && ! screen Helix | grep -q "Waiting to run"'
-check "the project's Python comes back" 'grep -qx "$T/venv" "$XDG_RUNTIME_DIR/hidex/$S/python"'
-check "the project's window theme comes back" 'grep -qx Dracula "$XDG_RUNTIME_DIR/hidex/$S/theme"'
+check "the project's Python comes back" 'grep -qx "$T/venv" "$XDG_RUNTIME_DIR/tidex/$S/python"'
+check "the project's window theme comes back" 'grep -qx Dracula "$XDG_RUNTIME_DIR/tidex/$S/theme"'
 msg editor theme
 check "the project's Helix theme comes back" 'wait_for "screen Helix | grep -q dracula"'
 stop
@@ -244,17 +244,17 @@ stop
 echo "Neovim"
 # the same project with Neovim as the editor: driven through its remote API, files kept in step with the disk
 # (the fake terminal does not answer Neovim's background question; a real one does)
-export HIDEX_EDITOR=nvim ED=Neovim NVIM_NOTTYFAST=1
+export TIDEX_EDITOR=nvim ED=Neovim NVIM_NOTTYFAST=1
 echo 'print("hi")' > "$T/proj/a.py"
 start
-check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/hidex/$S/nvim.sock" ]'
+check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/tidex/$S/nvim.sock" ]'
 key '\x1be' 1; key 'a.py' 2; key '\r' 3
 check "Enter on a file in the tree: Neovim opens it, in front" 'wait_for "screen Neovim | grep -q \"print(.hi.)\"" && [ "$(focused)" = Neovim ]'
 key ' f' 2
-check "Space f: the file picker of mini.nvim, shipped with hIDEx" 'screen Neovim | grep -q "Files"'
+check "Space f: the file picker of mini.nvim, shipped with tIDEx" 'screen Neovim | grep -q "Files"'
 key '\x1b' 1
-ask_nvim() { "$out/tools/bin/nvim" --headless --clean --server "$XDG_RUNTIME_DIR/hidex/$S/nvim.sock" --remote-expr "$1" 2>/dev/null; }
-check "Python coloured by tree-sitter (the parsers shipped with hIDEx)" '[ "$(ask_nvim "luaeval(\"vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] and 1 or 0\")")" = 1 ]'
+ask_nvim() { "$out/tools/bin/nvim" --headless --clean --server "$XDG_RUNTIME_DIR/tidex/$S/nvim.sock" --remote-expr "$1" 2>/dev/null; }
+check "Python coloured by tree-sitter (the parsers shipped with tIDEx)" '[ "$(ask_nvim "luaeval(\"vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] and 1 or 0\")")" = 1 ]'
 echo '# from Claude' >> "$T/proj/a.py"
 check "changed on disk, untouched here: Neovim shows it by itself" 'wait_for "screen Neovim | grep -q \"from Claude\""'
 key 'Oedited here' 1; "$Z" -s "$S" action write 27; pause 1
@@ -271,17 +271,17 @@ msg quit force; pause 3
 check "quitting: Neovim asks about the unsaved file first" 'screen Neovim | grep -qi "save changes"'
 stop
 unset ED NVIM_NOTTYFAST
-export HIDEX_EDITOR=helix
+export TIDEX_EDITOR=helix
 
 echo "Helix's sandbox"
 mkdir -p "$T/home/.ssh" "$T/home/notes" && touch "$T/home/.ssh/id_test" "$T/home/notes/a"
-check "hides ~/.ssh from Helix (empty, or refused)" 'seen=$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home HIDEX_EDITOR_RUN=ls "$out/bin/hidex-editor" run -A "$T/home/.ssh" 2>/dev/null); [ -z "$seen" ]'
-check "but not the rest" '[ "$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home HIDEX_EDITOR_RUN=ls "$out/bin/hidex-editor" run "$T/home/notes")" = a ]'
+check "hides ~/.ssh from Helix (empty, or refused)" 'seen=$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home TIDEX_EDITOR_RUN=ls "$out/bin/tidex-editor" run -A "$T/home/.ssh" 2>/dev/null); [ -z "$seen" ]'
+check "but not the rest" '[ "$(PATH="$out/bin:$out/tools/bin:$PATH" HOME=$T/home TIDEX_EDITOR_RUN=ls "$out/bin/tidex-editor" run "$T/home/notes")" = a ]'
 
 echo "guard"
-check "refuses /" '! "$out/bin/hidex-guard" / 2>/dev/null'
-check "refuses ~/.ssh" '! "$out/bin/hidex-guard" "$HOME/.ssh" 2>/dev/null'
-check "allows a project" '"$out/bin/hidex-guard" "$T/proj" 2>/dev/null'
+check "refuses /" '! "$out/bin/tidex-guard" / 2>/dev/null'
+check "refuses ~/.ssh" '! "$out/bin/tidex-guard" "$HOME/.ssh" 2>/dev/null'
+check "allows a project" '"$out/bin/tidex-guard" "$T/proj" 2>/dev/null'
 
 echo "$failed failed"
 exit "$failed"

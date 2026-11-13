@@ -1,7 +1,7 @@
 {
-  description = "hIDEx development: the tools to build its release (scripts/release) and test it";
+  description = "tIDEx development: the tools to build its release (scripts/release) and test it";
 
-  # hIDEx itself is installed with install.sh, the same on every Linux; this flake only gives a shell to work
+  # tIDEx itself is installed with install.sh, the same on every Linux; this flake only gives a shell to work
   # on it here: nix develop, then scripts/release, tests/unit, tests/run
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";

@@ -1,4 +1,4 @@
-# hIDEx's zsh (hidex-shell): zsh reads its files from here; your own .zprofile is read where it really is
-ZDOTDIR=$HIDEX_USER_ZDOTDIR
+# tIDEx's zsh (tidex-shell): zsh reads its files from here; your own .zprofile is read where it really is
+ZDOTDIR=$TIDEX_USER_ZDOTDIR
 [ -f "$ZDOTDIR/.zprofile" ] && . "$ZDOTDIR/.zprofile"
-ZDOTDIR=$HIDEX_SHARE/shell/zsh
+ZDOTDIR=$TIDEX_SHARE/shell/zsh

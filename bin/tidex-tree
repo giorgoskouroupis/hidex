@@ -1,0 +1,10 @@
+#!/bin/sh
+# tidex-tree DIR: broot locked to DIR, read-only (tidex-sandbox read): going "up" finds nothing else and the tree
+# cannot change a file. Files still open through tidex-open, which reaches Helix and lnav through zellij.
+dir=$(cd "$1" && pwd) || exit 1
+tidex-guard "$dir" || { sleep 5; exit 1; }
+# broot's socket (for tidex-tree-enter) is always /tmp/broot-server-NAME.sock: a name of its own per session and
+# folder, and the sandbox lets the tree write in /tmp (TIDEX_SANDBOX_TMP)
+sock=tidex-${ZELLIJ_SESSION_NAME:-tree}-$(printf %s "$dir" | md5sum | cut -c1-8)
+export BR_INSTALL=no TIDEX_TREE_TOP="$dir" TIDEX_TREE_SOCK=$sock TIDEX_SANDBOX_TMP=1
+exec tidex-sandbox read "$dir" -- broot --conf "$TIDEX_SHARE/broot.hjson" --listen "$sock" "$dir"

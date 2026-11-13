@@ -1,4 +1,4 @@
-//! The editor in the main pane, behind one contract: keys, the bar and the scripts (hidex-msg editor VERB …) ask
+//! The editor in the main pane, behind one contract: keys, the bar and the scripts (tidex-msg editor VERB …) ask
 //! for plain verbs (Command), and each editor does them its own way. The pane's title names the editor
 //! ("Helix", "Neovim"). Helix offers no interface to other programs: its commands are typed into it (typist);
 //! Neovim answers its remote API, through its adapter (editors/nvim do VERB …).
@@ -82,7 +82,7 @@ fn quoted(s: &str) -> Vec<String> {
 
 /// a request to Neovim's adapter, run as a script (it answers through Neovim's remote API)
 fn ask_neovim(args: &[String]) {
-    let mut command = vec!["env", "HIDEX_EDITOR=nvim", "hidex-editor", "do"];
+    let mut command = vec!["env", "TIDEX_EDITOR=nvim", "tidex-editor", "do"];
     command.extend(args.iter().map(String::as_str));
     scripts::run(&command, None);
 }

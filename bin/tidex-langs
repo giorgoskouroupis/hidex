@@ -1,0 +1,40 @@
+#!/bin/sh
+# tidex-langs [python]: the project's languages, most files first, with their language servers (✓ found,
+# ✘ missing, as the editor says) and, for Python, the env. Enter on Python picks its env (tidex-python);
+# on another language, the editor's full report on it.
+[ "$1" = python ] && exec tidex-python pick
+
+# the project's files: git's list (skips build output, venvs), else up to 20000 found
+files() { git ls-files 2>/dev/null | grep . || find . -type f -not -path '*/.*' 2>/dev/null | head -20000; }
+
+# the language name per extension (the common ones), counted
+count() {
+  awk -F/ '{ f = $NF; e = f; sub(/.*\./, "", e) }
+    f == "Dockerfile" || f ~ /\.dockerfile$/ { n["dockerfile"]++; next }
+    f !~ /\./ { next }
+    { l = m[e] } l != "" { n[l]++ }
+    BEGIN { split("py:python pyi:python js:javascript mjs:javascript cjs:javascript ts:typescript tsx:tsx " \
+      "jsx:jsx rs:rust go:go c:c h:c cpp:cpp cc:cpp hpp:cpp cxx:cpp java:java kt:kotlin sh:bash bash:bash " \
+      "zsh:bash md:markdown toml:toml yaml:yaml yml:yaml json:json nix:nix html:html htm:html css:css " \
+      "scss:scss sql:sql lua:lua r:r R:r jl:julia rb:ruby php:php cs:c-sharp swift:swift tex:latex " \
+      "vue:vue svelte:svelte", kv, " "); for (i in kv) { split(kv[i], p, ":"); m[p[1]] = p[2] } }
+    END { for (l in n) print n[l] "\t" l }' | sort -rn
+}
+
+# the language's servers as the editor sees them: "✓ name ✘ other"
+servers() { tidex-editor servers "$1" 2>/dev/null; }
+
+listing() {
+  files | count | head -15 | while IFS="$(printf '\t')" read -r n l; do
+    extra=; [ "$l" = python ] && extra="   env: $(tidex-python label)  ›"
+    printf '  %-12s \033[2m%6s files\033[0m   %s\033[33m%s\033[0m\t%s\n' "$l" "$n" "$(servers "$l")" "$extra" "$l"
+  done
+}
+
+choice=$(listing | tidex-fzf --ansi --no-sort --prompt 'langs > ' --delimiter '\t' --with-nth 1 \
+  --header 'Enter: Python'"'"'s env, or a language'"'"'s report in the editor') || exit 0
+l=$(printf '%s' "$choice" | cut -f2)
+case $l in
+  python) tidex-python pick ;;
+  ?*) tidex-editor health "$l" | less -R ;;
+esac

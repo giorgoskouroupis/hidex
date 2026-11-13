@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# tests/unit [HIDEX]: the scripts' rules, each checked on its own in a second or two, with fake fzf, zellij and
+# tests/unit [TIDEX]: the scripts' rules, each checked on its own in a second or two, with fake fzf, zellij and
 # delta standing in where a script would need a person or a session (the plugin has its own: cargo test in
-# plugin/); tests/run is the end-to-end one. HIDEX: an installed hIDEx (default: tests/installed).
+# plugin/); tests/run is the end-to-end one. TIDEX: an installed tIDEx (default: tests/installed).
 set -u
 repo=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-$("$repo/tests/installed")} || exit 1
@@ -15,100 +15,100 @@ printf '#!/bin/sh\necho "$*" > %s/delta.args\n' "$T" > "$T/fake/delta"
 printf '#!/bin/sh\nawk -v p="${PICK:-.}" '"'"'$0 ~ p && !done { print; done = 1 }'"'"'\n' > "$T/fake/fzf"
 chmod +x "$T/fake"/*
 export PATH=$T/fake:$out/bin:$out/tools/bin:$PATH HOME=$T/home XDG_RUNTIME_DIR=$T/run XDG_STATE_HOME=$T/state
-export HIDEX_SHARE=$out/share/hidex ZELLIJ_SESSION_NAME=unit HIDEX_PROJECT=$T/state/project
-mkdir -p "$HIDEX_PROJECT"
-s=$(hidex-state)
+export TIDEX_SHARE=$out/share/tidex ZELLIJ_SESSION_NAME=unit TIDEX_PROJECT=$T/state/project
+mkdir -p "$TIDEX_PROJECT"
+s=$(tidex-state)
 failed=0
 check() { if eval "$2" >/dev/null 2>&1; then printf '  ok    %s\n' "$1"; else printf '  FAIL  %s\n' "$1"; failed=$((failed + 1)); fi; }
 
 echo "guard"
-check "refuses /, system folders and inside them" '! hidex-guard / && ! hidex-guard /etc && ! hidex-guard /nix/store'
-check "refuses the home folder and its hidden ones" '! hidex-guard "$HOME" && ! hidex-guard "$HOME/.config"'
-check "refuses any .ssh" '! hidex-guard "$T/proj/.ssh"'
-check "allows a project folder" 'hidex-guard "$T/proj"'
+check "refuses /, system folders and inside them" '! tidex-guard / && ! tidex-guard /etc && ! tidex-guard /nix/store'
+check "refuses the home folder and its hidden ones" '! tidex-guard "$HOME" && ! tidex-guard "$HOME/.config"'
+check "refuses any .ssh" '! tidex-guard "$T/proj/.ssh"'
+check "allows a project folder" 'tidex-guard "$T/proj"'
 
 echo "pop-up colours"
-hidex-popup-colors "#252938 dark"
+tidex-popup-colors "#252938 dark"
 check "dark: 45% lighter, more saturated, white text" 'grep -qx -- "action set-pane-color --bg #373f5b --fg #ffffff" "$T/zellij.calls"'
-: > "$T/zellij.calls"; hidex-popup-colors "#fafafa light"
+: > "$T/zellij.calls"; tidex-popup-colors "#fafafa light"
 check "light: 18% darker, text as it is" 'grep -qx -- "action set-pane-color --bg #cdcdcd" "$T/zellij.calls"'
-: > "$T/zellij.calls"; hidex-popup-colors " "
+: > "$T/zellij.calls"; tidex-popup-colors " "
 check "nothing known: nothing set" '[ ! -s "$T/zellij.calls" ]'
 
 echo "background"
 echo Dracula > "$s/theme"
-check "a dark /theme is read as dark" '[ "$(hidex-bg </dev/null)" = "#282a36 dark" ]'
+check "a dark /theme is read as dark" '[ "$(tidex-bg </dev/null)" = "#282a36 dark" ]'
 echo "Catppuccin Latte" > "$s/theme"
-check "a light /theme is read as light" '[ "$(hidex-bg </dev/null | cut -d" " -f2)" = light ]'
+check "a light /theme is read as light" '[ "$(tidex-bg </dev/null | cut -d" " -f2)" = light ]'
 rm "$s/theme"
 
 echo "delta"
-HIDEX_DELTA_LIGHT=1 hidex-delta --paging=never
+TIDEX_DELTA_LIGHT=1 tidex-delta --paging=never
 check "light colours when asked" 'grep -q -- "--light --paging=never" "$T/delta.args"'
-hidex-delta --paging=never
+tidex-delta --paging=never
 check "dark ones otherwise" '! grep -q -- "--light" "$T/delta.args"'
 
 echo "window theme"
 : > "$T/tty"; echo "$T/tty" > "$s/tty"
-hidex-theme Nord
+tidex-theme Nord
 check "paints the window" 'grep -q "]4;0;" "$T/tty"'
-check "is kept for the session and the project" 'grep -qx Nord "$s/theme" && grep -qx Nord "$HIDEX_PROJECT/theme"'
-hidex-theme reset
-check "reset forgets it" '[ ! -f "$s/theme" ] && [ ! -f "$HIDEX_PROJECT/theme" ]'
-check "lists the ~900 schemes" '[ "$(hidex-theme list | wc -l)" -gt 800 ]'
+check "is kept for the session and the project" 'grep -qx Nord "$s/theme" && grep -qx Nord "$TIDEX_PROJECT/theme"'
+tidex-theme reset
+check "reset forgets it" '[ ! -f "$s/theme" ] && [ ! -f "$TIDEX_PROJECT/theme" ]'
+check "lists the ~900 schemes" '[ "$(tidex-theme list | wc -l)" -gt 800 ]'
 
 echo "python"
 mkdir -p "$T/proj" && echo 'print("hi")' > "$T/proj/a.py"
 mkdir -p "$T/proj/.venv/bin" && printf '#!/bin/sh\n' > "$T/proj/.venv/bin/python" && chmod +x "$T/proj/.venv/bin/python"
 printf 'version_info = 3.12.4\nuv = 0.5.0\n' > "$T/proj/.venv/pyvenv.cfg"
 cd "$T/proj"
-PICK=venv hidex-python pick
+PICK=venv tidex-python pick
 check "the project's .venv is listed (as uv) and picked" 'grep -qx "$T/proj/.venv" "$s/python" && grep -qx ".venv 3.12" "$s/python-label"'
-check "the pick is kept for the project" 'grep -qx "$T/proj/.venv" "$HIDEX_PROJECT/python"'
-rm "$s/python"; CONDA_PREFIX= VIRTUAL_ENV= hidex-python detect
+check "the pick is kept for the project" 'grep -qx "$T/proj/.venv" "$TIDEX_PROJECT/python"'
+rm "$s/python"; CONDA_PREFIX= VIRTUAL_ENV= tidex-python detect
 check "the next session finds it again" 'grep -qx "$T/proj/.venv" "$s/python"'
-hidex-env sh -c 'echo "$VIRTUAL_ENV $PATH"' > "$T/env"
+tidex-env sh -c 'echo "$VIRTUAL_ENV $PATH"' > "$T/env"
 check "new shells start in it" 'grep -q "^$T/proj/.venv $T/proj/.venv/bin:" "$T/env"'
-hidex-python set none
-check "none: hIDEx's own Python, also kept" '[ ! -f "$s/python" ] && grep -qx none "$HIDEX_PROJECT/python"'
+tidex-python set none
+check "none: tIDEx's own Python, also kept" '[ ! -f "$s/python" ] && grep -qx none "$TIDEX_PROJECT/python"'
 
 echo "bar status"
-check "a Python project shows its Python" '[ "$(hidex-status "$T/proj" | cut -f2)" != "" ]'
+check "a Python project shows its Python" '[ "$(tidex-status "$T/proj" | cut -f2)" != "" ]'
 mkdir -p "$T/docs" && echo hi > "$T/docs/a.md"
-check "another project shows none" '[ "$(hidex-status "$T/docs" | cut -f2)" = "" ]'
+check "another project shows none" '[ "$(tidex-status "$T/docs" | cut -f2)" = "" ]'
 
 echo "languages"
 echo 'echo hi' > "$T/proj/a.sh"; echo '# hi' > "$T/proj/README.md"
-PICK=nothing-matches hidex-langs < /dev/null > /dev/null
+PICK=nothing-matches tidex-langs < /dev/null > /dev/null
 printf '#!/bin/sh\ncat > %s/langs\n' "$T" > "$T/fake/fzf"
-hidex-langs < /dev/null > /dev/null
+tidex-langs < /dev/null > /dev/null
 check "counts the project's languages" 'grep -q "^  bash" "$T/langs" && grep -q "^  markdown" "$T/langs"'
 check "with their language servers found" 'grep "^  bash" "$T/langs" | grep -q "✓ bash-language-server"'
 
 echo "commands"
-check "every command has its function" 'for c in $(hidex-cmd --list | cut -f1); do grep -q "^cmd_$(echo $c | tr - _)()" "$out/bin/hidex-cmd" || exit 1; done'
-check "nothing typed: the commands by group, a header before each, keys beside" 'l=$(hidex-cmd --suggest "" | sed "s/\x1b\[[0-9]*m//g"); [ "$(printf "%s\n" "$l" | head -1 | cut -f1)" = look ] && printf "%s\n" "$l" | grep -q "^git	Alt+g · "'
-check "suggestions: commands starting with the line" '[ "$(hidex-cmd --suggest co | awk -F"\t" "\$3 != \"key\"" | cut -f1 | tr "\n" " ")" = "collapse copy " ]'
-check "suggestions: then the keys that fit (copy: Alt+v)" 'hidex-cmd --suggest copy | awk -F"\t" "\$3 == \"key\"" | cut -f1 | grep -qx "Alt+v"'
-check "suggestions: a command's arguments after a space" '[ "$(hidex-cmd --suggest "langs p" | cut -f1)" = "langs python" ]'
-check "suggestions: nothing fits, nothing listed" '[ -z "$(hidex-cmd --suggest zzz)" ]'
+check "every command has its function" 'for c in $(tidex-cmd --list | cut -f1); do grep -q "^cmd_$(echo $c | tr - _)()" "$out/bin/tidex-cmd" || exit 1; done'
+check "nothing typed: the commands by group, a header before each, keys beside" 'l=$(tidex-cmd --suggest "" | sed "s/\x1b\[[0-9]*m//g"); [ "$(printf "%s\n" "$l" | head -1 | cut -f1)" = look ] && printf "%s\n" "$l" | grep -q "^git	Alt+g · "'
+check "suggestions: commands starting with the line" '[ "$(tidex-cmd --suggest co | awk -F"\t" "\$3 != \"key\"" | cut -f1 | tr "\n" " ")" = "collapse copy " ]'
+check "suggestions: then the keys that fit (copy: Alt+v)" 'tidex-cmd --suggest copy | awk -F"\t" "\$3 == \"key\"" | cut -f1 | grep -qx "Alt+v"'
+check "suggestions: a command's arguments after a space" '[ "$(tidex-cmd --suggest "langs p" | cut -f1)" = "langs python" ]'
+check "suggestions: nothing fits, nothing listed" '[ -z "$(tidex-cmd --suggest zzz)" ]'
 mkdir -p "$T/panes"; printf '#!/bin/sh\nprintf "ID  TYPE  TITLE  FOCUSED  FLOATING\\nterminal_1  terminal  zsh 2  false  false\\nterminal_0  terminal  Helix  true  false\\nterminal_3  terminal  claude 1\\342\\200\\213  false  false\\nterminal_4  terminal  lazygit  false  true\\n"\n' > "$T/panes/zellij"; chmod +x "$T/panes/zellij"
-check "copy: the open terminals suggested" '[ "$(PATH=$T/panes:$PATH hidex-cmd --suggest "copy " | cut -f1 | tr "\n" ,)" = "copy claude 1,copy zsh 2," ]'
+check "copy: the open terminals suggested" '[ "$(PATH=$T/panes:$PATH tidex-cmd --suggest "copy " | cut -f1 | tr "\n" ,)" = "copy claude 1,copy zsh 2," ]'
 
 echo "frames"
-# a running session (its state folder, linked to this hIDEx): its config is written again on each change
-fs=$XDG_RUNTIME_DIR/hidex/frames-test; mkdir -p "$fs"; ln -sfn "$out" "$fs/current"
+# a running session (its state folder, linked to this tIDEx): its config is written again on each change
+fs=$XDG_RUNTIME_DIR/tidex/frames-test; mkdir -p "$fs"; ln -sfn "$out" "$fs/current"
 framed() { grep "$1" "$fs/config/config.kdl" | grep -q "base $2;"; }
-check "a colour number for the focused frame, at once in the running sessions" 'hidex-frames focused 4 && framed frame_selected 4'
-check "a #rrggbb colour for the others, quoted" 'hidex-frames unfocused "#ff8800" && framed frame_unselected "\"#ff8800\""'
-check "anything else refused, nothing changed" '! hidex-frames focused 99 2>/dev/null && framed frame_selected 4'
-check "reset: the defaults again (focused 3, others 8)" 'hidex-frames reset && framed frame_selected 3 && framed frame_unselected 8'
+check "a colour number for the focused frame, at once in the running sessions" 'tidex-frames focused 4 && framed frame_selected 4'
+check "a #rrggbb colour for the others, quoted" 'tidex-frames unfocused "#ff8800" && framed frame_unselected "\"#ff8800\""'
+check "anything else refused, nothing changed" '! tidex-frames focused 99 2>/dev/null && framed frame_selected 4'
+check "reset: the defaults again (focused 3, others 8)" 'tidex-frames reset && framed frame_selected 3 && framed frame_unselected 8'
 
 echo "editor"
-check "the editor by default: Neovim, through its adapter" '[ "$(hidex-editor title)" = Neovim ]'
-check "/editor helix: Helix from the next start on, kept for you" 'hidex-editor choose helix >/dev/null && [ "$(hidex-editor name)" = helix ] && [ "$(HIDEX_EDITOR=nvim hidex-editor name)" = nvim ]'
-rm -f "$XDG_STATE_HOME/hidex/editor"
-check "an editor without an adapter is refused" '! HIDEX_EDITOR=nothing hidex-editor title 2>/dev/null'
+check "the editor by default: Neovim, through its adapter" '[ "$(tidex-editor title)" = Neovim ]'
+check "/editor helix: Helix from the next start on, kept for you" 'tidex-editor choose helix >/dev/null && [ "$(tidex-editor name)" = helix ] && [ "$(TIDEX_EDITOR=nvim tidex-editor name)" = nvim ]'
+rm -f "$XDG_STATE_HOME/tidex/editor"
+check "an editor without an adapter is refused" '! TIDEX_EDITOR=nothing tidex-editor title 2>/dev/null'
 
 echo "update check"
 # a fake GitHub: v0.2.1 is out, with its changes and a newer zellij; its install.sh only says it ran
@@ -124,7 +124,7 @@ case $url in
 esac
 FAKE
 chmod +x "$u/fake/curl"
-ask() { echo "$1" | env PATH="$u/fake:$PATH" HIDEX_HOME="$u/home" XDG_CACHE_HOME="$u/cache" script -qfec hidex-check-update /dev/null 2>&1; }
+ask() { echo "$1" | env PATH="$u/fake:$PATH" TIDEX_HOME="$u/home" XDG_CACHE_HOME="$u/cache" script -qfec tidex-check-update /dev/null 2>&1; }
 said=$(ask n); status=$?
 check "a newer release is offered, with its changes" 'printf "%s" "$said" | grep -q "v0.2.1 is available (you have v0.2.0)" && printf "%s" "$said" | grep -q "tabs" && ! printf "%s" "$said" | grep -q old'
 check "a new zellij is announced (sessions need a restart)" 'printf "%s" "$said" | grep -q "zellij 0.47.0 (now 0.46.0)"'
@@ -134,32 +134,32 @@ check "y: installed, and the launcher told to start the new one" '[ "$status" = 
 printf 'test\n' > "$u/home/VERSION"
 check "a build from the repo is not offered anything" '! ask n | grep -q available'
 
-echo "sandbox, for real on this machine ($(hidex-sandbox --which))"
-if [ "$(hidex-sandbox --which)" = none ]; then echo "  (no sandbox here: skipped)"; else
+echo "sandbox, for real on this machine ($(tidex-sandbox --which))"
+if [ "$(tidex-sandbox --which)" = none ]; then echo "  (no sandbox here: skipped)"; else
   p=$T/sbproj; mkdir -p "$p" "$T/home/.ssh"; echo hi > "$p/a"; touch "$T/home/.ssh/id_test" "$T/home/notes"
-  check "read: the project is readable" '[ "$(hidex-sandbox read "$p" -- cat "$p/a")" = hi ]'
-  check "read: nothing can be written in it" '! hidex-sandbox read "$p" -- sh -c "echo x > $p/b" 2>/dev/null; [ ! -e "$p/b" ]'
-  check "read: the home folder is out of reach" '! hidex-sandbox read "$p" -- ls "$T/home" >/dev/null 2>&1'
-  check "write: the project is writable" 'hidex-sandbox write "$p" -- sh -c "echo x > $p/c" && [ -f "$p/c" ]'
-  if ! hidex-sandbox --gaps | grep -q network; then
-    check "read: no network (refused by the sandbox, not just unanswered)" 'hidex-sandbox read "$p" -- bash -c "exec 3<>/dev/tcp/127.0.0.1/9" 2>&1 | grep -q -E "Permission denied|unreachable"'
+  check "read: the project is readable" '[ "$(tidex-sandbox read "$p" -- cat "$p/a")" = hi ]'
+  check "read: nothing can be written in it" '! tidex-sandbox read "$p" -- sh -c "echo x > $p/b" 2>/dev/null; [ ! -e "$p/b" ]'
+  check "read: the home folder is out of reach" '! tidex-sandbox read "$p" -- ls "$T/home" >/dev/null 2>&1'
+  check "write: the project is writable" 'tidex-sandbox write "$p" -- sh -c "echo x > $p/c" && [ -f "$p/c" ]'
+  if ! tidex-sandbox --gaps | grep -q network; then
+    check "read: no network (refused by the sandbox, not just unanswered)" 'tidex-sandbox read "$p" -- bash -c "exec 3<>/dev/tcp/127.0.0.1/9" 2>&1 | grep -q -E "Permission denied|unreachable"'
   fi
-  check "machine (Helix): ~/.ssh hidden" '[ -z "$(hidex-sandbox machine -- ls -A "$T/home/.ssh" 2>/dev/null)" ]'
-  check "machine (Helix): the rest of home as usual" 'echo note > "$T/home/notes"; [ "$(hidex-sandbox machine -- cat "$T/home/notes")" = note ]'
+  check "machine (Helix): ~/.ssh hidden" '[ -z "$(tidex-sandbox machine -- ls -A "$T/home/.ssh" 2>/dev/null)" ]'
+  check "machine (Helix): the rest of home as usual" 'echo note > "$T/home/notes"; [ "$(tidex-sandbox machine -- cat "$T/home/notes")" = note ]'
 fi
 
 echo "uninstall"
-p=$T/pfx; mkdir -p "$p/share/hidex/versions/v9/bin" "$p/share/hidex/tools/zellij-1" "$p/bin" "$T/state/hidex"
-ln -s "$p/share/hidex/versions/v9/bin/hidex" "$p/bin/hidex"
-printf 'alias ll=ls\nexport PATH="%s/bin:$PATH"  # hIDEx\n' "$p" > "$HOME/.bashrc"
-mkdir -p "$HOME/.cache/zellij"; printf '"/x/hidex-panes.wasm" {\n    RunCommands\n}\n"/y/other.wasm" {\n    RunCommands\n}\n' > "$HOME/.cache/zellij/permissions.kdl"
-echo n | env -u ZELLIJ_SESSION_NAME HIDEX_PREFIX="$p" hidex-uninstall >/dev/null
-check "asks first: N keeps everything" '[ -d "$p/share/hidex" ] && [ -L "$p/bin/hidex" ]'
-env -u ZELLIJ_SESSION_NAME HIDEX_PREFIX="$p" hidex-uninstall --yes >/dev/null
-check "removes versions, tools, the command and what was kept" '[ ! -e "$p/share/hidex" ] && [ ! -L "$p/bin/hidex" ] && [ ! -e "$T/state/hidex" ]'
+p=$T/pfx; mkdir -p "$p/share/tidex/versions/v9/bin" "$p/share/tidex/tools/zellij-1" "$p/bin" "$T/state/tidex"
+ln -s "$p/share/tidex/versions/v9/bin/tidex" "$p/bin/tidex"
+printf 'alias ll=ls\nexport PATH="%s/bin:$PATH"  # tIDEx\n' "$p" > "$HOME/.bashrc"
+mkdir -p "$HOME/.cache/zellij"; printf '"/x/tidex-panes.wasm" {\n    RunCommands\n}\n"/y/other.wasm" {\n    RunCommands\n}\n' > "$HOME/.cache/zellij/permissions.kdl"
+echo n | env -u ZELLIJ_SESSION_NAME TIDEX_PREFIX="$p" tidex-uninstall >/dev/null
+check "asks first: N keeps everything" '[ -d "$p/share/tidex" ] && [ -L "$p/bin/tidex" ]'
+env -u ZELLIJ_SESSION_NAME TIDEX_PREFIX="$p" tidex-uninstall --yes >/dev/null
+check "removes versions, tools, the command and what was kept" '[ ! -e "$p/share/tidex" ] && [ ! -L "$p/bin/tidex" ] && [ ! -e "$T/state/tidex" ]'
 check "takes its PATH line out, leaves the rest" '[ "$(cat "$HOME/.bashrc")" = "alias ll=ls" ]'
-check "drops only its plugin permissions" '! grep -q hidex-panes "$HOME/.cache/zellij/permissions.kdl" && grep -q other.wasm "$HOME/.cache/zellij/permissions.kdl"'
-mkdir -p "$XDG_RUNTIME_DIR/hidex/unit"
-check "refuses inside a hIDEx session" '! HIDEX_PREFIX="$p" ZELLIJ_SESSION_NAME=unit hidex-uninstall --yes'
+check "drops only its plugin permissions" '! grep -q tidex-panes "$HOME/.cache/zellij/permissions.kdl" && grep -q other.wasm "$HOME/.cache/zellij/permissions.kdl"'
+mkdir -p "$XDG_RUNTIME_DIR/tidex/unit"
+check "refuses inside a tIDEx session" '! TIDEX_PREFIX="$p" ZELLIJ_SESSION_NAME=unit tidex-uninstall --yes'
 echo "$failed failed"
 exit "$failed"

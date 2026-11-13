@@ -1,22 +1,27 @@
 # Changelog
 
-What changed in each hIDEx release, newest first. A release's section here is its text on GitHub: write it before
+What changed in each tIDEx release, newest first. A release's section here is its text on GitHub: write it before
 pushing the version's tag (the release Action stops when the section is missing). The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+hIDEx is now **tIDEx**, not bound to one editor: the command `tidex`, its folders `~/.local/share/tidex`,
+`~/.local/state/tidex`, `~/.cache/tidex`, its variables `TIDEX_*` and the repository
+`giorgoskouroupis/tidex` (GitHub sends the old address there). Remove hIDEx first (`hidex --uninstall`), then
+install tIDEx: nothing of hIDEx is read.
+
 ### Added
 - Neovim (0.12.6, official build) is the editor by default; Helix stays one to pick: `/editor` (yours in every
-  project, from the next start), or `HIDEX_EDITOR=helix hidex .` for one start.
+  project, from the next start), or `TIDEX_EDITOR=helix tidex .` for one start.
 - With Neovim, files changed on disk (Claude, git, another editor) come back by themselves; changed there too,
-  Neovim asks which to keep (W12). hIDEx drives it through its remote API, never by typing into it, so it asks
+  Neovim asks which to keep (W12). tIDEx drives it through its remote API, never by typing into it, so it asks
   Neovim what is unsaved: a file with unsaved changes is not handed to another editor, and quitting lets Neovim
   ask about them.
-- Neovim comes ready: the language servers hIDEx brings, completion as you type, pickers and key hints on Helix's
+- Neovim comes ready: the language servers tIDEx brings, completion as you type, pickers and key hints on Helix's
   space-menu keys (mini.nvim), git markers, and tree-sitter colours for 15 languages, all built at release time
-  and shipped in one bundle: nothing is downloaded or compiled where hIDEx runs.
+  and shipped in one bundle: nothing is downloaded or compiled where tIDEx runs.
 - `F2` offers every other editor (Helix in a Neovim session, Neovim in a Helix one) besides micro and nano. While
   one holds the editor's place, opening a file asks whether to close it (`y`: its own quit key, so it asks about
   unsaved changes itself), and the file then opens in the editor.
@@ -24,8 +29,8 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ### Changed
 - The editor sits behind one contract (open, reload, theme, servers, quit): the bar's `editor` module, and one
-  adapter per editor in `editors/` (`hidex-editor`). `/helix-theme` is `/editor-theme`; `hidex-msg helix …` is
-  `hidex-msg editor …`.
+  adapter per editor in `editors/` (`tidex-editor`). `/helix-theme` is `/editor-theme`; `tidex-msg helix …` is
+  `tidex-msg editor …`.
 
 ## [v0.2.4] - 2026-11-13
 
@@ -184,11 +189,11 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `nil`, the Nix language server (it publishes no ready-made Linux build).
 - The command line in the bar (`Alt+Shift+p`), replaced by the palette.
 
-[Unreleased]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.4...HEAD
-[v0.2.4]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.3...v0.2.4
-[v0.2.3]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.2...v0.2.3
-[v0.2.2]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.1...v0.2.2
-[v0.2.1]: https://github.com/giorgoskouroupis/hidex/compare/v0.2.0...v0.2.1
-[v0.2.0]: https://github.com/giorgoskouroupis/hidex/compare/v0.1.1...v0.2.0
-[v0.1.1]: https://github.com/giorgoskouroupis/hidex/compare/v0.1.0...v0.1.1
-[v0.1.0]: https://github.com/giorgoskouroupis/hidex/releases/tag/v0.1.0
+[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.4...HEAD
+[v0.2.4]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.3...v0.2.4
+[v0.2.3]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.2...v0.2.3
+[v0.2.2]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.1...v0.2.2
+[v0.2.1]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/giorgoskouroupis/tidex/compare/v0.1.1...v0.2.0
+[v0.1.1]: https://github.com/giorgoskouroupis/tidex/compare/v0.1.0...v0.1.1
+[v0.1.0]: https://github.com/giorgoskouroupis/tidex/releases/tag/v0.1.0

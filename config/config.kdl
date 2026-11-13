@@ -1,7 +1,7 @@
-// hIDEx's zellij config. Locked by default, so every key reaches Helix, lazygit and Claude
+// tIDEx's zellij config. Locked by default, so every key reaches Helix, lazygit and Claude
 // (Ctrl+g unlocks zellij's own modes); the Alt keys below work while locked.
 default_mode "locked"
-theme "hidex"
+theme "tidex"
 pane_frames true
 // a full rounded frame around every pane (the default only draws a title line above each)
 pane_frame_style "full"
@@ -25,7 +25,7 @@ ui {
 }
 
 keybinds {
-    // scroll mode (Alt+v) ends back in hIDEx's keys (locked mode), at the bottom: m after copying the command at the
+    // scroll mode (Alt+v) ends back in tIDEx's keys (locked mode), at the bottom: m after copying the command at the
     // top with its output (the shell marks them: OSC 133), Esc, Ctrl+c or q without
     scroll {
         bind "m" { SelectCommandAtScrollPosition; Copy; ScrollToBottom; SwitchToMode "Locked"; }
@@ -37,7 +37,7 @@ keybinds {
         bind "Alt Down" { MoveFocus "Down"; }
         bind "Alt Up" { MoveFocus "Up"; }
         // jump straight to a pane: the explorer, Helix, the terminals, the side terminal (Claude); the keys
-        // below go to the hIDEx plugin, which lives in the bar (layouts/hidex.kdl)
+        // below go to the tIDEx plugin, which lives in the bar (layouts/tidex.kdl)
         bind "Alt e" { MessagePlugin "file:@plugin@" { name "focus"; payload "tree"; }; }
         bind "Alt h" { MessagePlugin "file:@plugin@" { name "focus"; payload "editor"; }; }
         bind "Alt t" { MessagePlugin "file:@plugin@" { name "focus"; payload "terminals"; }; }
@@ -82,11 +82,11 @@ keybinds {
         bind "Alt w" { ToggleFloatingPanes; }
         // fold the focused pane to a strip (its neighbours cover it), or unfold it; jumping to it unfolds it too
         bind "Alt x" { MessagePlugin "file:@plugin@" { name "collapse"; }; }
-        // the / commands: a line to type in, what fits listed below as you type (hidex-cmd)
+        // the / commands: a line to type in, what fits listed below as you type (tidex-cmd)
         bind "Alt p" { MessagePlugin "file:@plugin@" { name "popup"; payload "commands"; }; }
-        // every hIDEx key, by group, filtered as you type (hidex-cmd keys)
+        // every tIDEx key, by group, filtered as you type (tidex-cmd keys)
         bind "Alt k" { MessagePlugin "file:@plugin@" { name "popup"; payload "keys"; }; }
-        // quit hIDEx, asking first (hidex-quit-ask): Helix quits first, and refuses while files are unsaved
+        // quit tIDEx, asking first (tidex-quit-ask): Helix quits first, and refuses while files are unsaved
         bind "Alt q" { MessagePlugin "file:@plugin@" { name "quit"; payload "ask"; }; }
         // quit on the spot: unsaved changes dropped, running commands stopped
         bind "Alt Q" { MessagePlugin "file:@plugin@" { name "quit"; payload "now"; }; }
@@ -98,11 +98,11 @@ keybinds {
     }
 }
 
-// Terminal colours by ANSI index (0 black .. 8 grey), so hIDEx follows the terminal's palette and its
+// Terminal colours by ANSI index (0 black .. 8 grey), so tIDEx follows the terminal's palette and its
 // dark/light switch: unfocused frames in its grey, the focused one in the accent colour. frame_highlight: the
 // frame of a pane that needs you (Claude asking, a command failed or finished), in red, until you look at it.
 themes {
-    hidex {
+    tidex {
         text_unselected { base 7; background 0; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         text_selected { base 7; background 8; emphasis_0 3; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
         ribbon_selected { base 0; background 5; emphasis_0 1; emphasis_1 3; emphasis_2 6; emphasis_3 4; }

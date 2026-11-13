@@ -1,6 +1,6 @@
 //! What needs you, as zellij tracks it (its attention: Claude Code reports its own status, the shell marks a command
 //! that failed or finished), from its GlobalAttentionUpdate event: this session's terminals asking, failed or done
-//! get their frames highlighted (red, frame_highlight in hIDEx's theme) and the bar names the first of them, until
+//! get their frames highlighted (red, frame_highlight in tIDEx's theme) and the bar names the first of them, until
 //! you have seen it.
 use crate::names;
 use zellij_tile::prelude::*;

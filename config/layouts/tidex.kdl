@@ -1,0 +1,28 @@
+// broot trees | Helix on top, a shell across both below, the side terminal right (Claude first, with
+// --resume to pick a past conversation, then a shell for any AI tool), the tIDEx bar at the bottom.
+// The last side terminal and the last shell come back when exited (bin/tidex-side, tidex-shell).
+// Keys and pop-ups: ../config.kdl. bin/tidex fills in @TREES@ and drops the side pane with --side none.
+layout {
+    tab name="tIDEx" focus=true {
+        pane split_direction="vertical" {
+            pane size="60%" split_direction="horizontal" {
+                pane size="72%" split_direction="vertical" {
+                    // @TREES@: one locked tree per folder passed to tidex, stacked
+                    pane stacked=true size="28%" {
+                        @TREES@
+                    }
+                    // the editor (tidex-editor), named after it: "Helix"
+                    pane name="@EDITOR@" command="tidex-editor" focus=true { args "run"; }
+                }
+                pane name="term 1" command="tidex-shell"
+            }
+            pane name="side 1" command="tidex-side" size="40%" { args "--resume"; }
+        }
+        // the bar: the tIDEx plugin, which also does what the tIDEx keys ask
+        pane size=1 borderless=true {
+            plugin location="file:@plugin@"
+        }
+        // the welcome pop-up at a first start (bin/tidex fills it in, or nothing)
+        @WELCOME@
+    }
+}

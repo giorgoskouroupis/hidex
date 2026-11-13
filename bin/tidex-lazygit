@@ -1,0 +1,15 @@
+#!/bin/sh
+# tidex-lazygit [--write]: lazygit on the project's repo. By default read-only: sandboxed (tidex-sandbox read),
+# the repo read-only and no network, so browsing (log, diffs, branches) works and any change (stage, commit,
+# checkout, push) fails. --write: the plain lazygit.
+
+# the background, asked once: for the pop-up's colours, and light diffs on a light one (tidex-delta)
+bg=$(tidex-bg)
+tidex-popup-colors "$bg"
+case $bg in *light) export TIDEX_DELTA_LIGHT=1 ;; esac
+
+[ "$1" = --write ] && exec lazygit
+top=$(git rev-parse --show-toplevel 2>/dev/null) || top=$PWD
+# lazygit reads several config files, comma-separated, the later ones winning
+export LG_CONFIG_FILE="$LG_CONFIG_FILE,$TIDEX_SHARE/lazygit-readonly.yml"
+exec tidex-sandbox read "$top" -- lazygit

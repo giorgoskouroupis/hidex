@@ -1,0 +1,4 @@
+#!/bin/sh
+# tidex-delta: delta for lazygit's diffs, in light colours when tidex-lazygit found a light background
+# (delta cannot tell by itself there, and assumes dark: white text on dark red and green)
+exec delta ${TIDEX_DELTA_LIGHT:+--light} "$@"

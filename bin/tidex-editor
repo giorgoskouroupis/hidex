@@ -1,0 +1,63 @@
+#!/bin/sh
+# tidex-editor run [ARGS] | do VERB … | theme [pick | NAME | restore | list] | health LANG | servers LANG | notes |
+# title | name | choose [pick | NAME | list]: the editor in the main pane, whichever it is, through its adapter
+# (share/tidex/editors/NAME). Which: TIDEX_EDITOR (the session's, set at its start), else the one you chose
+# (/editor, kept in ~/.local/state/tidex/editor), else Neovim. The bar drives the running editor (tidex-msg
+# editor VERB: plugin/src/editor.rs); the rest of tIDEx asks here.
+adapters=${TIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/tidex}/editors
+chosen=${XDG_STATE_HOME:-$HOME/.local/state}/tidex/editor
+e=${TIDEX_EDITOR:-$(cat "$chosen" 2>/dev/null)}
+e=${e:-nvim}
+adapter=$adapters/$e
+[ -x "$adapter" ] || { echo "tIDEx: no editor $e" >&2; exit 1; }
+
+# choose: the main editor for the next starts, yours in every project (the running session keeps its own)
+choose() {
+  case ${1:-pick} in
+    list) ls "$adapters" ;;
+    pick)
+      n=$(for a in $(ls "$adapters"); do printf '%s\t%s\n' "$a" "$("$adapters/$a" title)"; done |
+        tidex-fzf --delimiter '\t' --with-nth 2 --prompt 'editor > ' \
+          --header "now: $("$adapter" title). The next start opens the one picked; Esc keeps it" | cut -f1) || exit 0
+      choose "$n" ;;
+    *)
+      [ -x "$adapters/$1" ] || { echo "tIDEx: no editor $1 (there are: $(ls "$adapters" | tr '\n' ' '))" >&2; exit 1; }
+      mkdir -p "${chosen%/*}" && echo "$1" > "$chosen"
+      echo "$("$adapters/$1" title): the editor from the next start on" ;;
+  esac
+}
+
+# theme: one of the editor's own, remembered for the project (TIDEX_PROJECT); the first it lists is tIDEx's own,
+# in the window's colours. pick: previewed as you move, Enter keeps, Esc goes back. restore: the project's, once
+# the editor runs (the bar asks for it at start).
+theme() {
+  mem=${TIDEX_PROJECT:+$TIDEX_PROJECT/$e-theme}
+  own=$("$adapter" themes | head -1)
+  current() { cat "$mem" 2>/dev/null || echo "$own"; }
+  keep() {
+    tidex-msg editor "theme $1"
+    [ -n "$mem" ] || return 0
+    if [ "$1" = "$own" ]; then rm -f "$mem"; else echo "$1" > "$mem"; fi
+  }
+  case ${1:-pick} in
+    list) "$adapter" themes ;;
+    # the editor has only just started: a moment before sending it anything
+    restore) t=$(current); [ "$t" = "$own" ] || { sleep 1; tidex-msg editor "theme $t"; } ;;
+    pick)
+      was=$(current)
+      t=$("$adapter" themes | tidex-fzf --prompt "$e theme > " \
+            --header "$own: in the window's colours. Moving previews; Enter keeps, Esc goes back" \
+            --bind 'focus:execute-silent(tidex-msg editor "theme {}")') || { tidex-msg editor "theme $was"; exit 0; }
+      keep "$t" ;;
+    terminal) keep "$own" ;;
+    *) keep "$1" ;;
+  esac
+}
+
+case $1 in
+  theme) shift; theme "$@" ;;
+  choose) shift; choose "$@" ;;
+  name) echo "$e" ;;
+  run | do | health | servers | notes | title) exec "$adapter" "$@" ;;
+  *) echo "usage: tidex-editor run | do | theme | health | servers | notes | title | name | choose" >&2; exit 1 ;;
+esac

@@ -1,4 +1,4 @@
-# pudb for 'python -m pudb' and breakpoint() in any env (share/hidex/python/lib): pure Python, one copy for
+# pudb for 'python -m pudb' and breakpoint() in any env (share/tidex/python/lib): pure Python, one copy for
 # every Python version; scripts/release installs exactly these
 pudb==2026.1
 urwid==5.1.2

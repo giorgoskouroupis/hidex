@@ -1,4 +1,4 @@
-# hIDEx: 'python -m pudb' and breakpoint() in any env, without installing pudb there. Its pure-Python copy
+# tIDEx: 'python -m pudb' and breakpoint() in any env, without installing pudb there. Its pure-Python copy
 # (lib/, next to this file) goes at the end of the import path, so the env's own packages always come first.
 import os
 import sys
@@ -10,8 +10,8 @@ if os.path.isdir(_lib) and _lib not in sys.path:
 
 
 # pudb's settings module is given its folders as it is imported (the program's environment is untouched):
-# its state goes to ~/.local/state/hidex/pudb, never ~/.config, and hIDEx's settings, read last, win.
-class _HidexPudbSettings:
+# its state goes to ~/.local/state/tidex/pudb, never ~/.config, and tIDEx's settings, read last, win.
+class _TidexPudbSettings:
     def find_spec(self, name, path=None, target=None):
         if name != "pudb.settings":
             return None
@@ -23,11 +23,11 @@ class _HidexPudbSettings:
 
         def exec_module(module):
             run(module)
-            state = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "hidex")
+            state = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "tidex")
             xdg = os.path.join(os.path.dirname(_here), "xdg")
             module.XDG_CONFIG_HOME = state
             module.XDG_CONFIG_DIRS = [state, xdg]
-            # pudb.cfg names its theme "@theme@": hIDEx's theme.py, wherever hIDEx is installed
+            # pudb.cfg names its theme "@theme@": tIDEx's theme.py, wherever tIDEx is installed
             load = module.load_config
 
             def load_config(*args, **kwargs):
@@ -42,4 +42,4 @@ class _HidexPudbSettings:
         return spec
 
 
-sys.meta_path.insert(0, _HidexPudbSettings())
+sys.meta_path.insert(0, _TidexPudbSettings())

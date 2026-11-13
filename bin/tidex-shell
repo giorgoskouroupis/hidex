@@ -1,0 +1,21 @@
+#!/bin/sh
+# tidex-shell [term|side]: what runs in a terminal or after Claude in a side terminal (named after what runs: zsh 1): a login
+# shell in the project Python (tidex-env); when it exits, a new one if this is the last pane of its kind, else
+# the pane closes.
+kind=${1:-term}
+# noted for tidex-running (Alt+q asks while a command runs here)
+mkdir -p "$(tidex-state)/panes" && echo "$$" > "$(tidex-state)/panes/$ZELLIJ_PANE_ID"
+# your shell, with the shell integration added (share/tidex/shell: zellij's prompt jumps and output selection);
+# fish brings it by itself
+shell() {
+  case ${SHELL##*/} in
+    bash) tidex-env "$SHELL" --rcfile "$TIDEX_SHARE/shell/bashrc" -i ;;
+    zsh) TIDEX_USER_ZDOTDIR=${ZDOTDIR:-$HOME} ZDOTDIR=$TIDEX_SHARE/shell/zsh tidex-env "$SHELL" -l ;;
+    *) tidex-env "${SHELL:-sh}" -l ;;
+  esac
+}
+while :; do
+  shell
+  [ "$(tidex-panes "$kind" | wc -l)" -gt 1 ] &&
+    exec zellij action close-pane -p "terminal_$ZELLIJ_PANE_ID"
+done

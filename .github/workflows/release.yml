@@ -1,4 +1,4 @@
-# a version tag (v0.1.0…) builds hIDEx's release files (scripts/release: the core, the bundles) and publishes them,
+# a version tag (v0.1.0…) builds tIDEx's release files (scripts/release: the core, the bundles) and publishes them,
 # with the core's checksum (for install.sh), as that tag's release, its section of CHANGELOG.md as the text
 name: release
 on:
@@ -42,5 +42,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/hidex-lsp-*.tar.gz dist/hidex-pudb-*.tar.gz dist/hidex-broot-*.tar.gz dist/hidex-nvim-*.tar.gz \
-            --title "hIDEx $GITHUB_REF_NAME" --notes-file notes.md
+          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" "$ARCHIVE.sha256" dist/tidex-lsp-*.tar.gz dist/tidex-pudb-*.tar.gz dist/tidex-broot-*.tar.gz dist/tidex-nvim-*.tar.gz \
+            --title "tIDEx $GITHUB_REF_NAME" --notes-file notes.md

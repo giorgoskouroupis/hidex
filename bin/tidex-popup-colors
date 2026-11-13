@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# tidex-popup-colors ["#rrggbb dark|light"]: the colours of the pop-up it runs in, the same for every pop-up
+# (lazygit, yazi, the / commands, quit?), set apart from the rest: a solid background (zellij lets the panes
+# below show through otherwise) from the window's (tidex-bg, unless given). On a dark theme 45% lighter,
+# multiplied so it keeps its hue and a little more saturated so it reads as a colour, not a grey, with white
+# text, which stays crisp on it; on a light theme 18% darker, the text as it is.
+read -r bg mode <<< "${1:-$(tidex-bg)}"
+[ -z "$bg" ] && exit 0
+r=$((16#${bg:1:2})) g=$((16#${bg:3:2})) b=$((16#${bg:5:2}))
+fg=()
+if [ "$mode" = dark ]; then
+  r=$((r * 145 / 100 + 5)) g=$((g * 145 / 100 + 5)) b=$((b * 145 / 100 + 5))
+  m=$(((r + g + b) / 3)); r=$((m + (r - m) * 13 / 10)) g=$((m + (g - m) * 13 / 10)) b=$((m + (b - m) * 13 / 10))
+  ((r < 0)) && r=0; ((g < 0)) && g=0; ((b < 0)) && b=0
+  ((r > 255)) && r=255; ((g > 255)) && g=255; ((b > 255)) && b=255
+  fg=(--fg "#ffffff")
+else
+  r=$((r * 82 / 100)) g=$((g * 82 / 100)) b=$((b * 82 / 100))
+fi
+zellij action set-pane-color --bg "$(printf '#%02x%02x%02x' "$r" "$g" "$b")" "${fg[@]}" >/dev/null 2>&1
+exit 0

@@ -36,7 +36,7 @@ type Piece = (String, usize);
 
 fn left(status: &Status) -> Vec<Piece> {
     let mut out = vec![
-        (format!("\u{1b}[1;30;48;5;{ACCENT}m hIDEx {RESET}"), 7),
+        (format!("\u{1b}[1;30;48;5;{ACCENT}m tIDEx {RESET}"), 7),
         (format!(" \u{1b}[1m{}{RESET}", status.project), 1 + status.project.chars().count()),
     ];
     let fields =

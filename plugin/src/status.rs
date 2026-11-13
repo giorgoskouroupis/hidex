@@ -1,5 +1,5 @@
 //! What the bar shows besides the buttons: the git branch, the project Python, the colour theme and a warning when
-//! the sandbox is incomplete, read by the hidex-status script every few seconds (and at once when a script says it
+//! the sandbox is incomplete, read by the tidex-status script every few seconds (and at once when a script says it
 //! changed).
 use crate::scripts;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ pub struct Status {
     pub branch: String,
     pub python: String,
     pub theme: String,
-    /// "sandbox: partial" or "no sandbox" when this machine's sandbox is incomplete (hidex-sandbox --gaps)
+    /// "sandbox: partial" or "no sandbox" when this machine's sandbox is incomplete (tidex-sandbox --gaps)
     pub sandbox: String,
     /// the first pane that needs you ("claude 1 needs you") and its colour (attention)
     pub alert: Option<(String, u8)>,
@@ -22,10 +22,10 @@ impl Status {
     }
 
     pub fn refresh(&self, cwd: &PathBuf) {
-        scripts::run(&["hidex-status", &cwd.to_string_lossy()], Some(scripts::STATUS_LINE));
+        scripts::run(&["tidex-status", &cwd.to_string_lossy()], Some(scripts::STATUS_LINE));
     }
 
-    /// hidex-status's line: branch, Python, theme, sandbox warning, tab-separated. Says whether anything changed.
+    /// tidex-status's line: branch, Python, theme, sandbox warning, tab-separated. Says whether anything changed.
     pub fn read(&mut self, stdout: &[u8]) -> bool {
         let line = String::from_utf8_lossy(stdout);
         let mut parts = line.trim_end_matches('\n').split('\t');

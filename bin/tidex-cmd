@@ -1,0 +1,149 @@
+#!/bin/sh
+# tidex-cmd [--popup] [NAME [ARG]]: tIDEx's / commands, the one table of them: each command is one line below
+# (name, group, its key if it has one, description) and one function. With no name, the palette (Alt+p, "cmds" on
+# the bar): the commands by group, then what fits as you type (--suggest). --popup: started as a pop-up, so it
+# takes the pop-ups' colours. A command taking arguments also has an args_ function listing them.
+
+COMMANDS='theme	look		colour theme for the whole window, previewed as you move, kept for the project; "theme reset" for the terminal'"'"'s own
+editor-theme	look		a theme of the editor'"'"'s own, for the editor only, previewed as you move, kept for the project; "terminal" to follow /theme again
+frames	look		the frame colours, focused and the others, yours in every project, previewed as you move; "frames reset" for the defaults
+langs	project		the project'"'"'s languages and their language servers; Python'"'"'s env ("langs python" goes straight there)
+reload	editor		reload every file open in the editor from disk
+lsp	editor		restart the editor'"'"'s language servers
+editor	editor		the main editor, Neovim or Helix, yours in every project, from the next start ("editor helix")
+git	open	Alt+g	lazygit, read-only
+git-write	open	Alt+Shift+g	lazygit that can stage, commit, push
+yazi	open	Alt+y	yazi, the file manager
+terminal	open		a new terminal, stacked with the others
+side	open		a new side terminal (Claude, or a shell for any AI tool)
+collapse	panes	Alt+x	fold the last used pane to a strip, or unfold it
+copy	panes		copy the output of the last command in the terminal last used ("copy zsh 2", "copy claude 1": in that one), zellij'"'"'s own copy
+keys	tIDEx	Alt+k	every tIDEx key, by group
+about	tIDEx		this tIDEx: its version, where it is installed, its tools, the sandbox on this machine, links
+update	tIDEx		move this session to the newest tIDEx installed (after install.sh), keeping terminals and buffers
+quit	tIDEx	Alt+q	quit tIDEx (asks first; Helix refuses while files are unsaved)'
+
+# tIDEx's keys (Alt+k, and found by the palette as you type): group, keys, what they do; the editor's notes
+# (its adapter's) come after them
+KEYS='move	Alt+arrows	move between panes, and through a stack
+move	Alt+e / h / t / c	the explorer / the editor / the terminals / the side terminal
+move	Alt+1…9	terminal, side terminal or tree N, of the kind you are on
+move	Alt+\	back to the pane you were in
+attention	Alt+j	the next pane that needs you (Claude asking, a command failed or done)
+attention	Alt+Space	everything that needs you, across sessions (zellij inbox)
+panes	Alt+n	a new pane of the kind you are on, stacked with it
+panes	Alt+x	fold the pane to a strip, or unfold it
+panes	Alt+f, Shift+Esc	max: the pane fills the panes area, and back
+panes	Alt+z	zen: the pane covers the whole window, and back
+panes	Alt+= / Alt+-	grow / shrink the pane
+panes	Alt+Shift+arrows	grow the pane on that side
+panes	Alt+Ctrl+arrows	shrink the pane from that side
+copy	Alt+v	an earlier command: [ ] step, m copies it with its command line, Esc back
+pop-ups	Alt+p	the / commands
+pop-ups	Alt+k	these keys
+pop-ups	Alt+g / Alt+Shift+g	lazygit read-only / that can commit and push
+pop-ups	Alt+y	yazi
+pop-ups	Alt+w	show / hide the pop-ups
+trees	Enter	a file: the editor (logs and big files: lnav); a folder: into it
+trees	F2	a file: open with another editor (Helix or Neovim, micro, nano), in the editor'"'"'s place
+quit	Alt+q	quit, asking first
+quit	Alt+Shift+q	quit at once: unsaved changes dropped'
+
+# the keys as list lines: keys, then group and what (dimmed), then "key" (not a command); --groups: a header
+# line before each group
+keys_lines() {
+  { printf '%s\n' "$KEYS"; tidex-editor notes 2>/dev/null | sed "s/^/editor\t$(tidex-editor title 2>/dev/null)\t/"; } |
+    awk -F'\t' -v groups="$1" '
+    groups && $1 != g { g = $1; print "\033[1m" g "\033[0m\t\tkey" }
+    { printf "%s\t\033[2m%s\033[0m\tkey\n", (groups ? "  " : "") $2, (groups ? "" : $1 " · ") $3 }'
+}
+
+cmd_theme() { if [ -n "$1" ]; then tidex-theme "$*"; else tidex-theme pick; fi; }
+args_theme() { echo reset; tidex-theme list; }
+cmd_editor_theme() { tidex-editor theme "${1:-pick}"; }
+args_editor_theme() { tidex-editor theme list; }
+cmd_editor() { tidex-editor choose "${1:-pick}"; [ -n "$1" ] && { printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }; }
+args_editor() { tidex-editor choose list; }
+cmd_frames() { [ $# -gt 0 ] || set -- pick; tidex-frames "$@"; }
+args_frames() { printf "reset\nfocused\nunfocused\n"; }
+cmd_langs() { tidex-langs "$@"; }
+args_langs() { echo python; }
+cmd_reload() { tidex-msg editor reload-all; }
+cmd_lsp() { tidex-msg editor lsp-restart; }
+cmd_git() { tidex-msg popup "lazygit (read-only)"; }
+cmd_git_write() { tidex-msg popup lazygit; }
+cmd_yazi() { tidex-msg popup yazi; }
+cmd_terminal() { tidex-msg new terminal; }
+cmd_side() { tidex-msg new side; }
+cmd_collapse() { tidex-msg collapse; }
+cmd_copy() { tidex-msg copy "${*:--}"; }
+# the terminals open now
+args_copy() { tidex-panes | cut -f2 | sort -u; }
+# tIDEx's own folder (through the session's link), its version and tools
+cmd_about() {
+  h=${TIDEX_SHARE%/share/tidex}
+  {
+    printf 'tIDEx %s, a terminal IDE around Helix, in zellij (MIT)\n' "$(cat "$h/VERSION" 2>/dev/null || echo development)"
+    printf '  https://github.com/giorgoskouroupis/tidex\n'
+    printf '  changes: https://github.com/giorgoskouroupis/tidex/blob/main/CHANGELOG.md\n\n'
+    printf 'installed in  %s\n' "$(readlink -f "$h")"
+    printf 'sandbox here  %s\n' "$(tidex-sandbox --which)"
+    tidex-sandbox --gaps | sed 's/^/  not protected: /'
+    echo
+    echo 'tools'
+    grep -v '^#' "$h/tools.lock" 2>/dev/null | awk -F'\t' 'NF { printf "  %-16s %s\n", $1, $2 }'
+  } | less
+}
+# the keys by group, filtered as you type; Enter or Esc closes
+cmd_keys() {
+  keys_lines --groups | tidex-fzf --ansi --prompt 'keys ' --delimiter '\t' --with-nth 1,2 --tabstop 22 \
+    --header 'type to filter · Esc closes' >/dev/null
+  exit 0
+}
+# the result stays on screen until a key: the pop-up closes when the command ends
+cmd_update() { tidex-update "$@"; printf 'press a key'; stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1; }
+cmd_quit() { tidex-msg quit ask; }
+
+# what fits the typed line: commands starting with it, then containing it; after "NAME ", its arguments
+suggest() {
+  case $1 in
+    *' '*)
+      c=${1%% *} a=${1#* } f=args_$(printf '%s' "$c" | tr - _)
+      command -v "$f" >/dev/null && "$f" | awk -v c="$c" -v a="$a" 'index($0, a) == 1 { print c " " $0 "\t" }' ;;
+    '')
+      # nothing typed: every command, a header line before each group (not runnable, as the keys)
+      printf '%s\n' "$COMMANDS" | awk -F'\t' '$2 != g { g = $2; print "\033[1m" g "\033[0m\t\tkey" }
+        { print $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }' ;;
+    *)
+      printf '%s\n' "$COMMANDS" | awk -F'\t' -v q="$1" '{ l = $1 "\t\033[2m" ($3 != "" ? $3 " · " : "") $4 "\033[0m" }
+        index($1, q) == 1 { print l; next } index($1, q) { rest[++n] = l } END { for (i = 1; i <= n; i++) print rest[i] }'
+      # then the keys whose group or words have it, from 3 letters ("copy": Alt+v)
+      [ ${#1} -ge 3 ] && keys_lines | awk -v q="$1" 'index(tolower($0), tolower(q))' ;;
+  esac
+}
+
+# the palette: Enter runs the chosen line, or the typed one when nothing fits; Tab takes the chosen line
+palette() {
+  out=$(tidex-fzf --disabled --print-query --ansi --prompt '/' --delimiter '\t' --with-nth 1,2 --tabstop 14 \
+    --bind 'start,change:reload:tidex-cmd --suggest {q}' --bind 'tab:transform-query:printf "%s " {1}' \
+    --header 'Tab completes · Enter runs · Esc closes')
+  [ $? -eq 130 ] && exit 0
+  # a key line only informs: nothing to run
+  [ "$(printf '%s\n' "$out" | sed -n 2p | cut -f3)" = key ] && exit 0
+  line=$(printf '%s\n' "$out" | sed -n 2p | cut -f1)
+  line=${line:-$(printf '%s\n' "$out" | sed -n 1p)}
+  # the line's words: the command, then its arguments
+  # shellcheck disable=SC2086
+  [ -n "$line" ] && exec "$0" $line
+}
+
+[ "$1" = --popup ] && { shift; tidex-popup-colors; }
+case $1 in
+  --list) printf '%s\n' "$COMMANDS" ;;
+  --suggest) suggest "$2" ;;
+  '') palette ;;
+  *)
+    f=cmd_$(printf '%s' "$1" | tr - _)
+    printf '%s\n' "$COMMANDS" | cut -f1 | grep -qx -- "$1" || { echo "tIDEx: no command /$1" >&2; exit 1; }
+    shift; "$f" "$@" ;;
+esac

@@ -1,7 +1,7 @@
-# hIDEx's tools, pinned, each checked against its sha256.
+# tIDEx's tools, pinned, each checked against its sha256.
 # name  version  sha256  url  what to take (programs found in the download, linked in tools/bin; "dir": the whole
 # download as tools/NAME, e.g. Helix and its runtime; "dir:PROGRAM…": also those programs in tools/bin).
-# install.sh fetches each tool from its official download into ~/.local/share/hidex/tools/NAME-VERSION, once.
+# install.sh fetches each tool from its official download into ~/.local/share/tidex/tools/NAME-VERSION, once.
 zellij	0.46.0	a8ee599eb357b6142443c91506a4ece3aa8811cb75dcf2b28d194bd66853c79d	https://github.com/zellij-org/zellij/releases/download/v0.46.0/zellij-x86_64-unknown-linux-musl.tar.gz	zellij
 helix	25.07.1	3f08e63ecd388fff657ad39722f88bb03dcf326f1f2da2700d99e1dc40ab2e8b	https://github.com/helix-editor/helix/releases/download/25.07.1/helix-25.07.1-x86_64-linux.tar.xz	dir
 # Neovim: the editor by default (editors/nvim); its official build needs glibc 2.34 or newer

@@ -1,5 +1,5 @@
-//! Everything hIDEx can be asked to do, whether by a key (config.kdl), a click on the bar, or a script
-//! (hidex-msg): one list, so the three always mean the same.
+//! Everything tIDEx can be asked to do, whether by a key (config.kdl), a click on the bar, or a script
+//! (tidex-msg): one list, so the three always mean the same.
 use crate::editor::Command;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -16,11 +16,11 @@ pub enum Action {
     Jump(usize),
     /// something for the editor in the main pane (editor::Command): open, reload, its theme…
     Editor(Command),
-    /// a file handed to a guest editor in the editor's place (hidex-open-with): reloaded when the guest quits
+    /// a file handed to a guest editor in the editor's place (tidex-open-with): reloaded when the guest quits
     Handover(String),
     /// something for the main editor once the guest in its place has quit (a file asked for meanwhile)
     AfterGuest(Command),
-    /// quit hIDEx: "" asks first if commands still run in the shells; "force" stops them; "save" also saves
+    /// quit tIDEx: "" asks first if commands still run in the shells; "force" stops them; "save" also saves
     /// the editor's files. The editor goes first either way (it refuses while files are unsaved).
     Quit(String),
     /// read the branch, Python and theme again for the bar
@@ -31,7 +31,7 @@ pub enum Action {
 }
 
 impl Action {
-    /// a message from a key binding or from hidex-msg: its name and payload
+    /// a message from a key binding or from tidex-msg: its name and payload
     pub fn from_message(name: &str, payload: &str) -> Option<Action> {
         let arg = payload.to_string();
         Some(match name {

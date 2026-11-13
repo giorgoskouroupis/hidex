@@ -1,0 +1,49 @@
+#!/bin/sh
+# tidex-frames [pick | reset | focused N | unfocused N]: the colours of the pane frames, the focused one and the
+# others, yours in every project (~/.local/state/tidex/frames). N: one of the terminal's 16 colours (0-15, so it
+# follows /theme and the dark/light switch) or "#rrggbb". pick: from a list, previewed as you move. reset: the
+# defaults (focused 3, yellow; others 8, grey). The red frame of a pane that needs you stays. Every running
+# session takes the change at once (zellij re-reads its config).
+file=${XDG_STATE_HOME:-$HOME/.local/state}/tidex/frames
+NAMES='black red green yellow blue magenta cyan white'
+
+# every running session's config written again (tidex-config reads the file)
+apply() {
+  for s in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/tidex/*/; do
+    [ -e "$s/current" ] || continue
+    tidex-config "${s%/}"
+  done
+}
+# set WHICH [N]: keeps WHICH's colour (none: its default)
+set_frame() {
+  mkdir -p "${file%/*}"
+  { grep -v "^$1 " "$file" 2>/dev/null; [ -n "$2" ] && echo "$1 $2"; } > "$file.new"
+  mv "$file.new" "$file"
+  apply
+}
+valid() {
+  case $1 in [0-9] | 1[0-5] | '#'[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) ;;
+    *) echo "tidex-frames: a colour is 0-15 or #rrggbb" >&2; exit 1 ;; esac
+}
+
+# the 16 colours as list lines: a sample, the number, its name
+colours() {
+  i=0
+  for bright in '' 'bright '; do
+    for n in $NAMES; do printf '\033[38;5;%dm████\033[0m\t%d\t%s%s\n' "$i" "$i" "$bright" "$n"; i=$((i + 1)); done
+  done
+}
+# pick WHICH: the list, previewed as you move; Esc puts back the colour it had
+pick() {
+  was=$(awk -v w="$1" '$1 == w { print $2 }' "$file" 2>/dev/null)
+  n=$(colours | tidex-fzf --ansi --delimiter '\t' --prompt "$1 frame " --header 'Enter keeps · Esc puts it back' \
+    --bind "focus:execute-silent(tidex-frames $1 {2})" | cut -f2)
+  set_frame "$1" "${n:-$was}"
+}
+
+case ${1:-pick} in
+  pick) tidex-popup-colors; pick focused; pick unfocused ;;
+  reset) rm -f "$file"; apply ;;
+  focused | unfocused) valid "$2"; set_frame "$1" "$2" ;;
+  *) echo "usage: tidex-frames [pick | reset | focused N | unfocused N]" >&2; exit 1 ;;
+esac

@@ -1,4 +1,4 @@
-//! The panes of the hIDEx tab and their roles, which come from the pane names: "tree: <folder>", the editor's
+//! The panes of the tIDEx tab and their roles, which come from the pane names: "tree: <folder>", the editor's
 //! ("Helix": editor::kind), "edit: …" (a guest editor in its place), a side terminal's name (it ends with the side
 //! mark, names::SIDE; "side N" in the layout); any other tiled terminal is part of the terminals area. Terminals
 //! and side terminals are named "<program> <n>" (names).
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use zellij_tile::prelude::*;
 
-/// how hidex-open-with names a guest editor it opens in the editor's place: "edit: a.py (micro)"
+/// how tidex-open-with names a guest editor it opens in the editor's place: "edit: a.py (micro)"
 const GUEST: &str = "edit: ";
 
 #[derive(Default)]
@@ -32,7 +32,7 @@ pub fn role(p: &PaneInfo) -> Option<&'static str> {
     } else if editor::kind(&p.title).is_some() {
         "editor"
     } else if p.title.starts_with(GUEST) {
-        // a guest editor in the editor's place (hidex-open-with): never renamed, typed into, nor stacked with
+        // a guest editor in the editor's place (tidex-open-with): never renamed, typed into, nor stacked with
         "guest"
     } else if p.title.ends_with(SIDE) || p.title.starts_with("side") {
         "side"
@@ -85,7 +85,7 @@ impl Panes {
         }).map(|p| p.id)
     }
 
-    /// the panes of the hIDEx tab
+    /// the panes of the tIDEx tab
     pub fn all(&self) -> Vec<&PaneInfo> {
         self.manifest.panes.get(&self.tab).map(|ps| ps.iter().collect()).unwrap_or_default()
     }
@@ -149,15 +149,15 @@ pub fn focus(id: u32) {
 }
 
 /// a new terminal or side terminal, stacked onto its area; named, stacked and focused once it opens
-/// (`on_opened`), renamed after what runs in it on the next refresh (names). hidex-shell / hidex-side close when
+/// (`on_opened`), renamed after what runs in it on the next refresh (names). tidex-shell / tidex-side close when
 /// exited, unless they are the last of their kind.
 pub fn open_new(kind: &str, panes: &Panes, cwd: &PathBuf) {
     // "here" (Alt+n): the kind of the focused pane; a side terminal if on one, else a terminal
     let on_side = panes.tiled().and_then(|id| panes.get(id)).and_then(role) == Some("side");
     let kind = if kind == "here" && on_side { "side" } else { kind };
     let (area, program) = match kind {
-        "side" | "claude" => ("side", "hidex-side"),
-        _ => ("terminals", "hidex-shell"),
+        "side" | "claude" => ("side", "tidex-side"),
+        _ => ("terminals", "tidex-shell"),
     };
     let n = (1..).find(|n| panes.of_kind_numbered(area, *n).is_none()).unwrap_or(1);
     let mut context = named(&names::name(if area == "side" { "side" } else { "shell" }, n, area == "side"));
@@ -178,7 +178,7 @@ pub fn named(name: &str) -> BTreeMap<String, String> {
     BTreeMap::from([("name".to_string(), name.to_string())])
 }
 
-/// a pane opened by hIDEx: name it, stack it onto its area if asked, focus it
+/// a pane opened by tIDEx: name it, stack it onto its area if asked, focus it
 pub fn on_opened(id: u32, context: &BTreeMap<String, String>) {
     if let Some(name) = context.get("name") {
         rename_terminal_pane(id, name);

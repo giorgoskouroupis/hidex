@@ -1,7 +1,0 @@
-#!/bin/sh
-# hidex-fzf [FZF OPTIONS]: fzf in hIDEx's one look, for every list (the / commands, themes, Python envs,
-# languages): the whole pop-up, the input at the top, the chosen line reversed, matches in the accent colour,
-# little chrome. The scripts add only what is their own (prompt, columns, keys).
-exec fzf --height 100% --reverse --no-scrollbar --info inline-right --pointer ' ' --marker ' ' \
-  --color 'bg+:-1,fg+:-1:reverse,hl:3,hl+:3:reverse,prompt:3:bold,info:8,header:8,separator:8,query:-1:bold' \
-  "$@"

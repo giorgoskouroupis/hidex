@@ -1,0 +1,50 @@
+#!/bin/sh
+# tidex-uninstall [--yes] (tidex --uninstall): removes tIDEx and everything it brought, after saying what and
+# asking: its sessions (ended, their running commands stopped), its versions and tools (~/.local/share/tidex),
+# ~/.local/bin/tidex, what it kept per project (~/.local/state/tidex), its sessions' state, its entries in
+# zellij's plugin permissions, and the PATH line install.sh added to ~/.bashrc or ~/.zshrc. Left as they are:
+# your projects, and zellij's own "don't show the setup wizard again" choice.
+# TIDEX_PREFIX: when installed elsewhere than ~/.local.
+prefix=${TIDEX_PREFIX:-$HOME/.local}
+root=$prefix/share/tidex
+run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/tidex
+state=${XDG_STATE_HOME:-$HOME/.local/state}/tidex
+perms=${XDG_CACHE_HOME:-$HOME/.cache}/zellij/permissions.kdl
+
+if [ -n "${ZELLIJ_SESSION_NAME:-}" ] && [ -d "$run/$ZELLIJ_SESSION_NAME" ]; then
+  echo "tIDEx: quit tIDEx first (Alt+q), then run tidex --uninstall from a plain terminal"; exit 1
+fi
+
+# the sessions: one state folder each, its zellij reached through its "current" link
+sessions=$(for d in "$run"/*/current; do [ -e "$d" ] && basename "$(dirname "$d")"; done)
+# the files install.sh may have put its PATH line in (fish: a file of its own)
+fish=${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/tidex.fish
+rcs=$(for f in "$HOME/.bashrc" "${ZDOTDIR:-$HOME}/.zshrc" "$HOME/.zshrc" "$HOME/.profile" "$fish"; do
+  [ ! -L "$f" ] && grep -qs "# tIDEx$" "$f" && echo "$f"; done | sort -u)
+
+echo "This removes tIDEx:"
+[ -n "$sessions" ] && echo "  its sessions, ended now (commands still running in them are stopped): $(echo $sessions)"
+echo "  $root (every version and tool, $(du -sh "$root" 2>/dev/null | cut -f1))"
+echo "  $prefix/bin/tidex"
+[ -d "$state" ] && echo "  $state (themes and Python kept per project)"
+[ -n "$rcs" ] && echo "  the PATH line it added in: $(echo $rcs)"
+if [ "${1:-}" != --yes ]; then
+  printf 'Remove? [y/N] '
+  read -r answer
+  [ "$answer" = y ] || { echo "Nothing removed."; exit 0; }
+fi
+
+for n in $sessions; do
+  z=$run/$n/current/tools/bin/zellij
+  [ -x "$z" ] || z=zellij
+  env -u ZELLIJ_SESSION_NAME "$z" kill-session "$n" >/dev/null 2>&1
+  env -u ZELLIJ_SESSION_NAME "$z" delete-session --force "$n" >/dev/null 2>&1
+done
+rm -rf "$run" "$state" "$prefix/bin/tidex" "$root"
+# zellij's permissions: the entries of tIDEx's plugin (by its file name)
+if [ -f "$perms" ]; then
+  awk '/^"[^"]*tidex-panes[^"]*\.wasm" \{/ { skip = 1; next } skip && /^\}/ { skip = 0; next } !skip' "$perms" > "$perms.new" &&
+    mv "$perms.new" "$perms"
+fi
+for f in $rcs; do if [ "$f" = "$fish" ]; then rm -f "$f"; else sed -i "/# tIDEx$/d" "$f"; fi; done
+echo "tIDEx removed."

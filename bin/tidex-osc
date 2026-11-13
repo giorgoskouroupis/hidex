@@ -1,0 +1,7 @@
+#!/bin/sh
+# tidex-osc CODE...: sends terminal codes (OSC, without the ESC ] … ESC \ around them) straight
+# to the window tIDEx runs in (its tty, noted by tidex), past zellij: the colours (tidex-theme). Fails when the
+# window is not known.
+s=$(tidex-state) || exit 1
+tty=$(cat "$s/tty" 2>/dev/null) && [ -w "$tty" ] || { echo "tIDEx: the window's terminal is not known" >&2; exit 1; }
+for code; do printf '\033]%s\033\\' "$code"; done >> "$tty"

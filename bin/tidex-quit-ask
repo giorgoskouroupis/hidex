@@ -1,0 +1,19 @@
+#!/bin/sh
+# tidex-quit-ask: the "quit tIDEx?" pop-up of Alt+q, listing what still runs in the shells: q stops it and
+# quits, s saves Helix's files too, any other key cancels. Unsaved files are never dropped: Helix refuses.
+# (Alt+Shift+q quits without asking, dropping them.)
+tidex-popup-colors
+running=$(tidex-running)
+printf '\n  \033[1mquit tIDEx?\033[0m\n\n'
+if [ -n "$running" ]; then
+  printf '  Still running, stopped by both q and s (Ctrl+c, then harder):\n\n'
+  printf '%s\n' "$running" | sed 's/^/    /'
+  echo
+fi
+printf '  \033[33mq\033[0m quit   \033[33ms\033[0m save Helix'"'"'s files, quit   \033[33many other key\033[0m cancel\n'
+stty -icanon -echo 2>/dev/null
+k=$(dd bs=1 count=1 2>/dev/null)
+case $k in
+  q) tidex-msg quit force ;;
+  s) tidex-msg quit save ;;
+esac

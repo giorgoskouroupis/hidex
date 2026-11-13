@@ -1,4 +1,4 @@
-# added on top of lazygit.yml for the read-only lazygit (hidex-lazygit): its sandbox has no network, so the
+# added on top of lazygit.yml for the read-only lazygit (tidex-lazygit): its sandbox has no network, so the
 # background fetch could only fail ("fatal: unable to fork")
 git:
   autoFetch: false

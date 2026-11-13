@@ -1,14 +1,14 @@
 #!/bin/sh
-# Helix's adapter (hidex-editor): run | themes | health LANG | servers LANG | notes | title. Helix has no
+# Helix's adapter (tidex-editor): run | themes | health LANG | servers LANG | notes | title. Helix has no
 # interface for other programs: the bar types its commands into it (plugin/src/typist.rs), and it saves when left
 # (its config: auto-save), the only way to hand files over safely.
 case $1 in
-  # Helix, sandboxed so it cannot open the secrets folders (hidex-sandbox machine), nor anything it starts
-  # (language servers, :sh). HIDEX_EDITOR_RUN: another program to run there instead (the tests).
-  run) shift; exec hidex-sandbox machine -- "${HIDEX_EDITOR_RUN:-hx}" "$@" ;;
-  # hIDEx's own first (in the window's colours), then every theme in Helix's runtime folders
+  # Helix, sandboxed so it cannot open the secrets folders (tidex-sandbox machine), nor anything it starts
+  # (language servers, :sh). TIDEX_EDITOR_RUN: another program to run there instead (the tests).
+  run) shift; exec tidex-sandbox machine -- "${TIDEX_EDITOR_RUN:-hx}" "$@" ;;
+  # tIDEx's own first (in the window's colours), then every theme in Helix's runtime folders
   themes)
-    echo hidex
+    echo tidex
     hx --health 2>/dev/null | sed -n 's/^Runtime directories: //p' | tr ';' '\n' |
       while read -r d; do ls "$d/themes" 2>/dev/null; done | sed -n 's/\.toml$//p' | sort -u ;;
   # Helix's report on a language

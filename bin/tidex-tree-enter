@@ -1,0 +1,10 @@
+#!/bin/sh
+# Enter on a folder in a tree (broot verb, inside the sandbox): go into it; on the top line, go up one level,
+# but never above the folder the tree was opened on. Tells broot through its socket (tidex-tree).
+dir=$1
+root=$(broot --send "$TIDEX_TREE_SOCK" --get-root)
+if [ "$dir" != "$root" ]; then target=$dir
+elif [ "$root" != "$TIDEX_TREE_TOP" ]; then target=$(dirname "$root")
+else exit 0
+fi
+exec broot --send "$TIDEX_TREE_SOCK" -c ":focus $target"

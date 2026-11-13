@@ -1,7 +1,7 @@
 {
-  "name": "hidex-language-servers",
+  "name": "tidex-language-servers",
   "private": true,
-  "description": "hIDEx's bundled language servers that run on Node (scripts/release installs them with npm ci)",
+  "description": "tIDEx's bundled language servers that run on Node (scripts/release installs them with npm ci)",
   "dependencies": {
     "basedpyright": "1.40.2",
     "bash-language-server": "5.8.1",

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# tests/installed [ARCHIVE]: hIDEx as a user gets it, for the tests: the archive (default: scripts/release of this
+# tests/installed [ARCHIVE]: tIDEx as a user gets it, for the tests: the archive (default: scripts/release of this
 # checkout, as version "test") installed by install.sh into dist/test-install (downloads from dist/cache when
 # there). Prints the installed version's folder.
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
 archive=${1:-$("$repo/scripts/release" test)}
 prefix=$repo/dist/test-install
-HIDEX_ARCHIVE=$archive HIDEX_PREFIX=$prefix HIDEX_CACHE=$repo/dist/cache sh "$repo/install.sh" >&2
-readlink -f "$prefix/bin/hidex" | sed 's|/bin/hidex$||'
+TIDEX_ARCHIVE=$archive TIDEX_PREFIX=$prefix TIDEX_CACHE=$repo/dist/cache sh "$repo/install.sh" >&2
+readlink -f "$prefix/bin/tidex" | sed 's|/bin/tidex$||'

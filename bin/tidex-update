@@ -1,0 +1,26 @@
+#!/bin/sh
+# tidex-update [TIDEX]: moves this session to a newer tIDEx (default: the one installed, ~/.local/bin/tidex)
+# without restarting it. Terminals, running commands and Helix with its unsaved buffers stay as they are; the
+# session's "current" link (bin/tidex) moves, then zellij's keys, the bar and Helix's settings are reloaded.
+# Scripts, pop-ups and language servers started from then on are the new ones. Not reloaded: the layout, and
+# zellij itself (when it changed, quit and start again).
+s=$(tidex-state) || exit 1
+[ -L "$s/current" ] || { echo "tIDEx: this session started before /update existed: quit and start it again"; exit 1; }
+new=${1:-$(readlink -f "${TIDEX_PREFIX:-$HOME/.local}/bin/tidex" 2>/dev/null)}
+new=${new%/bin/tidex}
+[ -x "$new/bin/tidex" ] || { echo "tIDEx: no installed tIDEx found (install.sh first)"; exit 1; }
+old=$(readlink -f "$s/current")
+[ "$new" = "$old" ] && { echo "tIDEx: already the newest"; exit 0; }
+if [ "$("$old/tools/bin/zellij" --version)" != "$("$new/tools/bin/zellij" --version)" ]; then
+  echo "tIDEx: the new one brings another zellij: quit and start tIDEx again"; exit 1
+fi
+ln -sfn "$new" "$s/current"
+tidex-config "$s"
+# the bar, and the messages to it, at the session's own address (also when run from outside the session: bin/tidex)
+export TIDEX_PLUGIN=$s/current/share/tidex/tidex-panes.wasm
+zellij action start-or-reload-plugin "file:$TIDEX_PLUGIN"
+# the bar needs a moment to start again before it can pass a command to Helix
+sleep 1
+tidex-msg editor config-reload
+tidex-msg status
+echo "tIDEx: updated ($old → $new)"

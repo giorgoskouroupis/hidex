@@ -7,18 +7,18 @@ use zellij_tile::prelude::*;
 pub const LAZYGIT_RO: &str = "lazygit (read-only)";
 pub const LAZYGIT: &str = "lazygit";
 pub const QUIT_ASK: &str = "quit?";
-/// the / commands' program (hidex-cmd), its one table of them
-pub const COMMANDS: &str = "hidex-cmd";
+/// the / commands' program (tidex-cmd), its one table of them
+pub const COMMANDS: &str = "tidex-cmd";
 
 /// name (the pop-up's title) and what runs in it
 pub const POPUPS: [(&str, &str, &[&str]); 6] = [
-    (LAZYGIT_RO, "hidex-lazygit", &[]),
-    (LAZYGIT, "hidex-lazygit", &["--write"]),
-    ("yazi", "hidex-yazi", &[]),
+    (LAZYGIT_RO, "tidex-lazygit", &[]),
+    (LAZYGIT, "tidex-lazygit", &["--write"]),
+    ("yazi", "tidex-yazi", &[]),
     ("commands", COMMANDS, &["--popup"]),
     ("keys", COMMANDS, &["--popup", "keys"]),
     // Alt+q while commands still run in the shells
-    (QUIT_ASK, "hidex-quit-ask", &[]),
+    (QUIT_ASK, "tidex-quit-ask", &[]),
 ];
 
 #[derive(Default)]

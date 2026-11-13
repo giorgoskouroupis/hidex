@@ -1,0 +1,6 @@
+#!/bin/sh
+# The side terminal: Claude first when TIDEX_SIDE is "claude" and it is installed (with the arguments given,
+# e.g. --resume for the first one), then a shell (tidex-shell side), where any other AI tool on the PATH can be
+# started (each keeps its own login).
+if [ "${TIDEX_SIDE:-claude}" = claude ] && command -v claude >/dev/null; then tidex-env claude "$@"; fi
+exec tidex-shell side

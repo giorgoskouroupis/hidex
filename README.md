@@ -1,4 +1,4 @@
-# hIDEx
+# tIDEx
 
 A terminal IDE in [zellij], around an editor: [Neovim] by default, or [Helix] (`/editor`). A file tree ([broot])
 and the editor on top, a shell below, a side terminal on the right ([Claude Code] first, then any AI tool), a bar
@@ -9,11 +9,11 @@ machine is touched.
 A fun personal project, vibe coded with Claude: shaped around one person's daily work, shared as is.
 
 > **Files changed on disk** (by Claude, git, another editor) **come back in the editor by themselves** with
-> Neovim; changed there too, it asks which to keep (W12). Neovim answers hIDEx through its remote API, so hIDEx
+> Neovim; changed there too, it asks which to keep (W12). Neovim answers tIDEx through its remote API, so tIDEx
 > asks it what is unsaved before handing a file to another editor (`F2`), and nothing is lost.
 >
 > **Helix saves by itself when you leave it** (another pane, `F2`, a pop-up): it offers no way to ask it what is
-> unsaved, so saving on leaving is how hIDEx keeps one version of each file. `u` still undoes, and git shows what
+> unsaved, so saving on leaving is how tIDEx keeps one version of each file. `u` still undoes, and git shows what
 > changed. Files changed on disk do not come back by themselves: `/reload` (or `Ctrl+r` in Helix).
 >
 > The first start says what matters for its editor in a pop-up.
@@ -21,26 +21,26 @@ A fun personal project, vibe coded with Claude: shaped around one person's daily
 Install (Linux x86_64, any distribution, no root), and the same again to update:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/hidex/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/giorgoskouroupis/tidex/main/install.sh | sh
 ```
 
-Everything goes to `~/.local/share/hidex`: hIDEx's own files per version (`versions/VERSION`, a few MB) and each
-tool once (`tools/`, shared by the versions), with `~/.local/bin/hidex` pointing at the newest. The first install
+Everything goes to `~/.local/share/tidex`: tIDEx's own files per version (`versions/VERSION`, a few MB) and each
+tool once (`tools/`, shared by the versions), with `~/.local/bin/tidex` pointing at the newest. The first install
 downloads it all (about 280 MB, every tool from its official release, checked against `tools.lock`); an update
-downloads hIDEx's own files and only the tools that changed. Versions and tools no session uses are removed. Node
+downloads tIDEx's own files and only the tools that changed. Versions and tools no session uses are removed. Node
 and Python come with it, for the language servers and the debugger. `~/.local/bin` is added to PATH in your
 shell's file (`~/.bashrc`, `~/.zshrc`, fish's, else `~/.profile`) when needed, unless a system manages that file
-(as on NixOS) or `HIDEX_NO_MODIFY_PATH=1` is set.
+(as on NixOS) or `TIDEX_NO_MODIFY_PATH=1` is set.
 
-`hidex --uninstall` removes hIDEx and everything it brought (it says what, and asks first); `hidex --version`.
-At start, `hidex` says when a newer release is out, with its changes, and asks whether to install it (GitHub asked
-at most once a day, nothing said offline; `HIDEX_NO_UPDATE_CHECK=1` to turn it off).
+`tidex --uninstall` removes tIDEx and everything it brought (it says what, and asks first); `tidex --version`.
+At start, `tidex` says when a newer release is out, with its changes, and asks whether to install it (GitHub asked
+at most once a day, nothing said offline; `TIDEX_NO_UPDATE_CHECK=1` to turn it off).
 
 ```sh
-hidex ~/some/project
-hidex ~/some/project ~/results/run-42                       # more folders: one tree each
-hidex myserver:~/some/project                               # the server's hIDEx, over ssh (installed there too)
-hidex --side shell ~/some/project                           # side terminal without Claude (none: no side pane)
+tidex ~/some/project
+tidex ~/some/project ~/results/run-42                       # more folders: one tree each
+tidex myserver:~/some/project                               # the server's tIDEx, over ssh (installed there too)
+tidex --side shell ~/some/project                           # side terminal without Claude (none: no side pane)
 ```
 
 Every folder gets its own tree, stacked, locked to it: a sandbox ([Landlock]) that sees only that folder,
@@ -48,13 +48,13 @@ read-only.
 Logs and files over 10 MB open in lnav, the rest in the editor.
 
 Each project is a zellij session named after its (first) folder and that folder's parent, e.g. `code-myproject`.
-Running `hidex` there again reattaches to it, also after the window was closed or the ssh connection
+Running `tidex` there again reattaches to it, also after the window was closed or the ssh connection
 dropped. `Alt+q` ends it after asking (`q` quits, `s` also saves Helix's files, any other key cancels), and lists
 the commands still running in the terminals. Quitting stops them: `Ctrl+c` first, then harder, so nothing is left
 running (on a server too; only what left the shell on its own, like daemons or docker containers, is not
 reached). Unsaved files are never dropped: Helix refuses and shows which. `Alt+Shift+q` quits at once: no question,
 unsaved changes dropped, running commands stopped. Closing the window (or a dropped ssh) is not quitting: the next
-`hidex` there reattaches.
+`tidex` there reattaches.
 
 | Keys | |
 |---|---|
@@ -72,11 +72,11 @@ unsaved changes dropped, running commands stopped. Closing the window (or a drop
 | `Alt+1`…`Alt+9` | terminal N / side terminal N / the Nth tree, of the kind of pane you are on (from Helix: terminal N) |
 | `Alt+x` | fold the focused pane to a strip (its neighbour covers it), or unfold it to its exact size |
 | `Alt+p` | the / commands: type `copy`, `theme dracula`… with what fits listed below as you type (`Tab` completes, `Enter` runs the chosen line or the typed one, `Esc` closes); the keys that fit are listed too |
-| `Alt+k` | every hIDEx key, by group, filtered as you type |
+| `Alt+k` | every tIDEx key, by group, filtered as you type |
 | `Alt+g` / `Alt+y` | lazygit (read-only) / yazi pop-up: the same key hides it and brings it back (`q` quits it) |
 | `Alt+Shift+g` | lazygit that can stage, commit, push: it replaces the read-only one |
 | `Alt+w` | show / hide the pop-ups (several sit side by side; one alone is centred, 80% of the window; all share one solid colour set from the theme: lighter with white text on a dark one, darker on a light one) |
-| `Alt+q` | quit hIDEx, after asking (lists running commands; the editor asks about, or refuses, unsaved files) |
+| `Alt+q` | quit tIDEx, after asking (lists running commands; the editor asks about, or refuses, unsaved files) |
 | `Alt+Shift+q` | quit at once: unsaved changes dropped, running commands stopped |
 | `Enter` on a file in a tree or yazi | the editor; logs and files over 10 MB in lnav (`q` closes) |
 | `F2` on a file in a tree | open with another editor: Helix or Neovim (the one not in use), micro, nano when the system has it; it opens in the editor's place (sandboxed the same), and the editor is back when it quits, that file reloaded. One at a time: meanwhile, opening a file asks whether to close it (`y`: with its own quit key, so it asks about unsaved changes itself); a file with unsaved changes in Neovim is not handed over |
@@ -90,59 +90,59 @@ has buttons for the same actions as the keys (git, yazi, +term, +side, fold, cmd
 text: no icon font needed.
 
 **`/` commands**, typed or picked in the palette (`Alt+p`, `cmds` on the bar), one line each in the table
-of `bin/hidex-cmd` and one small function. With nothing typed, the palette lists them by group (look, project,
-Helix, open, panes, hIDEx), with the key of those that have one; typing narrows to what fits, keys included.
+of `bin/tidex-cmd` and one small function. With nothing typed, the palette lists them by group (look, project,
+Helix, open, panes, tIDEx), with the key of those that have one; typing narrows to what fits, keys included.
 Those that need a list or a result open in a pop-up:
 
 - `/theme`: recolours the whole window live, with any of the ~900 [iTerm2-Color-Schemes] (favourites first,
   then dark and light ones; each is previewed as you move, `Esc` goes back), kept for the project's next sessions;
-  `reset` gives the terminal's colours back, and so does leaving hIDEx. Every hIDEx colour is one
+  `reset` gives the terminal's colours back, and so does leaving tIDEx. Every tIDEx colour is one
   of the terminal's 16, so zellij, Helix, the trees, lazygit and pudb follow (Claude Code keeps its own). The
   terminal must accept colour-setting sequences (alacritty, foot, kitty, wezterm do). Fonts stay the terminal's.
 - `/editor`: the main editor, Neovim (the default) or Helix, yours in every project, from the next start;
-  `/editor helix` straight away. `HIDEX_EDITOR=helix hidex .` picks one for a single start.
+  `/editor helix` straight away. `TIDEX_EDITOR=helix tidex .` picks one for a single start.
 - `/editor-theme`: one of the editor's own themes, for the editor only, previewed in it as you move, kept for the
-  project; `/editor-theme terminal` (or `hidex`) follows `/theme` again.
+  project; `/editor-theme terminal` (or `tidex`) follows `/theme` again.
 - `/frames`: the colours of the pane frames, the focused one and the others, picked from the terminal's 16
   (previewed as you move) or given as `/frames focused 4`, `/frames unfocused #ff8800`; yours in every project,
   and every running session takes them at once. `/frames reset`: yellow and grey again. The red frame of a pane
   that needs you stays.
-- `/langs`: the project's languages, most files first, with their language servers (found or missing). hIDEx
+- `/langs`: the project's languages, most files first, with their language servers (found or missing). tIDEx
   brings servers for Python and the files most projects have (shell, Markdown, TOML, YAML, JSON, HTML,
   CSS, JavaScript/TypeScript, Dockerfile); others (rust-analyzer, gopls, …) are used when on the PATH, e.g.
   from the project's dev shell. Enter on a language shows Helix's health report for it.
 - `/langs python` (or Enter on Python): the project's Python env, the one Helix checks the code against: at
-  start, the env active when `hidex` was run (micromamba, conda, virtualenv), else the one last picked here for
+  start, the env active when `tidex` was run (micromamba, conda, virtualenv), else the one last picked here for
   the project, else its `.venv`; here another, grouped: the project's (uv, venv), micromamba, conda, other virtualenvs (poetry, virtualenvwrapper). The bar shows it, and
-  new shells, side terminals and Claude start in it (`bin/hidex-env`). Helix's checker follows a switch at once,
-  without a restart (`bin/hidex-pyright` hands basedpyright the env's interpreter).
+  new shells, side terminals and Claude start in it (`bin/tidex-env`). Helix's checker follows a switch at once,
+  without a restart (`bin/tidex-pyright` hands basedpyright the env's interpreter).
 - `/reload` (files changed on disk), `/lsp` (restart the language servers), `/git`, `/git-write`, `/yazi`,
   `/terminal`, `/side`, `/collapse`, `/keys`, `/about` (version, install folder, tools, the sandbox here), `/quit`.
 - `/copy`: the output of the last command run in the terminal you were last in (`/copy zsh 2`: in that one), to
   the clipboard: zellij's own copy, which knows where the output starts and ends from the marks the shell sets
   (shell integration), and reaches the window's clipboard through the terminal, so over ssh too.
-- `/update`: after installing a newer hIDEx, moves the running session to it without a restart:
+- `/update`: after installing a newer tIDEx, moves the running session to it without a restart:
   terminals, running commands and Helix with its unsaved buffers stay; the keys, the bar, Helix's settings and
   everything started from then on are the new ones. A new layout or a new zellij still needs a restart.
 
-Scripts can ask the same of hIDEx: `hidex-msg popup yazi`, `hidex-msg editor reload-all`, …
+Scripts can ask the same of tIDEx: `tidex-msg popup yazi`, `tidex-msg editor reload-all`, …
 
 ## What it takes from the machine
 
-Only its terminal colours (every hIDEx colour is a terminal colour, so it follows the theme), its default
+Only its terminal colours (every tIDEx colour is a terminal colour, so it follows the theme), its default
 shell, Claude if `claude` is on the PATH (else the side terminal is a plain shell), and micromamba or conda
 for the list of Python envs. Everything else is pinned
 by the flake and configured from `config/`: zellij, Helix (its own config and language servers, not the
 machine's `~/.config/helix`; Python through [basedpyright] and [ruff]), broot, yazi, lazygit with [delta],
 lnav, [pudb].
 
-Debugging: `python -m pudb script.py` works in any hIDEx terminal, in whichever env is active, without
-installing pudb there: hIDEx puts its own pudb for that Python version (3.12, 3.13, 3.14) at the end of the
-import path, so the env's packages come first. With no env, hIDEx's own `python3` is used. (An env with its
-own `sitecustomize.py`, which is rare, would lose it in hIDEx terminals.) `breakpoint()` in the code opens
+Debugging: `python -m pudb script.py` works in any tIDEx terminal, in whichever env is active, without
+installing pudb there: tIDEx puts its own pudb for that Python version (3.12, 3.13, 3.14) at the end of the
+import path, so the env's packages come first. With no env, tIDEx's own `python3` is used. (An env with its
+own `sitecustomize.py`, which is rare, would lose it in tIDEx terminals.) `breakpoint()` in the code opens
 pudb too. In pudb: `b` breakpoint, `n` next, `s` step in, `c` continue, `!` a prompt in the current frame
 (IPython when the env has it). Its look and settings come from `config/xdg/pudb`; what pudb saves
-(breakpoints) goes to `~/.local/state/hidex/pudb`. On a Python version hIDEx has no pudb for,
+(breakpoints) goes to `~/.local/state/tidex/pudb`. On a Python version tIDEx has no pudb for,
 `breakpoint()` only prints a warning and the program goes on.
 
 The side terminal starts Claude with `--resume` (pick a past conversation); `Ctrl+c` twice leaves Claude for
@@ -153,8 +153,8 @@ Exiting the last shell of a side terminal or of the terminals starts a new one; 
 
 ## Sandboxing
 
-hIDEx refuses to start in, or open anything from, system folders (`/`, `/etc`, `/nix`, `/usr`, `/var`…),
-the home folder itself and its hidden folders (`~/.ssh`, `~/.gnupg`, `~/.config`…): `bin/hidex-guard`.
+tIDEx refuses to start in, or open anything from, system folders (`/`, `/etc`, `/nix`, `/usr`, `/var`…),
+the home folder itself and its hidden folders (`~/.ssh`, `~/.gnupg`, `~/.config`…): `bin/tidex-guard`.
 
 The trees, yazi and the read-only lazygit run under [Landlock] (the kernel's own sandbox, through [landrun]; on a
 kernel without it, [bubblewrap] if the machine has it): the kernel, not the program's settings, keeps them in
@@ -182,49 +182,49 @@ their place, so no key pressed there can reach further.
 ## Layout
 
 One job per file; each script says at its top what it does and who calls it. Two rules hold throughout: the
-session is found in `ZELLIJ_SESSION_NAME` (set once by `bin/hidex`), never passed around, and each shared
+session is found in `ZELLIJ_SESSION_NAME` (set once by `bin/tidex`), never passed around, and each shared
 concern lives in one place (named below).
 
 - **Build:** `scripts/release` (the core archive: scripts, config, plugin; and the bundles: the Node
   language servers of `release/lsp`, pudb of `release/pudb.txt`), `tools.lock` (the tools, fetched by
-  `bin/hidex-tools` for the installer and the build alike), `install.sh` (one folder per version, reached
+  `bin/tidex-tools` for the installer and the build alike), `install.sh` (one folder per version, reached
   through each session's `current` link), `.github/workflows/release.yml` (a `v*` tag publishes the archive),
-  `flake.nix` (optional, only to build hIDEx on a machine with Nix: `nix develop` gives Rust and the tools
-  `scripts/release` needs; installing and running hIDEx never use Nix), `CHANGELOG.md` (each release's text).
-- **Start and state:** `bin/hidex` starts or reattaches a session; `bin/hidex-state` (the session's state
-  folder), `bin/hidex-config` (its zellij config), `bin/hidex-update` (`/update`), `bin/hidex-check-update` (a
-  newer release offered at start), `bin/hidex-uninstall` (`hidex --uninstall`).
+  `flake.nix` (optional, only to build tIDEx on a machine with Nix: `nix develop` gives Rust and the tools
+  `scripts/release` needs; installing and running tIDEx never use Nix), `CHANGELOG.md` (each release's text).
+- **Start and state:** `bin/tidex` starts or reattaches a session; `bin/tidex-state` (the session's state
+  folder), `bin/tidex-config` (its zellij config), `bin/tidex-update` (`/update`), `bin/tidex-check-update` (a
+  newer release offered at start), `bin/tidex-uninstall` (`tidex --uninstall`).
 - **The plugin** (`plugin/`, Rust), which is also the bar, one module per job: `actions` (what keys, clicks and
-  `hidex-msg` can ask), `panes` (roles, jumps, new panes), `names` (the terminals named after what runs),
+  `tidex-msg` can ask), `panes` (roles, jumps, new panes), `names` (the terminals named after what runs),
   `clients` (only the bar of a connected window acts), `popups`, `editor` (the editor behind one contract: open,
   reload, quit…) and `typist` (Helix's way: commands typed into it), `collapse`
   (folding), `status` and `bar`, `scripts` (the scripts it runs, and how their answers are told apart), `timers`.
-  Its `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/hidex-msg`.
-- **Commands:** `bin/hidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/hidex-theme`,
-  `bin/hidex-editor` (editor themes, and the rest asked of the editor), `bin/hidex-langs`, `bin/hidex-python`,
-  `bin/hidex-quit-ask`.
-- **Panes:** `bin/hidex-shell` (terminals, and side terminals after Claude: `bin/hidex-side`), `bin/hidex-tree`
-  and `bin/hidex-tree-enter` (the trees), `bin/hidex-editor` with one adapter per editor in `editors/` (`run`,
-  `themes`, `health`, `servers`, `title`: Helix's is `editors/helix`), `bin/hidex-lazygit` and `bin/hidex-yazi`
-  (pop-ups), `bin/hidex-open` (a picked file to Helix or lnav).
-- **Shared pieces, one each:** `bin/hidex-sandbox` (every sandbox), `bin/hidex-guard` (the off-limits folders),
-  `bin/hidex-osc` (codes to the window: colours, clipboard), `bin/hidex-bg` and `config/brightness.awk` (the
-  window's background, dark or light), `bin/hidex-popup-colors` (the pop-ups' colours), `bin/hidex-env` (the
-  project Python for a program), `bin/hidex-running` and `bin/hidex-stop` (what runs in the shells, stopping
-  it), `bin/hidex-status` (the bar's line), `bin/hidex-pyright` (basedpyright on the project Python, live),
-  `bin/hidex-delta` (light diffs).
+  Its `zellij-tile` version must match the zellij in `tools.lock`. Scripts reach it through `bin/tidex-msg`.
+- **Commands:** `bin/tidex-cmd`, the one table of `/` commands; the scripts behind them: `bin/tidex-theme`,
+  `bin/tidex-editor` (editor themes, and the rest asked of the editor), `bin/tidex-langs`, `bin/tidex-python`,
+  `bin/tidex-quit-ask`.
+- **Panes:** `bin/tidex-shell` (terminals, and side terminals after Claude: `bin/tidex-side`), `bin/tidex-tree`
+  and `bin/tidex-tree-enter` (the trees), `bin/tidex-editor` with one adapter per editor in `editors/` (`run`,
+  `themes`, `health`, `servers`, `title`: Helix's is `editors/helix`), `bin/tidex-lazygit` and `bin/tidex-yazi`
+  (pop-ups), `bin/tidex-open` (a picked file to Helix or lnav).
+- **Shared pieces, one each:** `bin/tidex-sandbox` (every sandbox), `bin/tidex-guard` (the off-limits folders),
+  `bin/tidex-osc` (codes to the window: colours, clipboard), `bin/tidex-bg` and `config/brightness.awk` (the
+  window's background, dark or light), `bin/tidex-popup-colors` (the pop-ups' colours), `bin/tidex-env` (the
+  project Python for a program), `bin/tidex-running` and `bin/tidex-stop` (what runs in the shells, stopping
+  it), `bin/tidex-status` (the bar's line), `bin/tidex-pyright` (basedpyright on the project Python, live),
+  `bin/tidex-delta` (light diffs).
 - **Config:** `config/` (zellij's keys and layout, broot, lazygit, lnav), `config/xdg/` (Helix, yazi, pudb).
-- **Tests:** `tests/unit`, the plugin's `cargo test`, `tests/run` (end to end), all on hIDEx as installed
+- **Tests:** `tests/unit`, the plugin's `cargo test`, `tests/run` (end to end), all on tIDEx as installed
   (`tests/installed`).
 
 ## Tests
 
 In `nix develop` (or with Rust and its wasm32-wasip1 target): `tests/installed` builds the archive and installs
 it into `dist/test-install`; `cargo test` in `plugin/` checks the plugin's logic (pane names and jumps,
-focus after a close, the bar's buttons, messages, folding); `tests/unit HIDEX` the scripts' rules (the folder guard,
+focus after a close, the bar's buttons, messages, folding); `tests/unit TIDEX` the scripts' rules (the folder guard,
 pop-up colours, themes, the Python picked and kept, languages), with fake fzf, zellij and delta.
 
-`tests/run`, the end-to-end test, starts hIDEx in hidden sessions (no window), drives it with keys and messages, and checks the panes:
+`tests/run`, the end-to-end test, starts tIDEx in hidden sessions (no window), drives it with keys and messages, and checks the panes:
 new panes, jumps, folding, pop-ups, what is kept per project, `/update`, quitting, the folder guard. It runs in
 its own temporary folders, never in your sessions or settings, in a few minutes; fine to leave in the background.
 
