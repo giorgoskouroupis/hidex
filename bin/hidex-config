@@ -1,10 +1,16 @@
 #!/bin/sh
 # hidex-config [STATE]: writes the session's zellij config (STATE/config/config.kdl; default: this session's) from
-# hIDEx's, with the plugin's path filled in: the one through the session's "current" link, so keys keep reaching
-# the bar after /update. zellij re-reads the file when it changes.
+# hIDEx's, filled in: the plugin's path through the session's "current" link (so keys keep reaching the bar after
+# /update), and the frame colours you chose (hidex-frames). zellij re-reads the file when it changes.
 [ -n "${1:-}" ] || set -- "$(hidex-state)"
 share=$1/current/share/hidex
 # no session (a script run on its own): nothing to write
 [ -f "$share/config.kdl" ] || exit 0
 mkdir -p "$1/config"
-sed "s|@plugin@|$share/hidex-panes.wasm|g" "$share/config.kdl" > "$1/config/config.kdl"
+# a palette number as it is, "#rrggbb" quoted
+frames=${XDG_STATE_HOME:-$HOME/.local/state}/hidex/frames
+colour() { awk -v w="$1" '$1 == w { print ($2 ~ /^#/ ? "\"" $2 "\"" : $2) }' "$frames" 2>/dev/null; }
+focused=$(colour focused) unfocused=$(colour unfocused)
+sed "s|@plugin@|$share/hidex-panes.wasm|g
+  /frame_selected/ s|base 3;|base ${focused:-3};|; /frame_unselected/ s|base 8;|base ${unfocused:-8};|" \
+  "$share/config.kdl" > "$1/config/config.kdl"
