@@ -16,6 +16,7 @@ handover() {
   case $editor in
     micro) keys='Ctrl+s saves, Ctrl+q quits' ;;
     nano) keys='Ctrl+o saves, Ctrl+x quits' ;;
+    helix | nvim) keys=':w saves, :q quits' ;;
     *) keys='save, then quit it' ;;
   esac
   printf '%s is open in %s, in %s'"'"'s place.\n\nTo open files again, save and quit %s first (%s);\n%s comes back. Nothing is closed for you.\n\npress a key: back to %s' \
@@ -30,16 +31,29 @@ if [ -n "$h" ]; then handover "$h"; exit 0; fi
 [ "$1" = --held ] && exit 0
 f=$(realpath -- "$1") || exit 1
 hidex-guard "$f" || { sleep 2; exit 1; }
-editors=$(printf '%s\nmicro\n' "$main"; command -v nano >/dev/null && echo nano)
-note="$title saved its changes when you left it: another editor opens the file as saved."
-pick=$(printf '%s\n' "$editors" | hidex-fzf --prompt 'open with ' --header "${f##*/} · Enter opens · Esc closes
-$note") ||
+# the main editor, then the other editors hIDEx has an adapter for (Helix, Neovim), then micro, nano
+adapters=${HIDEX_SHARE:-$(dirname "$(readlink -f "$0")")/../share/hidex}/editors
+editors=$(echo "$main"; ls "$adapters" | grep -vx "$main"; echo micro; command -v nano >/dev/null && echo nano)
+# Helix saves when left (its auto-save); an editor that answers (Neovim) is asked below instead
+note=; [ "$main" = helix ] && note="
+$title saved its changes when you left it: another editor opens the file as saved."
+pick=$(printf '%s\n' "$editors" | hidex-fzf --prompt 'open with ' --header "${f##*/} · Enter opens · Esc closes$note") ||
   exit 0
 [ "$pick" = "$main" ] && exec hidex-open "$f"
+# unsaved changes to it in the main editor: nothing handed over until they are saved
+if [ "$(hidex-editor do modified "$f" 2>/dev/null)" = 1 ]; then
+  printf '%s has unsaved changes in %s: save it there first (:w), then open it with %s.\n\npress a key' \
+    "${f##*/}" "$title" "$pick"
+  stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1
+  exit 0
+fi
 # the bar reloads that file in the main editor when the guest quits (the main one keeps it in memory meanwhile)
 hidex-msg handover "$f"
-# the main editor's pane, to take its place (none: a new pane where there is room); then the focus on it
+# the main editor's pane, to take its place (none: a new pane where there is room); then the focus on it. An
+# editor with an adapter runs through it (its settings, its sandbox), another one sandboxed as it is
 pane=$(zellij action list-panes 2>/dev/null | awk -F'  +' -v t="$title" '$2 == "terminal" && $3 == t { print $1; exit }')
+if [ -x "$adapters/$pick" ]; then run="env HIDEX_EDITOR=$pick hidex-editor run"; else run="hidex-sandbox machine -- $pick"; fi
+# shellcheck disable=SC2086
 id=$(zellij action new-pane ${pane:+--in-place --pane-id "$pane"} --close-on-exit --name "edit: ${f##*/} ($pick)" \
-  --cwd "${f%/*}" -- hidex-sandbox machine -- "$pick" "$f")
+  --cwd "${f%/*}" -- $run "$f")
 [ -n "$id" ] && zellij action focus-pane-id "$id"

@@ -3,7 +3,9 @@
 # other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
 share=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 sock() { echo "$(hidex-state)/nvim.sock"; }
-remote() { timeout 5 nvim --server "$(sock)" "$@" >/dev/null 2>&1; }
+# (a headless, clean client: no screen codes around its answers, and none of your own config)
+ask() { timeout 5 nvim --headless --clean --server "$(sock)" "$@"; }
+remote() { ask "$@" >/dev/null 2>&1; }
 case $1 in
   # Neovim with hIDEx's settings (config/nvim) and state of its own (NVIM_APPNAME), listening on the session's
   # socket; sandboxed like any editor (hidex-sandbox machine). HIDEX_EDITOR_RUN: another program (the tests).
@@ -31,8 +33,10 @@ case $1 in
         case $2 in saving) c=wqa ;; dropping) c='qa!' ;; *) c='confirm qa' ;; esac
         remote --remote-send "<Cmd>$c<CR>" ;;
       # how many files have unsaved changes
-      unsaved) timeout 5 nvim --server "$(sock)" --remote-expr "len(getbufinfo({'bufmodified':1}))" ;;
-      *) echo "nvim do: open FILE… | reload | reload-all | lsp-restart | theme [NAME] | config-reload | quit [saving|dropping] | unsaved" >&2; exit 1 ;;
+      unsaved) ask --remote-expr "len(getbufinfo({'bufmodified':1}))" ;;
+      # whether that file has unsaved changes here: 1 or 0 (open-with hands over only a saved file)
+      modified) ask --remote-expr "getbufvar(bufnr(fnameescape('$2')), '&modified') ? 1 : 0" ;;
+      *) echo "nvim do: open FILE… | reload | reload-all | lsp-restart | theme [NAME] | config-reload | quit [saving|dropping] | unsaved | modified FILE" >&2; exit 1 ;;
     esac ;;
   # Neovim's own scheme first (in the terminal's colours), then the others it brings
   themes)
