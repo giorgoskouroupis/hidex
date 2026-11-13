@@ -87,6 +87,7 @@ check "with their language servers found" 'grep "^  bash" "$T/langs" | grep -q "
 
 echo "commands"
 check "every command has its function" 'for c in $(hidex-cmd --list | cut -f1); do grep -q "^cmd_$(echo $c | tr - _)()" "$out/bin/hidex-cmd" || exit 1; done'
+check "nothing typed: the commands by group, a header before each, keys beside" 'l=$(hidex-cmd --suggest "" | sed "s/\x1b\[[0-9]*m//g"); [ "$(printf "%s\n" "$l" | head -1 | cut -f1)" = look ] && printf "%s\n" "$l" | grep -q "^git	Alt+g · "'
 check "suggestions: commands starting with the line" '[ "$(hidex-cmd --suggest co | awk -F"\t" "\$3 != \"key\"" | cut -f1 | tr "\n" " ")" = "collapse copy " ]'
 check "suggestions: then the keys that fit (copy: Alt+v)" 'hidex-cmd --suggest copy | awk -F"\t" "\$3 == \"key\"" | cut -f1 | grep -qx "Alt+v"'
 check "suggestions: a command's arguments after a space" '[ "$(hidex-cmd --suggest "langs p" | cut -f1)" = "langs python" ]'
@@ -94,6 +95,14 @@ check "suggestions: nothing fits, nothing listed" '[ -z "$(hidex-cmd --suggest z
 mkdir -p "$T/panes"; printf '#!/bin/sh\nprintf "ID  TYPE  TITLE  FOCUSED  FLOATING\\nterminal_1  terminal  zsh 2  false  false\\nterminal_0  terminal  Helix  true  false\\nterminal_3  terminal  claude 1\\342\\200\\213  false  false\\nterminal_4  terminal  lazygit  false  true\\n"\n' > "$T/panes/zellij"; chmod +x "$T/panes/zellij"
 check "copy: the open terminals suggested" '[ "$(PATH=$T/panes:$PATH hidex-cmd --suggest "copy " | cut -f1 | tr "\n" ,)" = "copy claude 1,copy zsh 2," ]'
 
+echo "frames"
+# a running session (its state folder, linked to this hIDEx): its config is written again on each change
+fs=$XDG_RUNTIME_DIR/hidex/frames-test; mkdir -p "$fs"; ln -sfn "$out" "$fs/current"
+framed() { grep "$1" "$fs/config/config.kdl" | grep -q "base $2;"; }
+check "a colour number for the focused frame, at once in the running sessions" 'hidex-frames focused 4 && framed frame_selected 4'
+check "a #rrggbb colour for the others, quoted" 'hidex-frames unfocused "#ff8800" && framed frame_unselected "\"#ff8800\""'
+check "anything else refused, nothing changed" '! hidex-frames focused 99 2>/dev/null && framed frame_selected 4'
+check "reset: the defaults again (focused 3, others 8)" 'hidex-frames reset && framed frame_selected 3 && framed frame_unselected 8'
 
 echo "update check"
 # a fake GitHub: v0.2.1 is out, with its changes and a newer zellij; its install.sh only says it ran
