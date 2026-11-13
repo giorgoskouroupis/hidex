@@ -18,6 +18,8 @@ pub enum Action {
     Editor(Command),
     /// a file handed to a guest editor in the editor's place (hidex-open-with): reloaded when the guest quits
     Handover(String),
+    /// something for the main editor once the guest in its place has quit (a file asked for meanwhile)
+    AfterGuest(Command),
     /// quit hIDEx: "" asks first if commands still run in the shells; "force" stops them; "save" also saves
     /// the editor's files. The editor goes first either way (it refuses while files are unsaved).
     Quit(String),
@@ -40,6 +42,7 @@ impl Action {
             "jump" => Action::Jump(payload.parse().ok()?),
             "editor" => Action::Editor(Command::parse(payload)?),
             "handover" if !payload.is_empty() => Action::Handover(arg),
+            "after-guest" => Action::AfterGuest(Command::parse(payload)?),
             "quit" => Action::Quit(arg),
             "status" => Action::Status,
             "copy" => Action::Copy(if payload == "-" { String::new() } else { arg }),
@@ -60,6 +63,7 @@ mod tests {
         assert_eq!(Action::from_message("quit", "now"), Some(Quit("now".into())));
         assert_eq!(Action::from_message("editor", "reload-all"), Some(Editor(Command::ReloadAll)));
         assert_eq!(Action::from_message("handover", "/p/a.py"), Some(Handover("/p/a.py".into())));
+        assert_eq!(Action::from_message("after-guest", "open \"/p/a.py\""), Some(AfterGuest(Command::Open(vec!["/p/a.py".into()]))));
         assert_eq!(Action::from_message("status", "-"), Some(Status));
         assert_eq!(Action::from_message("copy", "-"), Some(Copy(String::new())));
         assert_eq!(Action::from_message("copy", "side 2"), Some(Copy("side 2".into())));

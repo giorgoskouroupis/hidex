@@ -50,6 +50,8 @@ struct State {
     /// a guest editor holds the editor's place (hidex-open-with), and the file handed to it
     guest_open: bool,
     handed: Option<String>,
+    /// what to do in the editor once the guest has quit (a file asked for meanwhile: hidex-open-with)
+    after_guest: Option<Command>,
     /// messages wait here until zellij says whether this copy of the bar is the one to act (clients)
     gate: clients::Gate,
 }
@@ -96,6 +98,7 @@ impl State {
                 }
             }
             Action::Handover(file) => self.handed = Some(file),
+            Action::AfterGuest(command) => self.after_guest = Some(command),
             Action::Quit(how) => match how.as_str() {
                 "force" => self.quit_now(Quit::Refusing),
                 "save" => self.quit_now(Quit::Saving),
@@ -166,6 +169,9 @@ impl State {
         if self.guest_open && !guest_open {
             if let Some(file) = self.handed.take() {
                 self.run(Action::Editor(Command::Reload(file)));
+            }
+            if let Some(command) = self.after_guest.take() {
+                self.run(Action::Editor(command));
             }
         }
         self.guest_open = guest_open;

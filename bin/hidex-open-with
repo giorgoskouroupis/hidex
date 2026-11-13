@@ -1,34 +1,43 @@
 #!/bin/sh
-# hidex-open-with FILE: F2 on a file in a tree, in a pop-up: pick the editor (the main one, micro, nano when the
-# system has it). The main one: as Enter does. Another, a guest: in the main editor's place (zellij's open in
-# place, sandboxed the same), and the main editor is back when it quits. One guest holds that place at a time:
-# while one does, opening anything (here, Enter in a tree or yazi: hidex-open --held) says how to hand over
-# (save and quit it), and goes back to it.
+# hidex-open-with FILE: F2 on a file in a tree, in a pop-up: pick the editor (the main one, the others with an
+# adapter, micro, nano when the system has it). The main one: as Enter does. Another, a guest: in the main
+# editor's place (zellij's open in place, sandboxed the same), and the main editor is back when it quits. One
+# guest holds that place at a time: while one does, opening anything (F2, or Enter in a tree or yazi:
+# hidex-open-with --held FILE) asks whether to close the guest first, and the file then opens in the main one.
 main=${HIDEX_EDITOR:-helix} title=$(hidex-editor title)
 
 # the guest holding the main editor's place, as "PANE_ID<TAB>TITLE" ("edit: a.py (micro)"), if any
 held() {
   zellij action list-panes 2>/dev/null | awk -F'  +' '$2 == "terminal" && $3 ~ /^edit: / { print $1 "\t" $3; exit }'
 }
-# say who holds the place and how to hand it over (its own save and quit keys), then back to it
+# ask the guest to quit with its own key: each one asks by itself about unsaved changes (or refuses)
+close_guest() {
+  case $2 in
+    micro) zellij action write --pane-id "$1" 17 ;;
+    nano) zellij action write --pane-id "$1" 24 ;;
+    # Esc first, alone (Esc then ":" at once reads as Alt+:), then :q
+    helix) zellij action write --pane-id "$1" 27; sleep 0.2; zellij action write --pane-id "$1" 58 113 13 ;;
+    nvim) HIDEX_EDITOR=nvim hidex-editor do quit ;;
+  esac
+}
+# who holds the place: y closes it (the file asked for then opens in the main editor), anything else goes back
 handover() {
   guest=${1#*	} id=${1%%	*} file=${guest#edit: } file=${file% (*} editor=${guest##*(} editor=${editor%)}
-  case $editor in
-    micro) keys='Ctrl+s saves, Ctrl+q quits' ;;
-    nano) keys='Ctrl+o saves, Ctrl+x quits' ;;
-    helix | nvim) keys=':w saves, :q quits' ;;
-    *) keys='save, then quit it' ;;
-  esac
-  printf '%s is open in %s, in %s'"'"'s place.\n\nTo open files again, save and quit %s first (%s);\n%s comes back. Nothing is closed for you.\n\npress a key: back to %s' \
-    "$file" "$editor" "$title" "$editor" "$keys" "$title" "$editor"
-  stty -icanon -echo; dd bs=1 count=1 >/dev/null 2>&1
+  printf '%s is open in %s, in %s'"'"'s place.\n\nClose %s now? y: yes (it asks you first if anything is unsaved), \nanything else: back to %s' \
+    "$file" "$editor" "$title" "$editor" "$editor"
+  stty -icanon -echo; answer=$(dd bs=1 count=1 2>/dev/null)
+  if [ "$answer" = y ]; then
+    [ -n "$2" ] && hidex-msg after-guest "open \"$2\""
+    close_guest "$id" "$editor"
+  fi
   zellij action focus-pane-id "$id"
 }
 
 hidex-popup-colors
 h=$(held)
-if [ -n "$h" ]; then handover "$h"; exit 0; fi
-[ "$1" = --held ] && exit 0
+[ "$1" = --held ] && shift
+if [ -n "$h" ]; then handover "$h" "${1:+$(realpath -- "$1")}"; exit 0; fi
+[ -n "$1" ] || exit 0
 f=$(realpath -- "$1") || exit 1
 hidex-guard "$f" || { sleep 2; exit 1; }
 # the main editor, then the other editors hIDEx has an adapter for (Helix, Neovim), then micro, nano
