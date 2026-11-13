@@ -137,11 +137,13 @@ check "F2 on a file in the tree: the editors to pick from" 'wait_for "has \"open
 key 'micro' 1; key '\r' 4
 check "micro opens the file in Helix's place, focused" 'wait_for "has \"edit: a.py (micro)\"" && [ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ]'
 key '\x1be' 1; key '\r' 3
-check "Enter on a file meanwhile: nothing opened, a pop-up says how to hand over" 'wait_for "screen \"open with\" | grep -q \"save and quit micro\""'
+check "Enter on a file meanwhile: nothing opened, a pop-up asks whether to close micro" 'wait_for "screen \"open with\" | grep -q \"Close micro now\""'
 key 'x' 2
-check "a key: back to micro, Helix not brought back elsewhere" '[ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ] && [ "$(geom "tree: proj")" = "$tree_at" ]'
-key '# from micro\r' 1; key '\x13' 2; key '\x11' 3
-check "micro quits: Helix is back, in its place" 'wait_for "has Helix" && ! has "edit: a.py (micro)" && [ "$(geom Helix)" = "$helix_at" ]'
+check "another key: back to micro, Helix not brought back elsewhere" '[ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ] && [ "$(geom "tree: proj")" = "$tree_at" ]'
+# saved in micro, then Enter on the file again: y closes micro with its own key, and the file opens in Helix
+key '# from micro\r' 1; key '\x13' 2
+key '\x1be' 1; key '\r' 3; key 'y' 4
+check "y: micro quits by its own key: Helix is back, in its place" 'wait_for "has Helix" && ! has "edit: a.py (micro)" && [ "$(geom Helix)" = "$helix_at" ]'
 check "and Helix shows what micro saved (reloaded from disk)" 'grep -q "from micro" "$T/proj/a.py" && wait_for "screen Helix | grep -q \"from micro\""'
 key '\x1be' 1; key '\x1b' 1; key '\x1bh'
 
