@@ -7,6 +7,8 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+## [v0.3.2] - 2026-11-14
+
 ### Added
 - The bar says what happens out of sight: `switching editor: Neovim → Helix…`, then `editor: Helix` (or
   `Neovim kept`); the same for one guest editor giving way to another.
@@ -221,7 +223,8 @@ The first release: hIDEx installs on any Linux x86_64, without Nix or root.
 - `nil`, the Nix language server (it publishes no ready-made Linux build).
 - The command line in the bar (`Alt+Shift+p`), replaced by the palette.
 
-[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.2...HEAD
+[v0.3.2]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/giorgoskouroupis/tidex/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.4...v0.3.0
 [v0.2.4]: https://github.com/giorgoskouroupis/tidex/compare/v0.2.3...v0.2.4
