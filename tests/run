@@ -73,11 +73,17 @@ trap 'stop; chmod -R u+w "$T" 2>/dev/null; rm -rf "$T" "$R"' EXIT
 echo "tIDEx tests ($out)"
 
 echo "start"
+# a repository naming its own program for core.fsmonitor (any git command would run it): never run inside tIDEx
+printf '#!/bin/sh\ntouch "%s"\n' "$T/fsmonitor-ran" > "$T/proj/.git/mon"; chmod +x "$T/proj/.git/mon"
+git -C "$T/proj" config core.fsmonitor "$T/proj/.git/mon"
 start
 check "the first start: the welcome pop-up, Helix saving by itself first" 'wait_for "screen welcome | grep -q \"Helix saves by itself\""'
 key 'x' 2
 check "a key closes it, for good" '! has welcome && [ -e "$XDG_STATE_HOME/tidex/welcomed" ]'
 check "layout: tree, Helix, term 1, side 1" 'has "tree: proj" && has Helix && has "term 1" && has "side 1"'
+in_session git -C "$T/proj" status
+check "a repository's own fsmonitor program never runs in tIDEx (git status in the session)" '[ ! -e "$T/fsmonitor-ran" ]'
+git -C "$T/proj" config --unset core.fsmonitor
 check "the tree runs (broot listening on its socket)" 'wait_for "ls /tmp/broot-server-tidex-$S-* >/dev/null 2>&1"'
 check "terminals are named after what runs in them: bash 1, and the side one bash 1 too" 'wait_for "named \"bash 1\" && named \"bash 1$MARK\""'
 key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 4
@@ -140,8 +146,8 @@ key 'micro' 1; key '\r' 4
 check "micro opens the file in Helix's place, focused" 'wait_for "has \"edit: a.py (micro)\"" && [ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ]'
 key '\x1be' 1; key '\r' 3
 check "Enter on a file meanwhile: nothing opened, a pop-up asks whether to close micro" 'wait_for "screen \"open with\" | grep -q \"Close micro now\""'
-key 'x' 2
-check "another key: back to micro, Helix not brought back elsewhere" '[ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ] && [ "$(geom "tree: proj")" = "$tree_at" ]'
+key 'x' 1; key 'n' 2
+check "another key ignored, then n: back to micro, Helix not brought back elsewhere" '[ "$(focused)" = "edit: a.py (micro)" ] && [ "$(geom "edit: a.py (micro)")" = "$helix_at" ] && [ "$(geom "tree: proj")" = "$tree_at" ]'
 # saved in micro, then Enter on the file again: y closes micro with its own key, and the file opens in Helix
 key '# from micro\r' 1; key '\x13' 2
 key '\x1be' 1; key '\r' 3; key 'y' 4
@@ -240,7 +246,9 @@ echo "quit"
 key '\x1bq' 4
 check "Alt+q asks" 'has "quit?"'
 key 'x' 2
-check "another key cancels" '! has "quit?" && has Helix'
+check "another key does nothing: the question stays" 'has "quit?"'
+key '\x1b' 2
+check "Esc stays in tIDEx" '! has "quit?" && has Helix'
 key '\x1bt'; "$Z" -s "$S" action write-chars 'sleep 40
 '; pause 1
 key '\x1bQ' 10
@@ -264,15 +272,18 @@ echo "Neovim"
 export TIDEX_EDITOR=nvim ED=Neovim NVIM_NOTTYFAST=1
 echo 'print("hi")' > "$T/proj/a.py"
 start
-check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/tidex/$S/nvim.sock" ]'
+check "the editor pane is Neovim's" 'has Neovim && [ -S "$XDG_RUNTIME_DIR/tidex/$S/sockets/nvim.sock" ]'
 nvim_at=$(list -g | awk -F"  +" '$3 == "Neovim" { print $4 "," $5 " " $7 "x" $6 }')
 key '\x1be' 1; key 'a.py' 2; key '\r' 3
 check "Enter on a file in the tree: Neovim opens it, in front" 'wait_for "screen Neovim | grep -q \"print(.hi.)\"" && [ "$(focused)" = Neovim ]'
 key ' f' 2
 check "Space f: the file picker of mini.nvim, shipped with tIDEx" 'screen Neovim | grep -q "Files"'
 key '\x1b' 1
-ask_nvim() { "$out/tools/bin/nvim" --headless --clean --server "$XDG_RUNTIME_DIR/tidex/$S/nvim.sock" --remote-expr "$1" 2>/dev/null; }
+ask_nvim() { "$out/tools/bin/nvim" --headless --clean --server "$XDG_RUNTIME_DIR/tidex/$S/sockets/nvim.sock" --remote-expr "$1" 2>/dev/null; }
 check "Python coloured by tree-sitter (the parsers shipped with tIDEx)" '[ "$(ask_nvim "luaeval(\"vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] and 1 or 0\")")" = 1 ]'
+# a file cannot configure the editor: its own "vim:" line is ignored
+printf 'x\n# vim: set tabstop=3 :\n' > "$T/proj/m.txt"
+check "modelines off: a file's vim: line sets nothing" '[ "$(NVIM_APPNAME=tidex-nvim-test "$out/tools/bin/nvim" --headless -u "$out/share/tidex/nvim/init.lua" "$T/proj/m.txt" -c "lua io.write(vim.bo.tabstop)" -c "qa!" 2>/dev/null)" != 3 ]'
 echo '# from Claude' >> "$T/proj/a.py"
 check "changed on disk, untouched here: Neovim shows it by itself" 'wait_for "screen Neovim | grep -q \"from Claude\""'
 key 'Oedited here' 1; "$Z" -s "$S" action write 27; pause 1

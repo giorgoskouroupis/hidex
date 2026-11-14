@@ -34,8 +34,7 @@ echo "  $prefix/bin/tidex"
 echo "  its cache and its Neovim's own files (undo history, shada): $cache $nvim"
 [ -n "$rcs" ] && echo "  the PATH line it added in: $(echo $rcs)"
 if [ "${1:-}" != --yes ]; then
-  printf 'Remove? [y/N] '
-  read -r answer
+  answer=$(tidex-key --yn --esc 'Remove? y/n (Esc: no) '); echo
   [ "$answer" = y ] || { echo "Nothing removed."; exit 0; }
 fi
 

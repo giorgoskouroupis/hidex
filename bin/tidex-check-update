@@ -36,8 +36,7 @@ if [ -n "$new_zellij" ] && [ "$new_zellij" != "$old_zellij" ]; then
     "$new_zellij" "$old_zellij"
   printf '  one, quit them and start them again (what still runs in their terminals is then stopped).\n'
 fi
-printf '\nUpdate now? [y/N] '
-read -r answer
+answer=$(tidex-key --yn --esc "$(printf '\nUpdate now? y/n (Esc: no) ')"); echo
 [ "$answer" = y ] || exit 0
 curl -fsSL "$raw/$latest/install.sh" | TIDEX_VERSION=$latest sh || exit 0
 exit 10

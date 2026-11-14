@@ -1,18 +1,18 @@
 #!/bin/sh
-# tidex-quit-ask: the "quit tIDEx?" pop-up of Alt+q, listing what still runs in the shells: q stops it and
-# quits, s saves Helix's files too, any other key cancels. Unsaved files are never dropped: Helix refuses.
+# tidex-quit-ask: the "quit tIDEx?" pop-up of Alt+q, listing what still runs in the shells: y stops it and quits,
+# n or Esc stays. Unsaved files are never dropped: the editor asks about them first (or refuses).
 # (Alt+Shift+q quits without asking, dropping them.)
 tidex-popup-colors
 running=$(tidex-running)
-printf '\n  \033[1mquit tIDEx?\033[0m\n\n'
+printf '\n  \033[1mQuit tIDEx?\033[0m\n\n'
 if [ -n "$running" ]; then
-  printf '  Still running, stopped by both q and s (Ctrl+c, then harder):\n\n'
+  printf '  Still running, stopped by quitting (Ctrl+c, then harder):\n\n'
   printf '%s\n' "$running" | sed 's/^/    /'
   echo
 fi
-printf '  \033[33mq\033[0m quit   \033[33ms\033[0m save Helix'"'"'s files, quit   \033[33many other key\033[0m cancel\n'
-k=$(tidex-key)
-case $k in
-  q) tidex-msg quit force ;;
-  s) tidex-msg quit save ;;
-esac
+q='  \033[33my\033[0m quit (the editor asks first about anything unsaved)'
+q="$q   \033[33mn\033[0m or \033[33mEsc\033[0m stay\n"
+# shellcheck disable=SC2059
+k=$(tidex-key --yn --esc "$(printf "$q")")
+[ "$k" = y ] && tidex-msg quit force
+exit 0

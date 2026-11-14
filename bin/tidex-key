@@ -1,10 +1,38 @@
 #!/bin/sh
-# tidex-key [PROMPT]: PROMPT shown (on stderr, the terminal, so `answer=$(tidex-key …)` still shows it), then one
-# key read from the terminal (no Enter needed, not echoed), the terminal put back as it was; prints the key. Every
-# one-key question in tIDEx goes through here.
+# tidex-key [--yn [--esc]] [PROMPT]: PROMPT shown (on stderr, the terminal, so `answer=$(tidex-key …)` still shows
+# it), then one key read from the terminal (no Enter needed, not echoed), the terminal put back as it was; prints
+# the key. --yn: a question, answered only by y or n (and Esc with --esc, printed as "esc"): any other key is
+# ignored and it waits. Every key read and every question in tIDEx goes through here.
+yn=; esc=
+while :; do
+  case ${1:-} in
+    --yn) yn=1; shift ;;
+    --esc) esc=1; shift ;;
+    *) break ;;
+  esac
+done
 [ -n "${1:-}" ] && printf '%s' "$1" >&2
+
+# one key: a byte, or "esc" for Esc alone (an arrow or function key starts with the same byte, then more follow
+# at once: those are read away and given as "seq")
+read_key() {
+  k=$(dd bs=1 count=1 2>/dev/null)
+  [ "$k" = "$(printf '\033')" ] || { printf '%s' "$k"; return; }
+  stty min 0 time 1 2>/dev/null
+  rest=$(dd bs=8 count=1 2>/dev/null)
+  stty min 1 time 0 2>/dev/null
+  if [ -n "$rest" ]; then printf seq; else printf esc; fi
+}
+
 old=$(stty -g 2>/dev/null)
 stty -icanon -echo 2>/dev/null
-k=$(dd bs=1 count=1 2>/dev/null)
+while :; do
+  k=$(read_key)
+  [ -z "$yn" ] && break
+  case $k in
+    y | n) break ;;
+    esc) [ -n "$esc" ] && break ;;
+  esac
+done
 [ -n "$old" ] && stty "$old" 2>/dev/null
 printf '%s' "$k"
