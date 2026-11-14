@@ -7,6 +7,23 @@ pushing the version's tag (the release Action stops when the section is missing)
 
 ## [Unreleased]
 
+### Security
+- The editors and everything they start (language servers, a shell from the editor) write only the project's
+  folders and their own, and have no network (Linux 6.7 or later); they used to reach the whole machine but the
+  secrets.
+- The secrets hidden from every sandboxed program now also cover keyrings, tokens (`.npmrc`, `.pypirc`, cargo's,
+  `gh`, `glab`, Claude's login), more cloud credentials, browsers and mail, shell histories, `/root` and
+  `/etc/ssh`; a secret inside a writable folder stays hidden too.
+- Every git in a tIDEx session ignores a repository's own `core.fsmonitor` program (a hostile repo could get it
+  run by a mere `git status`).
+- Neovim: a file's own `vim:` line (modeline) sets nothing.
+
+### Changed
+- Every question is answered by `y` or `n` (Esc too where it says so); any other key is ignored and the question
+  stays: quit (`y` quits, the editor asking first about anything unsaved; the separate "save and quit" is gone),
+  `/editor` (one question: `y` now, `n` from the next start, Esc cancels), closing a guest editor, an update, the
+  uninstall, an old session.
+
 ## [v0.3.2] - 2026-11-14
 
 ### Added

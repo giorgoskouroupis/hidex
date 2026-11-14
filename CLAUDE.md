@@ -13,12 +13,15 @@ How work is done in this repo. They hold for every change, however small.
   |---|---|
   | anything editor-specific (run, quit, reload, themes…) | `bin/tidex-editor` + its adapters in `editors/` (`config/nvim` for Neovim's settings) |
   | how an editor quits, main or guest | `tidex-editor close EDITOR PANE` (adapters' `close`; micro, nano there) |
+  | the guest editors F2 offers, running one | `tidex-editor guests`, `tidex-editor guest NAME FILE` (`plain_guests` table) |
   | finding panes, waiting for one to exit or go | `bin/tidex-panes` |
   | a one-key question in a pop-up | `bin/tidex-key` |
   | every list to pick from | `bin/tidex-fzf` (tIDEx's one look) |
   | the / commands and the keys table | `bin/tidex-cmd` (`COMMANDS`, `KEYS`) |
   | talking to the bar | `bin/tidex-msg` → `plugin/src/actions.rs` (one list of actions) |
-  | sandboxing a program | `bin/tidex-sandbox` |
+  | sandboxing a program | `bin/tidex-sandbox` (modes `read`, `write`, `editor`) |
+  | what no sandboxed program may read | `secrets` in `bin/tidex-sandbox`: one list, every mode |
+  | settings for every git in a session | `bin/tidex` (git's `GIT_CONFIG_*` environment) |
   | a pop-up's colours | `bin/tidex-popup-colors` |
 
 - **Work that must outlive a pop-up** goes through the bar: `tidex-msg detach "tidex-…<TAB>args"`. Never `setsid`,
@@ -49,8 +52,9 @@ How work is done in this repo. They hold for every change, however small.
 
 ## Working with the user
 
-- No git action that changes anything (commit, add, restore, reset) and no nix command (`nix develop`, build,
-  flake update) without the user's yes for that action. Never push unless asked, each time.
+- No git action that changes anything (commit, add, restore, reset, tag) and no nix command (`nix develop`, build,
+  flake update) without the user's yes for that action. **The user pushes, never Claude**: hand over the push
+  command (main, tags, releases) and stop; "let's release" is not a go-ahead to push.
 - Commit messages carry no Co-Authored-By line.
 - Never ssh/scp/rsync to another host (horus…) without approval each time.
 - Commands for the user to run go in their own code block, never inline before a full stop.
@@ -59,9 +63,11 @@ How work is done in this repo. They hold for every change, however small.
 ## Current decisions
 
 - Neovim is the main editor; micro and nano are F2 guests.
-- Helix is **parked** (no API: stale view after edits on disk, driven by typed keys). It stays only until the
-  editor switch is proven both ways, then leaves the release; its adapter stays in `editors/` to come back if
-  Helix gains file watching or a plugin API (PRs #14544, #8675).
-- The editor switch (`/editor`, `n`/`r`, the switch on attach with its note) stays: a non-modal main editor is
-  to come.
+- Helix is to be **parked** (no API: stale view after edits on disk, driven by typed keys), but only once Emacs is
+  in: until then it stays as the second main editor, the test bench of the editor switch. Parked, it leaves the
+  release; its adapter stays in `editors/` to come back if Helix gains file watching or a plugin API (PRs
+  #14544, #8675).
+- The editor switch (`/editor`: `y` now, `n` from the next start; the switch on attach with its note) stays.
+- Next main editor: **Emacs** (trusted, mature, `emacsclient` drives it fully), made VS Code-like (`Ctrl+D`
+  multi-cursor through the multiple-cursors package, pinned and reviewed).
 - zellij is pinned (0.46.0, `tools.lock`; the plugin's `zellij-tile` the same version).
