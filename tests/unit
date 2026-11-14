@@ -145,8 +145,15 @@ if [ "$(tidex-sandbox --which)" = none ]; then echo "  (no sandbox here: skipped
   if ! tidex-sandbox --gaps | grep -q network; then
     check "read: no network (refused by the sandbox, not just unanswered)" 'tidex-sandbox read "$p" -- bash -c "exec 3<>/dev/tcp/127.0.0.1/9" 2>&1 | grep -q -E "Permission denied|unreachable"'
   fi
-  check "machine (Helix): ~/.ssh hidden" '[ -z "$(tidex-sandbox machine -- ls -A "$T/home/.ssh" 2>/dev/null)" ]'
-  check "machine (Helix): the rest of home as usual" 'echo note > "$T/home/notes"; [ "$(tidex-sandbox machine -- cat "$T/home/notes")" = note ]'
+  echo 'echo secret' > "$T/home/.zsh_history"
+  check "editor: ~/.ssh hidden" '[ -z "$(tidex-sandbox editor -- ls -A "$T/home/.ssh" 2>/dev/null)" ]'
+  check "editor: shell history hidden" '! tidex-sandbox editor -- cat "$T/home/.zsh_history" >/dev/null 2>&1'
+  check "editor: the rest of home readable" 'echo note > "$T/home/notes"; [ "$(tidex-sandbox editor -- cat "$T/home/notes")" = note ]'
+  check "editor: writes in the project" '(cd "$p" && tidex-sandbox editor -- sh -c "echo x > $p/d") && [ -f "$p/d" ]'
+  check "editor: nothing written outside it" '(cd "$p" && ! tidex-sandbox editor -- sh -c "echo x > $T/home/e" 2>/dev/null); [ ! -e "$T/home/e" ]'
+  if ! tidex-sandbox --gaps | grep -q network; then
+    check "editor: no network" '(cd "$p" && tidex-sandbox editor -- bash -c "exec 3<>/dev/tcp/127.0.0.1/9" 2>&1) | grep -q -E "Permission denied|unreachable"'
+  fi
 fi
 
 echo "uninstall"

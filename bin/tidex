@@ -22,6 +22,10 @@ LG_CONFIG_FILE=$h/share/tidex/lazygit.yml YAZI_CONFIG_HOME=$h/share/tidex/xdg/ya
 PYTHONPATH=$h/share/tidex/python${PYTHONPATH:+:$PYTHONPATH} PYTHONBREAKPOINT=pudb.set_trace
 export TIDEX_HOME PATH TIDEX_SHARE TIDEX_PLUGIN LG_CONFIG_FILE YAZI_CONFIG_HOME ZELLIJ_CONFIG_DIR
 export PYTHONPATH PYTHONBREAKPOINT
+# every git started in the session (the bar's, lazygit's, the editors', the terminals') runs no program a
+# repository names for core.fsmonitor in its own config: git's settings by environment, added to any already set
+n=${GIT_CONFIG_COUNT:-0}
+export "GIT_CONFIG_KEY_$n=core.fsmonitor" "GIT_CONFIG_VALUE_$n=false" GIT_CONFIG_COUNT=$((n + 1))
 case ${1:-} in
   --version) cat "$h/VERSION"; exit ;;
   --uninstall) shift; exec tidex-uninstall "$@" ;;
@@ -83,9 +87,11 @@ Enter: OK"
 if [ -n "$running" ]; then
   [ "$(readlink -f "$s/current")" = "$TIDEX_HOME" ] && attach
   tidex-update "$TIDEX_HOME" >/dev/null 2>&1 && attach
-  printf 'The session "%s" runs an older tIDEx that cannot be updated in place (its zellij differs, or it is from\nbefore /update).\n  y  remove it and start fresh (its running commands stop, unsaved Helix files are lost)\n  N  open it as it is (the default): finish your work, then quit and start tIDEx again\n> ' "$n"
-  read -r answer
-  [ "$answer" = y ] || attach
+  q='The session "%s" runs an older tIDEx that cannot be updated in place (its zellij differs, or it is from\n'
+  q="$q"'before /update).\n  y  remove it and start fresh (its running commands stop, unsaved files are lost)\n'
+  q="$q"'  n or Esc  open it as it is: finish your work, then quit and start tIDEx again\n'
+  # shellcheck disable=SC2059
+  [ "$(tidex-key --yn --esc "$(printf "$q" "$n")")" = y ] || attach
   outside kill-session "$n" >/dev/null 2>&1; outside delete-session --force "$n" >/dev/null 2>&1
 fi
 
@@ -126,6 +132,8 @@ if [ -f "$TIDEX_PROJECT/theme" ]; then cp "$TIDEX_PROJECT/theme" "$s/theme"; tid
 tidex-python detect
 # what this machine's sandbox leaves unprotected, once: the bar warns of it (tidex-status), /about says what
 tidex-sandbox --gaps > "$s/sandbox-gaps"
+# the session's project folders, one per line: where its editors may write (tidex-sandbox editor)
+for d in "$PWD" "$@"; do (cd "$d" && pwd); done > "$s/folders" || exit 1
 # the layout with one tree per folder, stacked; the first (code) tree is the open one
 trees=$(x=" expanded=true"; for d in "$PWD" "$@"; do d=$(cd "$d" && pwd) || exit 1
   printf 'pane name="tree: %s" command="tidex-tree"%s { args "%s"; }\n' "$(basename "$d")" "$x" "$d"; x=; done) || exit 1

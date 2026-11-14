@@ -3,25 +3,40 @@
 #   read DIR   DIR read-only, the system's programs and /etc, a private empty home, no network (the trees, the
 #              read-only lazygit)
 #   write DIR  the same, DIR writable (yazi, a file manager)
-#   machine    the whole machine as usual but the secrets folders and files (Helix)
-# read and write also reach zellij's socket and the session's state (its "current" link to tIDEx), so files
-# picked there still open in Helix. With Landlock (the kernel's, through landrun), else bubblewrap if the
-# machine has it; with neither, machine runs COMMAND as it is (an editor matters more), read and write fail.
+#   editor     the editors and what they start (language servers): read everything, write only the session's
+#              project folders, the editor's own folders (TIDEX_SANDBOX_WRITE, colon-separated), a cache and /tmp;
+#              no network
+# No mode ever reaches the secrets (below). read and write also reach zellij's socket and the session's state (its
+# "current" link to tIDEx), so files picked there still open in the editor. With Landlock (the kernel's, through
+# landrun), else bubblewrap if the machine has it; with neither, editor runs COMMAND as it is (an editor matters
+# more), read and write fail.
 # tidex-sandbox --which: the sandbox this machine allows: landlock, bubblewrap or none; --gaps: what it leaves
 # unprotected, one line each (older kernels), nothing when all is (/about, the bar).
 mode=$1; shift
-case $mode in machine|--which|--gaps) ;; *) dir=$1; shift ;; esac
+case $mode in editor|--which|--gaps) ;; *) dir=$1; shift ;; esac
 [ "$1" = -- ] && shift
 run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-secret_dirs=(.ssh .gnupg .password-store .local/share/keyrings .aws .kube .docker)
-secret_files=(.netrc .git-credentials .pgpass)
+
+# what no sandboxed program may read: keys and keyrings, tokens, cloud credentials, browsers and mail (cookies,
+# saved passwords), shell histories (pasted secrets), root's home and the machine's ssh keys
+secrets=(
+  "$HOME"/{.ssh,.gnupg,.password-store,.local/share/keyrings,.local/share/kwalletd}
+  "$HOME"/{.netrc,.git-credentials,.pgpass,.npmrc,.pypirc,.cargo/credentials,.cargo/credentials.toml}
+  "$HOME"/{.config/gh,.config/glab-cli,.claude,.claude.json}
+  "$HOME"/{.aws,.azure,.config/gcloud,.kube,.docker,.config/rclone,.terraform.d}
+  "$HOME"/{.mozilla,.librewolf,.config/chromium,.config/google-chrome,.config/BraveSoftware,.thunderbird}
+  "$HOME"/{.bash_history,.zsh_history,.local/share/fish/fish_history,.python_history,.psql_history}
+  /root /etc/ssh
+)
 
 # every variable passes (landrun passes none by default), but those given anew (VAR=value): a variable passed
 # twice keeps its first value
 env_args() {
   local v own=" ${*%%=*} "
   # (env, not compgen: a minimal bash has no compgen)
-  for v in $(env -0 | tr '\0\n' '\n ' | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p'); do case $own in *" $v "*) ;; *) printf -- '--env\n%s\n' "$v" ;; esac; done
+  for v in $(env -0 | tr '\0\n' '\n ' | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p'); do
+    case $own in *" $v "*) ;; *) printf -- '--env\n%s\n' "$v" ;; esac
+  done
   for v; do printf -- '--env\n%s\n' "$v"; done
 }
 
@@ -29,19 +44,38 @@ env_args() {
 # tIDEx: the whole install (versions/VERSION links its tools in tools/), else the folder it runs from
 system=(/usr /bin /sbin /lib /lib64 /etc /opt /nix /run/current-system ${TIDEX_HOME:+"${TIDEX_HOME%/versions/*}"})
 
-# everything from DIR down but the secrets: Landlock only allows, so a folder holding a secret (/, /home, HOME,
-# .local/share…) is listed entry by entry instead. Entries made later in those folders stay out of reach.
-all_but_secrets() {
-  local d=${1:-} e s deeper
-  for e in "$d"/* "$d"/.[!.]* "$d"/..?*; do
-    [ -e "$e" ] || [ -L "$e" ] || continue
-    deeper=
-    for s in "${secret_dirs[@]}" "${secret_files[@]}"; do
-      [ "$e" = "$HOME/$s" ] && continue 2
-      case $HOME/$s in "$e"/*) deeper=1 ;; esac
+# but_secrets PATH…: the PATHs without the secrets: Landlock only allows, so a folder holding a secret (/, /home,
+# HOME, /etc…) is listed entry by entry instead. Entries made later in those folders stay out of reach.
+but_secrets() {
+  local p q e s deeper
+  for p; do
+    for s in "${secrets[@]}"; do [ "$p" = "$s" ] && continue 2; done
+    deeper= q=${p%/}
+    # (q: "${p%/}" itself inside a case pattern does not match as it should)
+    for s in "${secrets[@]}"; do case $s in "$q"/*) deeper=1 ;; esac; done
+    if [ -z "$deeper" ]; then printf '%s\n' "$p"; continue; fi
+    for e in "$q"/* "$q"/.[!.]* "$q"/..?*; do
+      [ -e "$e" ] || [ -L "$e" ] || continue
+      but_secrets "$e"
     done
-    if [ -n "$deeper" ]; then all_but_secrets "$e"; else printf '%s\n' "$e"; fi
   done
+}
+
+# where an editor may write: the session's project folders (bin/tidex: its state's "folders", else here), the
+# session's sockets folder (Neovim's), a cache of its own, /tmp, and its own folders (TIDEX_SANDBOX_WRITE)
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/tidex/editor
+writable() {
+  local s
+  if s=$(tidex-state 2>/dev/null) && [ -s "$s/folders" ]; then cat "$s/folders"; echo "$s/sockets"; else pwd; fi
+  printf '%s\n' "$cache" /tmp
+  [ -n "${TIDEX_SANDBOX_WRITE:-}" ] && tr ':' '\n' <<< "$TIDEX_SANDBOX_WRITE"
+  return 0
+}
+
+# allow FLAG: the paths read (one a line) without the secrets (but_secrets), as landrun's "FLAG PATH" pairs
+allow() {
+  local p
+  while read -r p; do [ -n "$p" ] && but_secrets "$p"; done | while read -r p; do printf '%s\n%s\n' "$1" "$p"; done
 }
 
 landlock() {
@@ -53,8 +87,8 @@ landlock() {
       # a private home and temp folder (programs write their caches there)
       local home=$run/tidex/sandbox-home tmp=$run/tidex/sandbox-tmp
       mkdir -p "$home" "$tmp"
-      mode_args=(--rox "$(IFS=,; echo "${system[*]}")" --ro /proc --rw /dev,"$home","$tmp" --rwx "$run/zellij"
-        --ro "$run/tidex" --unix "$run/zellij")
+      mapfile -t mode_args < <(printf '%s\n' "${system[@]}" | allow --rox)
+      mode_args+=(--ro /proc --rw /dev,"$home","$tmp" --rwx "$run/zellij" --ro "$run/tidex" --unix "$run/zellij")
       [ "$mode" = write ] && mode_args+=(--rw "$dir") || mode_args+=(--ro "$dir")
       # /tmp, when the program must make a file there (broot's socket: tidex-tree)
       [ -n "${TIDEX_SANDBOX_TMP:-}" ] && mode_args+=(--rw /tmp)
@@ -63,15 +97,29 @@ landlock() {
       mapfile -t args < <(env_args "HOME=$home" "TMPDIR=$tmp" "XDG_CONFIG_HOME=$home/.config" \
         "XDG_CACHE_HOME=$home/.cache" "XDG_DATA_HOME=$home/.local/share" "XDG_STATE_HOME=$home/.local/state")
       exec landrun --best-effort --ignore-missing "${args[@]}" "${mode_args[@]}" -- "$@" ;;
-    machine)
-      mapfile -t args < <(env_args)
-      mapfile -t mode_args < <(all_but_secrets | sed 's/^/--rwx\n/')
-      exec landrun --best-effort --ignore-missing --unrestricted-network --unrestricted-scoped "${args[@]}" \
-        "${mode_args[@]}" -- "$@" ;;
+    editor)
+      mkdir -p "$cache"
+      local w=()
+      # (the writable folders too go without the secrets: a project never exposes one it holds)
+      mapfile -t w < <(writable | allow --rwx)
+      mapfile -t mode_args < <(echo / | allow --rox)
+      mapfile -t args < <(env_args "XDG_CACHE_HOME=$cache")
+      exec landrun --best-effort --ignore-missing --unrestricted-scoped "${args[@]}" "${mode_args[@]}" "${w[@]}" \
+        --rw /dev --rwx "$run/zellij" --unix "$run/zellij" -- "$@" ;;
   esac
 }
 
+# the secrets, hidden over whatever was bound: an empty folder, or an empty file
+hide_secrets() {
+  local p
+  for p in "${secrets[@]}"; do
+    if [ -d "$p" ]; then printf '%s\n' --tmpfs "$p"; elif [ -e "$p" ]; then printf '%s\n' --ro-bind /dev/null "$p"; fi
+  done
+}
+
 bubblewrap() {
+  local hide=()
+  mapfile -t hide < <(hide_secrets)
   case $mode in
     read|write)
       local project=--ro-bind start
@@ -81,12 +129,13 @@ bubblewrap() {
       for p in "${system[@]}"; do [ -e "$p" ] && binds+=(--ro-bind "$p" "$p"); done
       exec bwrap --die-with-parent --unshare-all "${binds[@]}" --proc /proc --dev /dev --tmpfs /tmp \
         --tmpfs "$HOME" --bind "$run/zellij" "$run/zellij" --ro-bind "$run/tidex" "$run/tidex" \
-        "$project" "$dir" "$dir" --chdir "$start" -- "$@" ;;
-    machine)
-      local hide=() d f
-      for d in "${secret_dirs[@]}"; do [ -d "$HOME/$d" ] && hide+=(--tmpfs "$HOME/$d"); done
-      for f in "${secret_files[@]}"; do [ -f "$HOME/$f" ] && hide+=(--ro-bind /dev/null "$HOME/$f"); done
-      exec bwrap --dev-bind / / --die-with-parent "${hide[@]}" -- "$@" ;;
+        "$project" "$dir" "$dir" "${hide[@]}" --chdir "$start" -- "$@" ;;
+    editor)
+      mkdir -p "$cache"
+      local binds=(--ro-bind / / --dev /dev --proc /proc) p
+      while read -r p; do [ -e "$p" ] && binds+=(--bind "$p" "$p"); done < <(writable)
+      exec bwrap --die-with-parent --unshare-net "${binds[@]}" --bind "$run/zellij" "$run/zellij" "${hide[@]}" \
+        --setenv XDG_CACHE_HOME "$cache" -- "$@" ;;
   esac
 }
 
@@ -114,8 +163,9 @@ gaps() {
     landlock)
       abi=$(landlock_abi)
       [ "$abi" -ge 3 ] || echo "read-only files can still be emptied (Linux 6.2 or later prevents it)"
-      [ "$abi" -ge 4 ] || echo "the network stays open to the trees, yazi and lazygit (Linux 6.7 or later closes it)" ;;
-    none) echo "no sandbox: the trees, yazi and the read-only lazygit do not start, Helix runs without one" ;;
+      [ "$abi" -ge 4 ] ||
+        echo "the network stays open to the editors, trees, yazi and lazygit (Linux 6.7 or later closes it)" ;;
+    none) echo "no sandbox: the trees, yazi and the read-only lazygit do not start, the editors run without one" ;;
   esac
   return 0
 }
@@ -123,13 +173,13 @@ gaps() {
 case $mode in
   --which) which_sandbox; exit 0 ;;
   --gaps) gaps; exit 0 ;;
-  read|write|machine) ;;
-  *) echo "tidex-sandbox: read DIR, write DIR, machine, --which or --gaps" >&2; exit 2 ;;
+  read|write|editor) ;;
+  *) echo "tidex-sandbox: read DIR, write DIR, editor, --which or --gaps" >&2; exit 2 ;;
 esac
 case $(which_sandbox) in
   landlock) landlock "$@" ;;
   bubblewrap) bubblewrap "$@" ;;
 esac
-[ "$mode" = machine ] && exec "$@"
+[ "$mode" = editor ] && exec "$@"
 echo "tIDEx: this machine allows no sandbox (no Landlock, no bubblewrap): not starting $1" >&2
 exit 1

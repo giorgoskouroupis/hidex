@@ -15,6 +15,10 @@ o.undofile = true
 o.list = true
 o.listchars = { tab = "→ ", trail = "·", nbsp = "␣" }
 o.updatetime = 1000
+-- a file cannot set options on itself ("vim: …" lines), nor a folder run its own config (exrc, off already):
+-- what is opened is never trusted to configure the editor
+o.modeline = false
+o.exrc = false
 
 -- Files changed on disk (Claude, git, a guest editor) come back by themselves: an untouched buffer is reloaded
 -- within a second; one with changes asks (W12: keep yours, or load the disk's) when you come back to it or stop

@@ -2,22 +2,24 @@
 # Neovim's adapter (tidex-editor): run | close PANE | do VERB … | themes | health LANG | servers LANG | notes | title.
 # Neovim answers other programs (--server, its remote API): the bar asks it through `do`, never by typing into it.
 share=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-sock() { echo "$(tidex-state)/nvim.sock"; }
+# its socket, in the session's sockets folder (the one place there an editor may write: tidex-sandbox editor)
+sock() { echo "$(tidex-state)/sockets/nvim.sock"; }
 # (a headless, clean client: no screen codes around its answers, and none of your own config)
 ask() { timeout 5 nvim --headless --clean --server "$(sock)" "$@"; }
 remote() { ask "$@" >/dev/null 2>&1; }
 case $1 in
   # Neovim with tIDEx's settings (config/nvim) and state of its own (NVIM_APPNAME), listening on the session's
-  # socket; sandboxed like any editor (tidex-sandbox machine). TIDEX_EDITOR_RUN: another program (the tests).
+  # socket; sandboxed as every editor (tidex-sandbox editor), its own folders writable (undo history, shada).
+  # TIDEX_EDITOR_RUN: another program (the tests).
   run)
     shift
-    s=$(tidex-state 2>/dev/null) && rm -f "$s/nvim.sock"
+    s=$(tidex-state 2>/dev/null) && { mkdir -p "$s/sockets"; rm -f "$(sock)"; }
     export NVIM_APPNAME=tidex-nvim
-    # its folders made first: the sandbox allows writing in what exists (not new folders beside the secrets)
-    mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/$NVIM_APPNAME" "${XDG_STATE_HOME:-$HOME/.local/state}/$NVIM_APPNAME" \
-      "${XDG_CACHE_HOME:-$HOME/.cache}/$NVIM_APPNAME"
-    exec tidex-sandbox machine -- "${TIDEX_EDITOR_RUN:-nvim}" \
-      ${s:+--listen "$s/nvim.sock"} -u "$share/nvim/init.lua" "$@" ;;
+    own="${XDG_DATA_HOME:-$HOME/.local/share}/$NVIM_APPNAME:${XDG_STATE_HOME:-$HOME/.local/state}/$NVIM_APPNAME"
+    # (made first: the sandbox allows writing in what exists)
+    (IFS=:; mkdir -p $own)
+    TIDEX_SANDBOX_WRITE=$own exec tidex-sandbox editor -- "${TIDEX_EDITOR_RUN:-nvim}" \
+      ${s:+--listen "$(sock)"} -u "$share/nvim/init.lua" "$@" ;;
   # it quits, asking first what to do with unsaved files (save, drop, cancel); through its API, so not by its pane
   close) exec "$0" do quit ;;
   # the bar's verbs (plugin/src/editor.rs), as Neovim commands run in place (<Cmd>: whatever the mode)

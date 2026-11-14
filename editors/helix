@@ -3,9 +3,9 @@
 # has no interface for other programs: the bar types its commands into it (plugin/src/typist.rs), and it saves
 # when left (its config: auto-save), the only way to hand files over safely.
 case $1 in
-  # Helix, sandboxed so it cannot open the secrets folders (tidex-sandbox machine), nor anything it starts
-  # (language servers, :sh). TIDEX_EDITOR_RUN: another program to run there instead (the tests).
-  run) shift; exec tidex-sandbox machine -- "${TIDEX_EDITOR_RUN:-hx}" "$@" ;;
+  # Helix, sandboxed as every editor (tidex-sandbox editor), and so anything it starts (language servers, :sh).
+  # TIDEX_EDITOR_RUN: another program to run there instead (the tests).
+  run) shift; exec tidex-sandbox editor -- "${TIDEX_EDITOR_RUN:-hx}" "$@" ;;
   # it quits, typed into its pane: Esc alone first (Esc then ":" at once reads as Alt+:), then :quit-all, which
   # refuses while files are unsaved; Enter as a terminal sends it, \r (\n reaches Helix as Ctrl+j)
   close) zellij action write --pane-id "$2" 27; sleep 0.2; zellij action write-chars --pane-id "$2" "$(printf ':quit-all\r')" ;;

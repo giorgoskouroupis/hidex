@@ -165,20 +165,27 @@ their place, so no key pressed there can reach further.
   (a file manager). A private empty home and temp folder: not your `~/.ssh`, `~/.gitconfig` or anything else in
   it. No network.
 - They still open files: `Enter` reaches Helix and lnav through zellij's socket, the one way out.
-- The editor runs in a lighter sandbox (`editors/helix run`): it sees the machine as usual (it saves files, runs the
-  language servers, uses your envs and the clipboard), except the secrets: `~/.ssh`, `~/.gnupg`, password
-  stores, `~/.aws`, `~/.kube`, `~/.docker`, `.netrc`, `.git-credentials` look empty to it and to anything it
-  starts. Other system files stay readable (opening `/etc/hosts` is harmless).
+- The editors (Neovim, Helix, micro, nano) and all they start (language servers, a shell from the editor) run
+  under the `editor` sandbox: they read the machine as usual (your envs, toolchains, other projects) but write
+  only the project's folders and their own (undo history, a cache, `/tmp`), and have no network: a language
+  server running a hostile project's code can neither send anything out nor change anything else.
+- No sandboxed program ever sees the secrets: `~/.ssh`, `~/.gnupg`, keyrings and password stores, tokens
+  (`.netrc`, `.git-credentials`, `.npmrc`, `.pypirc`, cargo's, `gh`, `glab`, Claude's login), cloud
+  credentials (`~/.aws`, `~/.azure`, gcloud, `~/.kube`, `~/.docker`, rclone, terraform), browsers and mail
+  (cookies, saved passwords), shell histories, `/root` and `/etc/ssh`: one list in `bin/tidex-sandbox`.
+- Every git started in tIDEx (the bar's, lazygit's, the editors', the terminals') ignores a repository's own
+  `core.fsmonitor` program, which a hostile repo could otherwise get run by a mere `git status`.
 - In the read-only lazygit any change (stage, commit, checkout, fetch, push) fails with "read-only file
   system"; `Alt+Shift+g` swaps it for the plain lazygit.
-- It guards against accidents, not against hostile code.
+- It limits what hostile code can reach; it is not a full isolation: the project itself stays writable to the
+  editors, and the terminals and the side terminal (Claude) run as you, unsandboxed.
 - Limits: it needs Landlock (Linux 5.13 and later, when the distribution turns it on) or bubblewrap; with
-  neither, the trees and the read-only lazygit do not start, and Helix runs without its sandbox. Landlock only
-  allows, so Helix gets everything but the secrets as it was at its start: a file or folder created afterwards
-  right in your home folder (or in `/`) stays out of its reach until Helix restarts, and the home folder itself
-  cannot be listed from Helix (what is in it opens as usual). In a git worktree the repo's
-  data lives outside the folder, so the read-only lazygit cannot see it; the trees and yazi refuse, as above,
-  off-limits folders.
+  neither, the trees and the read-only lazygit do not start, and the editors run without one. Network blocking
+  needs Linux 6.7. Landlock only allows, so an editor reads everything but the secrets as it was at its start: a
+  file or folder created afterwards right in your home folder (or in `/`) stays out of its reach until the editor
+  restarts, and the home folder itself cannot be listed from it (what is in it opens as usual). In a git
+  worktree the repo's data lives outside the folder, so the read-only lazygit cannot see it; the trees and yazi
+  refuse, as above, off-limits folders.
 
 ## Layout
 
