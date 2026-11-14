@@ -87,7 +87,8 @@ check "with their language servers found" 'grep "^  bash" "$T/langs" | grep -q "
 
 echo "commands"
 check "every command has its function" 'for c in $(tidex-cmd --list | cut -f1); do grep -q "^cmd_$(echo $c | tr - _)()" "$out/bin/tidex-cmd" || exit 1; done'
-check "nothing typed: the commands by group, a header before each, keys beside" 'l=$(tidex-cmd --suggest "" | sed "s/\x1b\[[0-9]*m//g"); [ "$(printf "%s\n" "$l" | head -1 | cut -f1)" = look ] && printf "%s\n" "$l" | grep -q "^git	Alt+g · "'
+check "nothing typed: the commands by group, indented under a header before each, keys beside" 'l=$(tidex-cmd --suggest "" | sed "s/\x1b\[[0-9;]*m//g"); [ "$(printf "%s\n" "$l" | head -1 | cut -f1)" = look ] && printf "%s\n" "$l" | grep -q "^  git	Alt+g · "'
+check "the command of that very name first (editor, then editor-theme)" '[ "$(tidex-cmd --suggest editor | head -1 | cut -f1)" = editor ]'
 check "suggestions: commands starting with the line" '[ "$(tidex-cmd --suggest co | awk -F"\t" "\$3 != \"key\"" | cut -f1 | tr "\n" " ")" = "collapse copy " ]'
 check "suggestions: then the keys that fit (copy: Alt+v)" 'tidex-cmd --suggest copy | awk -F"\t" "\$3 == \"key\"" | cut -f1 | grep -qx "Alt+v"'
 check "suggestions: a command's arguments after a space" '[ "$(tidex-cmd --suggest "langs p" | cut -f1)" = "langs python" ]'
